@@ -1,0 +1,3 @@
+<template>
+    Salary Increment
+</template>
