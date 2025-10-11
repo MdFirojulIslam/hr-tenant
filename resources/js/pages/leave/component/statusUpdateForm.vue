@@ -9,8 +9,7 @@ const { isOpen, editStore, leave_type, stId } = defineProps([
     "leave_type",
     "stId",
 ]);
-
-const inactive = ref(true);
+console.log(editStore);
 
 const form = ref({
     Full_Name: "",
@@ -70,10 +69,8 @@ const update = async () => {
                 timer: 1500,
             });
         }
-        if(inactive.value == true){
-            await api.get(`/leave-status-mail/${stId}`);
-        }
-        // window.location.reload();
+        await api.get(`/leave-status-mail/${stId}`);
+        window.location.reload();
     } catch (error) {
         console.error("Error updating store:", error);
     }
@@ -81,15 +78,26 @@ const update = async () => {
 </script>
 
 <template>
-    <div v-if="isOpen" class="modal-mask col-lg-6 col-md-6 grid-margin stretch-card" ref="target">
+    <div
+        v-if="isOpen"
+        class="modal-mask col-lg-6 col-md-6 grid-margin stretch-card"
+        ref="target"
+    >
         <div class="card">
             <div class="card-body">
                 <form class="forms-sample" @submit.prevent="update">
                     <div class="row">
                         <div class="col-lg-12 col-md-12 col-sm-12 mb-2">
                             <div class="form-group">
-                                <label for="exampleInputEmail1">Employee Name</label>
-                                <input type="text" class="form-control" v-model="form.Full_Name" readonly />
+                                <label for="exampleInputEmail1"
+                                    >Employee Name</label
+                                >
+                                <input
+                                    type="text"
+                                    class="form-control"
+                                    v-model="form.Full_Name"
+                                    readonly
+                                />
                             </div>
                         </div>
                     </div>
@@ -97,9 +105,20 @@ const update = async () => {
                     <div class="row">
                         <div class="col-lg-6 col-md-6 col-sm-6 mb-2">
                             <div class="form-group">
-                                <label for="exampleInputEmail1">Leave Type</label>
-                                <select name="" id="" class="form-control" v-model="form.Leave_Type">
-                                    <option v-for="item in leave_type" :key="item.id" :value="item.id">
+                                <label for="exampleInputEmail1"
+                                    >Leave Type</label
+                                >
+                                <select
+                                    name=""
+                                    id=""
+                                    class="form-control"
+                                    v-model="form.Leave_Type"
+                                >
+                                    <option
+                                        v-for="item in leave_type"
+                                        :key="item.id"
+                                        :value="item.id"
+                                    >
                                         {{ item.Name }}
                                     </option>
                                 </select>
@@ -107,8 +126,15 @@ const update = async () => {
                         </div>
                         <div class="col-lg-6 col-md-6 col-sm-6 mb-2">
                             <div class="form-group">
-                                <label for="exampleInputEmail1">Leave Status</label>
-                                <select name="" id="" class="form-control" v-model="form.Status">
+                                <label for="exampleInputEmail1"
+                                    >Leave Status</label
+                                >
+                                <select
+                                    name=""
+                                    id=""
+                                    class="form-control"
+                                    v-model="form.Status"
+                                >
                                     <option value="Pending">Pending</option>
                                     <option value="Approved">Approved</option>
                                     <option value="Rejected">Rejected</option>
@@ -120,7 +146,13 @@ const update = async () => {
                         <div class="col-lg-12 col-md-12 col-sm-12 mb-2">
                             <div class="form-group">
                                 <label for="exampleInputEmail1">Purpose</label>
-                                <textarea type="text" class="form-control" v-model="form.Purpose" rows="2"></textarea>
+                                <textarea
+                                    type="text"
+                                    class="form-control"
+                                    v-model="form.Purpose"
+                                    rows="2"
+                                    readonly
+                                ></textarea>
                             </div>
                         </div>
                     </div>
@@ -128,28 +160,34 @@ const update = async () => {
                     <div class="row">
                         <div class="col-lg-6 col-md-6 col-sm-12">
                             <div class="form-group">
-                                <label for="exampleInputEmail1">From Date*</label>
-                                <input type="date" class="form-control" v-model="form.From_Date"
-                                    @change="computeDuration" />
+                                <label for="exampleInputEmail1"
+                                    >From Date*</label
+                                >
+                                <input
+                                    type="date"
+                                    class="form-control"
+                                    v-model="form.From_Date"
+                                    @change="computeDuration"
+                                />
                             </div>
                         </div>
                         <div class="col-lg-6 col-md-6 col-sm-12">
                             <div class="form-group">
                                 <label for="exampleInputEmail1">To Date*</label>
-                                <input type="date" class="form-control" v-model="form.To_Date"
-                                    @change="computeDuration" />
+                                <input
+                                    type="date"
+                                    class="form-control"
+                                    v-model="form.To_Date"
+                                    @change="computeDuration"
+                                />
                             </div>
                         </div>
                     </div>
 
                     <div class="row">
                         <div class="col-lg-12 col-md-12 col-sm-12 mt-2">
-                            <p class="d-flex justify-content-between">
+                            <p>
                                 <strong>No of Days: {{ form.duration }}</strong>
-                                <div class="d-flex align-items-center">
-                                <input type="checkbox" v-model="inactive" />
-                                <label class="px-2 pt-0">Send Mail</label>
-                            </div>
                             </p>
                         </div>
                     </div>
@@ -158,7 +196,11 @@ const update = async () => {
                         <button type="submit" class="custom-btn btn-13 p-2">
                             <i class="fa-solid fa-check"></i> | Save
                         </button>
-                        <button type="reset" class="custom-btn btn-12 p-2" @click.stop="closeModal">
+                        <button
+                            type="reset"
+                            class="custom-btn btn-12 p-2"
+                            @click.stop="closeModal"
+                        >
                             <i class="fa-solid fa-x"></i> | Cancel
                         </button>
                     </div>

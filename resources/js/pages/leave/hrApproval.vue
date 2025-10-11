@@ -2,18 +2,16 @@
 import { ref, onMounted, computed, defineAsyncComponent } from "vue";
 import { Bootstrap4Pagination } from "laravel-vue-pagination";
 import Swal from "sweetalert2";
-import api from "@/api";
+import api from "../../api";
 
 const employee = ref([]);
-const deptEmp = ref([]);
-const earnedLeave = ref("");
+
 const department = ref([]);
 const error = ref([]);
 const leaveType = ref();
 const selectedType = ref("");
-const selectedStatus = ref("Approved (SV)");
+const selectedStatus = ref("");
 const selectedDept = ref("");
-const selectedEmp = ref("");
 const allLeave = ref([]);
 const selectedStore = ref(null);
 
@@ -32,19 +30,10 @@ const statusClose = () => {
     getData();
 };
 
-const getDeptEmp = async (id) => {
-    try {
-        const response = await api.get(`/emp/${id}`);
-        deptEmp.value = response.data;
-    } catch (error) {
-        console.error("Error updating store:", error);
-    }
-};
-
 const editLeaveStatus = async (id) => {
     const leaveData = allLeave.value.find((leave) => leave.id === id);
     if (leaveData) {
-        selectedStore.value = leaveData;
+        selectedStore.value = leaveData; 
         statusId.value = id;
         statusOpen();
     } else {
@@ -66,7 +55,6 @@ const getData = async (page = 1) => {
         department.value = responsedept.data;
         leaveType.value = responsetype.data;
         allLeave.value = response.data;
-        console.log(allLeave.value);
 
     } catch (err) {
         error.value = err.message || "Error fetching data";
@@ -75,30 +63,23 @@ const getData = async (page = 1) => {
 };
 
 
-
 const filteredData = computed(() => {
     return allLeave.value.filter((item) => {
         return (
             (selectedType.value === "" ||
                 item.Leave_Type === selectedType.value) &&
             (selectedStatus.value === "" ||
-                item.status === selectedStatus.value) &&
+                item.Status === selectedStatus.value) &&
             (selectedDept.value === "" ||
-                item.dept_id === selectedDept.value) &&
-            (selectedEmp.value === "" ||
-                item.Full_Name === selectedEmp.value)
+                item.department === selectedDept.value)
         );
     });
 });
-
 
 const getEmployee = async (id) => {
     try {
         const response = await api.get(`/leave/${id}`);
         employee.value = response.data;
-
-        const responseEarned = await api.get(`/get-earned-leave/${id}`);
-        earnedLeave.value = responseEarned.data;
     } catch (error) {
         console.error("Error updating store:", error);
     }
@@ -109,9 +90,9 @@ const totalLeaveDays = computed(() => {
 
     if (Array.isArray(leaveType.value) && leaveType.value.length > 0) {
         leaveType.value.forEach((type) => {
-            totals[type.leave_name] = {
+            totals[type.Name] = {
                 totalDays: 0,
-                maxDays: type.leave_name === "Earned" ? earnedLeave.value : type.max_leave_days || 0,
+                maxDays: type.Max_Days || 0,
             };
         });
 
@@ -120,9 +101,11 @@ const totalLeaveDays = computed(() => {
             if (!totals[typeName]) {
                 totals[typeName] = {
                     totalDays: 0,
-                    maxDays: item.max_leave_days,
+                    maxDays: item.Max_Days,
                 };
             }
+
+            totals[typeName].maxDays = item.Max_Days;
 
             if (item.Status === "Approved") {
                 totals[typeName].totalDays += item.daysBetween;
@@ -135,27 +118,15 @@ const totalLeaveDays = computed(() => {
 
 const deleteLeave = async (id) => {
     try {
-        const result = await Swal.fire({
-            title: "Are you sure?",
-            text: "Do you want to delete this leave?",
-            icon: "warning",
-            showCancelButton: true,
-            confirmButtonText: "Yes",
-            cancelButtonText: "No",
-            reverseButtons: true,
-        });
-
-        if (result.isConfirmed) {
-            const response = await api.delete(`/soft-delete-leave/${id}`);
-            if (response.data.success) {
-                Swal.fire({
-                    position: "middle",
-                    icon: "success",
-                    title: "Information has been deleted",
-                    showConfirmButton: false,
-                    timer: 1500,
-                });
-            }
+        const response = await api.delete(`/soft-delete-leave/${id}`);
+        if (response.data.success) {
+            Swal.fire({
+                position: "middle",
+                icon: "success",
+                title: "Information has been Deleted",
+                showConfirmButton: false,
+                timer: 1500,
+            });
             await getData();
         }
     } catch (err) {
@@ -209,8 +180,6 @@ onMounted(() => getData());
                                 </section>
                             </div>
 
-
-
                             <div class="col-lg-4 col-md-12 px-2 mb-4">
                                 <table class="leave-status">
                                     <thead class="table_head">
@@ -244,28 +213,17 @@ onMounted(() => getData());
                         <div class="row d-flex justify-content-center justify-content-md-end mb-3">
                             <div class="col-lg-3 col-md-4 col-sm-6 mb-3">
                                 <label>Department</label>
-                                <select v-model="selectedDept" class="form-control" @change="getDeptEmp(selectedDept)">
+                                <select v-model="selectedDept" class="form-control">
                                     <option value="">All Department</option>
-                                    <option v-for="item in department" :key="item.id" :value="item.id">{{ item.Name }}
+                                    <option v-for="item in department" :key="item.id" :value="item.Name">{{ item.Name }}
                                     </option>
                                 </select>
                             </div>
-                            <div class="col-lg-3 col-md-4 col-sm-6 mb-3">
-                                <label>Employee</label>
-                                <select v-model="selectedEmp" class="form-control">
-                                    <option value="">All Employee</option>
-                                    <option v-for="item in deptEmp" :key="item.id" :value="item.Full_Name">{{
-                                        item.Full_Name }}
-                                    </option>
-                                </select>
-                            </div>
-
                             <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
                                 <label>Leave Type</label>
                                 <select v-model="selectedType" class="form-control">
                                     <option value="">All Type</option>
-                                    <option v-for="item in leaveType" :key="item.id" :value="item.leave_name">{{
-                                        item.leave_name }}
+                                    <option v-for="item in leaveType" :key="item.id" :value="item.Name">{{ item.Name }}
                                     </option>
                                 </select>
                             </div>
@@ -275,7 +233,6 @@ onMounted(() => getData());
                                     <option value="">All Status</option>
                                     <option value="Pending">Pending</option>
                                     <option value="Approved">Approved</option>
-                                    <option value="Approved (SV)">Approved (SV)</option>
                                     <option value="Rejected">Rejected</option>
                                 </select>
                             </div>
@@ -291,7 +248,6 @@ onMounted(() => getData());
                                         <th>To Date</th>
                                         <th>Total Days</th>
                                         <th>Leave Type</th>
-                                        <th>Purpose</th>
                                         <th>Status</th>
                                         <th>Documents</th>
                                         <th>Operation</th>
@@ -301,21 +257,20 @@ onMounted(() => getData());
                                     <tr class="ver-align" v-for="(l, index) in filteredData" :key="l.id"
                                         @click="getEmployee(l.EID)">
                                         <td>{{ index + 1 }}</td>
-                                        <td>{{ l.full_name }}</td>
-                                        <td>{{ l.from_date }}</td>
-                                        <td>{{ l.to_date }}</td>
+                                        <td>{{ l.Full_Name }}</td>
+                                        <td>{{ l.From_Date }}</td>
+                                        <td>{{ l.To_Date }}</td>
                                         <td>{{ l.daysBetween }}</td>
-                                        <td>{{ l.leave_type }}</td>
-                                        <td>{{ l.purpose }}</td>
-                                        <td>{{ l.status }}</td>
+                                        <td>{{ l.Leave_Type }}</td>
+                                        <td>{{ l.Status }}</td>
                                         <td v-if="l.Attachment_Url">
-                                            <button @click="openAttachment(l.attachment_url)"
+                                            <button @click="openAttachment(l.Attachment_Url)"
                                                 class="btn btn-info btn-sm mx-1">
                                                 <i class="fa-solid fa-file-arrow-down"></i>
                                             </button>
                                         </td>
                                         <td v-else>-</td>
-                                        <td>
+                                        <td v-if="l.Notification == 1">
                                             <button class="btn btn-warning btn-sm mx-1" @click="editLeaveStatus(l.id)">
                                                 <i class="fa-regular fa-pen-to-square"></i>
                                             </button>
@@ -336,9 +291,9 @@ onMounted(() => getData());
 
 
 <style>
-/* .leave-table {
-    max-height: 310px;
-} */
+.leave-table {
+    max-height: 200px;
+}
 
 .leave-status th,
 .leave-status td {

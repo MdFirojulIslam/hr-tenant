@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Route;
  
 Route::get('/salary', [EmployeeSalaryController::class, 'index']);
 Route::post('/salary-setup', [EmployeeSalaryController::class, 'create']);
-Route::put('/salary-update/{id}', [EmployeeSalaryController::class, 'update']);
+Route::put('/salary-update/{id}', [EmployeeSalaryController::class, 'update']); 
 Route::get('/employee-salary-search', [EmployeeSalaryController::class, 'salarySearch']);
 
 Route::get('/generate-salary', [EmployeeSalaryController::class, 'generateSalary']);

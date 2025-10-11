@@ -1,7 +1,7 @@
 <script setup>
 import { ref, defineProps, getCurrentInstance, watch } from "vue";
 import Swal from "sweetalert2";
-import api from "@/api";
+import api from "../../../api";
 
 const { isOpen, editStore, updateinfo, EID, holiId } = defineProps([
     "isOpen",
@@ -24,10 +24,10 @@ watch(
     () => editStore,
     (item) => {
         if (item) {
-            form.value.name = item.Name || "";
-            form.value.from_date = item.From_Date || "";
-            form.value.to_date = item.To_Date || "";
-            form.value.duration = item.Duration || "";
+            form.value.name = item.holiday_name || "";
+            form.value.from_date = item.from_date || "";
+            form.value.to_date = item.to_date || "";
+            form.value.duration = item.duration || "";
         }
     },
     { immediate: true }
@@ -166,15 +166,14 @@ const submit = () => {
 
                     <div class="row">
                         <div class="col-lg-12 col-md-12 col-sm-12 mt-2">
-                                <p><strong>No of Days: {{ form.duration }}</strong></p>
+                            <p>
+                                <strong>No of Days: {{ form.duration }}</strong>
+                            </p>
                         </div>
                     </div>
 
                     <div class="d-flex justify-content-between">
-                        <button
-                            type="submit"
-                            class="custom-btn btn-13 p-2"
-                        >
+                        <button type="submit" class="custom-btn btn-13 p-2">
                             <i class="fa-solid fa-check"></i> | {{ updateinfo }}
                         </button>
                         <button

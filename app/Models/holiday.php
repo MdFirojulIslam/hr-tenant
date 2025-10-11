@@ -10,10 +10,10 @@ class holiday extends Model
     use HasFactory;
 
     protected $fillable = [
-        'Name',
-        'From_Date',
-        'To_Date',
-        'Duration',
+        'holiday_name',
+        'from_date',
+        'to_date',
+        'duration',
         'created_by',
         'updated_by',
     ];

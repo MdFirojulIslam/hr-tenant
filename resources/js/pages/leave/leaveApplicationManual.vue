@@ -9,13 +9,11 @@ const employee = ref([]);
 const emp_img = ref([]);
 
 const error = ref([]);
-const existMsg = ref("");
 const fileSizeWarning = ref();
 const leaveType = ref();
 const leave = ref([]);
 const selectedType = ref("");
 const selectedStatus = ref("");
-const loading = ref(false);
 
 const form = ref({
     department: "",
@@ -37,7 +35,7 @@ const getData = async () => {
         department.value = responsedept.data;
         leaveType.value = responsetype.data;
     } catch (err) {
-        console.error(err.message);
+        error.value = err.message || "Error fetching data";
     } finally {
     }
 };
@@ -80,9 +78,9 @@ const totalLeaveDays = computed(() => {
 
     if (Array.isArray(leaveType.value) && leaveType.value.length > 0) {
         leaveType.value.forEach((type) => {
-            totals[type.leave_name] = {
+            totals[type.Name] = {
                 totalDays: 0,
-                maxDays: type.max_leave_days || 0,
+                maxDays: type.Max_Days || 0,
             };
         });
 
@@ -91,7 +89,7 @@ const totalLeaveDays = computed(() => {
             if (!totals[typeName]) {
                 totals[typeName] = {
                     totalDays: 0,
-                    maxDays: item.max_leave_days,
+                    maxDays: item.Max_Days,
                 };
             }
 
@@ -129,27 +127,6 @@ const getImage = (e) => {
 
 const submit = async () => {
     form.value.Status = "Pending";
-    loading.value = true;
-
-    const selectedLeaveType = leaveType.value.find(
-        (leave) => leave.id === form.value.Leave_Type_Id
-    );
-
-    if (
-        selectedLeaveType &&
-        selectedLeaveType.Name === "Sick" &&
-        totalDays.value >= 3 &&
-        !form.file
-    ) {
-        Swal.fire({
-            icon: "error",
-            title: "Validation Error",
-            text: "For sick leave of 2 days or more, you must attach a document.",
-        });
-        loading.value = false;
-        return;
-    }
-
     const config = {
         headers: {
             "Content-Type": "multipart/form-data",
@@ -166,9 +143,7 @@ const submit = async () => {
 
     try {
         const response = await api.post("/leave", formdata, config);
-        existMsg.value = response.data.message;
         if (response.data.success) {
-            loading.value = false;
             Swal.fire({
                 position: "middle",
                 icon: "success",
@@ -180,24 +155,18 @@ const submit = async () => {
             getEmployeeImg(form.value.Employee_Id);
             resetForm();
         }
-        loading.value = false;
     } catch (err) {
-        loading.value = false;
         error.value = err.response.data.errors;
     }
 };
 
-
-const totalDays = computed(() => {
-    if (form.value.From_Date && form.value.To_Date) {
-        const startDate = new Date(form.value.From_Date);
-        const endDate = new Date(form.value.To_Date);
-        const diffTime = Math.abs(endDate - startDate);
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-        return diffDays + 1; // Include both start and end dates
-    }
-    return 0;
-});
+const totalDays = (start, end) => {
+    const startDate = new Date(start);
+    const endDate = new Date(end);
+    const diffTime = Math.abs(endDate - startDate);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays;
+};
 
 const openAttachment = (url) => {
     window.open(url, "_blank");
@@ -207,18 +176,13 @@ onMounted(() => getData());
 </script>
 
 <template>
-    <div v-if="loading" class="overlay-loading">
-        <div class="loader"></div>
-    </div>
     <div class="container-fluid">
         <div class="row">
             <div class="col-12 grid-margin stretch-card">
                 <div class="card">
                     <div class="card-body">
                         <div class="text-center">
-                            <h1 class="mb-5">
-                                Leave Application Manual (Only By HR)
-                            </h1>
+                            <h1 class="mb-5">Leave Application Manual (Only By HR)</h1>
                         </div>
                         <div class="row">
                             <!-- Form Section -->
@@ -228,14 +192,8 @@ onMounted(() => getData());
                                         <div class="col-lg-6 col-md-6 col-sm-12 mb-3">
                                             <div class="form-group">
                                                 <label for="exampleInputEmail1">Department</label>
-                                                <select class="form-control" v-model="form.department" @change="
-                                                    getEmployee(
-                                                        form.department
-                                                    )
-                                                    ">
-                                                    <option selected disabled>
-                                                        select
-                                                    </option>
+                                                <select class="form-control" v-model="form.department" @change="getEmployee(form.department)">
+                                                    <option selected disabled>select</option>
                                                     <option v-for="dept in department" :key="dept.id" :value="dept.id">
                                                         {{ dept.Name }}
                                                     </option>
@@ -245,11 +203,7 @@ onMounted(() => getData());
                                         <div class="col-lg-6 col-md-6 col-sm-12 mb-3">
                                             <div class="form-group">
                                                 <label for="exampleInputEmail1">Employee Name</label>
-                                                <select class="form-control" v-model="form.Employee_Id" @change="
-                                                    getEmployeeImg(
-                                                        form.Employee_Id
-                                                    )
-                                                    ">
+                                                <select class="form-control" v-model="form.Employee_Id" @change="getEmployeeImg(form.Employee_Id)">
                                                     <option v-for="e in employee" :key="e.id" :value="e.id">
                                                         {{ e.Full_Name }}
                                                     </option>
@@ -261,34 +215,15 @@ onMounted(() => getData());
                                     <div class="row">
                                         <div class="col-lg-6 col-md-6 col-sm-12 mb-3">
                                             <div class="form-group">
-                                                <label for="fromDate">From Date
-                                                    <span class="text-danger">{{
-                                                        error
-                                                            ? error.From_Date
-                                                            : ""
-                                                    }}</span>
-                                                </label>
-                                                <input type="date" class="form-control" id="fromDate"
-                                                    v-model="form.From_Date" />
+                                                <label for="fromDate">From Date</label>
+                                                <input type="date" class="form-control" id="fromDate" v-model="form.From_Date" />
                                             </div>
                                         </div>
                                         <div class="col-lg-6 col-md-6 col-sm-12 mb-3">
                                             <div class="form-group">
-                                                <label for="toDate">To Date<span class="text-danger">{{
-                                                    error
-                                                        ? error.To_Date
-                                                        : ""
-                                                        }}</span></label>
-                                                <input type="date" class="form-control" id="toDate"
-                                                    v-model="form.To_Date" />
+                                                <label for="toDate">To Date</label>
+                                                <input type="date" class="form-control" id="toDate" v-model="form.To_Date" />
                                             </div>
-                                        </div>
-                                    </div>
-                                    <!-- Display Total Duration -->
-                                    <div class="row mb-1" v-if="form.From_Date && form.To_Date">
-                                        <div class="form-group">
-                                            <label>Total Duration:
-                                                {{ totalDays }} days</label>
                                         </div>
                                     </div>
 
@@ -296,8 +231,7 @@ onMounted(() => getData());
                                         <div class="col-12 mb-3">
                                             <div class="form-group">
                                                 <label for="purpose">Purpose/Reason</label>
-                                                <textarea class="form-control" id="purpose" rows="2"
-                                                    v-model="form.Purpose"></textarea>
+                                                <textarea class="form-control" id="purpose" rows="2" v-model="form.Purpose"></textarea>
                                             </div>
                                         </div>
                                     </div>
@@ -305,17 +239,10 @@ onMounted(() => getData());
                                     <div class="row">
                                         <div class="col-lg-6 col-md-6 col-sm-12 mb-3">
                                             <div class="form-group">
-                                                <label for="leaveType">Leave Type<span class="text-danger">{{
-                                                    error
-                                                        ? error.Leave_Type_Id
-                                                        : ""
-                                                        }}</span></label>
+                                                <label for="leaveType">Leave Type</label>
                                                 <select class="form-control" v-model="form.Leave_Type_Id">
-                                                    <option selected disabled>
-                                                        select
-                                                    </option>
-                                                    <option v-for="leave in leaveType" :key="leave.id"
-                                                        :value="leave.id">
+                                                    <option selected disabled>select</option>
+                                                    <option v-for="leave in leaveType" :key="leave.id" :value="leave.id">
                                                         {{ leave.Name }} Leave
                                                     </option>
                                                 </select>
@@ -324,28 +251,19 @@ onMounted(() => getData());
                                         <div class="col-lg-6 col-md-6 col-sm-12 mb-3">
                                             <div class="form-group">
                                                 <label for="documentUpload">
-                                                    Documents (If sick leave is
-                                                    more than 2 days)
+                                                    Documents (If sick leave is more than 2 days)
                                                     <div v-if="fileSizeWarning" class="text-danger">
-                                                        File size exceeds 500
-                                                        KB. Please choose a
-                                                        smaller file.
+                                                        File size exceeds 500 KB. Please choose a smaller file.
                                                     </div>
                                                 </label>
-                                                <input type="file" class="form-control" id="documentUpload"
-                                                    @change="getImage" />
+                                                <input type="file" class="form-control" id="documentUpload" @change="getImage" />
                                             </div>
                                         </div>
                                     </div>
 
                                     <div class="row">
                                         <div class="col-12">
-                                            <button type="submit" class="btn btn-primary btn-block">
-                                                Submit
-                                            </button>
-                                            <span class="px-2 text-danger">{{
-                                                existMsg
-                                                }}</span>
+                                            <button type="submit" class="btn btn-primary btn-block">Submit</button>
                                         </div>
                                     </div>
                                 </form>
@@ -364,31 +282,20 @@ onMounted(() => getData());
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        <tr v-for="(
-info, typeName
-                                            ) in totalLeaveDays" :key="typeName">
+                                        <tr v-for="(info, typeName) in totalLeaveDays" :key="typeName">
                                             <td>{{ typeName }}</td>
                                             <td>{{ info.maxDays }}</td>
                                             <td>{{ info.totalDays }}</td>
-                                            <td>
-                                                {{
-                                                    info.maxDays -
-                                                    info.totalDays
-                                                }}
-                                            </td>
+                                            <td>{{ info.maxDays - info.totalDays }}</td>
                                         </tr>
                                     </tbody>
                                 </table>
                             </div>
 
                             <!-- Employee Image Section -->
-                            <div
-                                class="col-lg-2 col-md-6 col-sm-12 d-flex justify-content-center align-items-center mb-4">
+                            <div class="col-lg-2 col-md-6 col-sm-12 d-flex justify-content-center align-items-center mb-4">
                                 <div v-if="emp_img" class="img-container">
-                                    <img :src="emp_img.img_url" class="img-fluid rounded" style="
-                                            max-height: 220px;
-                                            max-width: 220px;
-                                        " />
+                                    <img :src="emp_img.img_url" class="img-fluid rounded" style="max-height: 220px; max-width: 220px" />
                                 </div>
                             </div>
                         </div>
@@ -440,17 +347,13 @@ info, typeName
                                 <tbody>
                                     <tr v-for="(l, index) in filteredData" :key="l.id">
                                         <td>{{ index + 1 }}</td>
-                                        <td>{{ l.from_date }}</td>
-                                        <td>{{ l.to_date }}</td>
+                                        <td>{{ l.From_Date }}</td>
+                                        <td>{{ l.To_Date }}</td>
                                         <td>{{ l.daysBetween }}</td>
-                                        <td>{{ l.purpose }}</td>
-                                        <td>{{ l.status }}</td>
+                                        <td>{{ l.Purpose }}</td>
+                                        <td>{{ l.Status }}</td>
                                         <td v-if="l.Attachment_Url">
-                                            <button @click="
-                                                openAttachment(
-                                                    l.Attachment_Url
-                                                )
-                                                " class="btn btn-info">
+                                            <button @click="openAttachment(l.Attachment_Url)" class="btn btn-info">
                                                 <i class="fa fa-download"></i>
                                             </button>
                                         </td>
@@ -465,6 +368,7 @@ info, typeName
         </div>
     </div>
 </template>
+
 
 <style>
 .leave-status th,

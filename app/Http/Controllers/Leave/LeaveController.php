@@ -52,7 +52,7 @@ class LeaveController extends Controller
     {
         $currentYear = now()->year;
 
-        $subordinates = leave::select('leaves.id', 'employees.id as EID', 'employees.Full_Name', 'employees.Employee_Id', 'leaves.from_date', 'leaves.to_date', 'leaves.status', 'leaves.attachment_url', 'leaves.purpose', 'leaves.notification', 'leave_types.leave_name as Leave_Type', 'leave_types.id as leave_id', 'designations.Name as designation', 'departments.Name as department', 'departments.id as dept_id', 'officials.Supervisor_Id')
+        $subordinates = leave::select('leaves.id', 'employees.id as EID', 'employees.Full_Name', 'employees.Employee_Id', 'leaves.from_date', 'leaves.to_date', 'leaves.status', 'leaves.attachment_url', 'leaves.purpose', 'leaves.notification', 'leave_types.leave_name', 'leave_types.id as leave_id', 'designations.Name as designation', 'departments.Name as department', 'departments.id as dept_id', 'officials.Supervisor_Id')
             ->join('employees', 'leaves.employee_id', '=', 'employees.id')
             ->join('leave_types', 'leaves.leave_type_id', '=', 'leave_types.id')
             ->join('officials', 'officials.EID', '=', 'employees.id')
@@ -62,7 +62,7 @@ class LeaveController extends Controller
             ->whereYear('leaves.from_date', '=', $currentYear)
             ->orderby('leaves.id', 'desc')
             ->get();
- 
+
 
         return $subordinates;
     }
@@ -110,7 +110,7 @@ class LeaveController extends Controller
                 'leaves.attachment_url',
                 'leaves.purpose',
                 'leaves.notification',
-                'leave_types.leave_name as Leave_Type',
+                'leave_types.leave_name',
                 'leave_types.id as leave_id',
                 'designations.Name as designation',
                 'departments.Name as department',
@@ -135,13 +135,13 @@ class LeaveController extends Controller
     public function allLeave()
     {
         $user = Auth::user();
- 
+
         if ($user) {
-            if ($user->role_id == 1 || $user->role_id == 2) { 
-                $leaves = $this->getAllLeave(); 
-            } else { 
+            if ($user->role_id == 1 || $user->role_id == 2) {
+                $leaves = $this->getAllLeave();
+            } else {
                 $leaves = $this->getSubordinates($user->EID);
-            } 
+            }
 
             foreach ($leaves as $leave) {
                 $startDate = new \DateTime($leave->from_date);
@@ -149,7 +149,7 @@ class LeaveController extends Controller
 
                 $interval = $startDate->diff($endDate);
                 $leave->daysBetween = $interval->days + 1;
-            } 
+            }
             return response()->json($leaves);
         } else {
             return response()->json('User not found');
@@ -213,9 +213,9 @@ class LeaveController extends Controller
         $userId = Auth::user()->EID;
 
         $leaveExists = leave::where('EID', $request->Employee_Id)
-        ->where('From_Date', $request->From_Date)
-        ->where('To_Date', $request->To_Date)
-        ->exists();
+            ->where('From_Date', $request->From_Date)
+            ->where('To_Date', $request->To_Date)
+            ->exists();
 
         $response = [
             'message'   =>  'Leave request already submitted.',
@@ -294,39 +294,39 @@ class LeaveController extends Controller
         //     ->where('leaves.employee_id', '=', $id)
         //     ->whereYear('leaves.from_date', '=', $currentYear)
         //     ->orderby('leaves.id', 'desc')
-        //     ->get(); 
+        //     ->get();
 
-    //    $leaves = DB::table(function ($query) use ($id, $currentYear) {
-    //     $query->select(
-    //             'leaves.leave_type_id',
-    //             DB::raw('SUM(DATEDIFF(to_date, from_date) + 1) as leave_days')
-    //         )
-    //         ->from('leaves')
-    //         ->where('leaves.employee_id', $id)
-    //         ->whereYear('leaves.from_date', $currentYear)
-    //         ->groupBy('leaves.id', 'leaves.leave_type_id');
-    // }, 'aaa')
-    // ->join('leave_types as lt', 'lt.id', '=', 'aaa.leave_type_id')
-    // ->select(
-    //     'aaa.leave_type_id',
-    //     'lt.leave_name',
-    //     'lt.max_leave_days',
-    //     DB::raw('SUM(aaa.leave_days) as leave_count')
-    // )
-    // ->groupBy('aaa.leave_type_id', 'lt.leave_name', 'lt.max_leave_days')
-    // ->get();
- 
+        //    $leaves = DB::table(function ($query) use ($id, $currentYear) {
+        //     $query->select(
+        //             'leaves.leave_type_id',
+        //             DB::raw('SUM(DATEDIFF(to_date, from_date) + 1) as leave_days')
+        //         )
+        //         ->from('leaves')
+        //         ->where('leaves.employee_id', $id)
+        //         ->whereYear('leaves.from_date', $currentYear)
+        //         ->groupBy('leaves.id', 'leaves.leave_type_id');
+        // }, 'aaa')
+        // ->join('leave_types as lt', 'lt.id', '=', 'aaa.leave_type_id')
+        // ->select(
+        //     'aaa.leave_type_id',
+        //     'lt.leave_name',
+        //     'lt.max_leave_days',
+        //     DB::raw('SUM(aaa.leave_days) as leave_count')
+        // )
+        // ->groupBy('aaa.leave_type_id', 'lt.leave_name', 'lt.max_leave_days')
+        // ->get();
 
-    //     $attendanceRecords = DB::table('attendences')
-    //         ->join('employees', 'employees.id', '=', 'attendences.EID')
-    //         ->where('employees.id', $id)
-    //         ->whereIn('attendences.Status', ['P', 'L'])
-    //         ->whereYear('attendences.Date', $currentYear)
-    //         ->distinct()
-    //         ->count();
-            
-    //         $earnedLeave = floor($attendanceRecords / 18);
-    
+
+        //     $attendanceRecords = DB::table('attendences')
+        //         ->join('employees', 'employees.id', '=', 'attendences.EID')
+        //         ->where('employees.id', $id)
+        //         ->whereIn('attendences.Status', ['P', 'L'])
+        //         ->whereYear('attendences.Date', $currentYear)
+        //         ->distinct()
+        //         ->count();
+
+        //         $earnedLeave = floor($attendanceRecords / 18);
+
 
         // foreach ($leaves as $leave) {
         //     $startDate = new \DateTime($leave->from_date);
@@ -337,22 +337,22 @@ class LeaveController extends Controller
         // }
 
         $leavesWithEarned = DB::table('leaves as l')
-        ->select(
-            'lt.id as leave_type_id',
-            'lt.leave_name',
-            'lt.max_leave_days',
-            DB::raw('SUM(DATEDIFF(l.to_date, l.from_date) + 1) as leave_count'),
-            DB::raw('(SELECT FLOOR(COUNT(DISTINCT a.Date)/18) 
-                    FROM attendences a 
-                    WHERE a.EID = '.$id.' 
-                        AND a.Status IN ("P","L") 
-                        AND YEAR(a.Date) = '.$currentYear.') as earned_leave')
-        )
-        ->join('leave_types as lt', 'lt.id', '=', 'l.leave_type_id')
-        ->where('l.employee_id', $id)
-        ->whereYear('l.from_date', $currentYear)
-        ->groupBy('lt.id', 'lt.leave_name', 'lt.max_leave_days')
-        ->get();
+            ->select(
+                'lt.id as leave_type_id',
+                'lt.leave_name',
+                'lt.max_leave_days',
+                DB::raw('SUM(DATEDIFF(l.to_date, l.from_date) + 1) as leave_count'),
+                DB::raw('(SELECT FLOOR(COUNT(DISTINCT a.Date)/18)
+                    FROM attendences a
+                    WHERE a.EID = ' . $id . '
+                        AND a.Status IN ("P","L")
+                        AND YEAR(a.Date) = ' . $currentYear . ') as earned_leave')
+            )
+            ->join('leave_types as lt', 'lt.id', '=', 'l.leave_type_id')
+            ->where('l.employee_id', $id)
+            ->whereYear('l.from_date', $currentYear)
+            ->groupBy('lt.id', 'lt.leave_name', 'lt.max_leave_days')
+            ->get();
 
 
 
@@ -367,9 +367,9 @@ class LeaveController extends Controller
     public function leaveSummery($id)
     {
         $leaves = leave::with('leave_type')
-        ->where('employee_id', $id)
-        ->orderBy('from_date', 'asc')
-        ->get();
+            ->where('employee_id', $id)
+            ->orderBy('from_date', 'asc')
+            ->get();
 
         foreach ($leaves as $leave) {
             $startDate = new \DateTime($leave->from_date);
@@ -398,7 +398,7 @@ class LeaveController extends Controller
             'Notification' => 0,
         ]);
         $response = [
-            'success'   =>  true,  
+            'success'   =>  true,
             'message'   =>  'Successfully Updated',
         ];
         return response()->json($response);
@@ -472,24 +472,28 @@ class LeaveController extends Controller
     public function fetchHoliday(Request $request)
     {
         $year = $request->query('year');
-        $holidays = holiday::whereYear('From_Date', $year)->orderBy('From_Date')->get();
+        $holidays = holiday::whereYear('from_date', $year)->orderBy('from_date')->get();
         return response()->json($holidays);
     }
 
     public function insertHoliday(Request $request)
     {
         DB::beginTransaction();
+
         $create = holiday::create([
-            'Name' => $request->input('name'),
-            'From_Date' => $request->input('from_date'),
-            'To_Date' => $request->input('to_date'),
-            'Duration' => $request->input('duration'),
+            'holiday_name' => $request->input('name'),
+            'from_date' => $request->input('from_date'),
+            'to_date' => $request->input('to_date'),
+            'duration' => $request->input('duration'),
         ]);
 
-        $response = [
-            'success'   =>  true,
-            'message'   =>  'Successfully inserted',
-        ];
+        if ($create) {
+            $response = [
+                'success'   =>  true,
+                'message'   =>  'Successfully inserted',
+            ];
+        }
+
 
         DB::commit();
         return response()->json($response);
@@ -506,12 +510,14 @@ class LeaveController extends Controller
     public function updateHoliday(Request $request, $id)
     {
         DB::beginTransaction();
+
+        dd($id);
         $holiday = holiday::findorfail($id);
         $holiday->update([
-            'Name' => $request->input('name'),
-            'From_Date' => $request->input('from_date'),
-            'To_Date' => $request->input('to_date'),
-            'Duration' => $request->input('duration'),
+            'holiday_name' => $request->input('name'),
+            'from_date' => $request->input('from_date'),
+            'to_date' => $request->input('to_date'),
+            'duration' => $request->input('duration'),
         ]);
         $response = [
             'success'   =>  true,
@@ -562,6 +568,4 @@ class LeaveController extends Controller
             return response()->json($response);
         }
     }
-
-    
 }
