@@ -336,23 +336,63 @@ class LeaveController extends Controller
         //     $leave->daysBetween = $interval->days + 1;
         // }
 
+        // $leavesWithEarned = DB::table('leaves as l')
+        //     ->select(
+        //         'lt.id as leave_type_id',
+        //         'lt.leave_name',
+        //         'lt.max_leave_days',
+        //         DB::raw('SUM(DATEDIFF(l.to_date, l.from_date) + 1) as leave_count'),
+        //         DB::raw('(SELECT FLOOR(COUNT(DISTINCT a.Date)/18)
+        //             FROM attendences a
+        //             WHERE a.EID = ' . $id . '
+        //                 AND a.Status IN ("P","L")
+        //                 AND YEAR(a.Date) = ' . $currentYear . ') as earned_leave')
+        //     )
+        //     ->join('leave_types as lt', 'lt.id', '=', 'l.leave_type_id')
+        //     ->join('employees', 'l.employee_id', '=', 'employees.id')
+        //     ->join('officials', 'officials.EID', '=', 'employees.id')
+        //     ->join('departments', 'officials.Department_Id', '=', 'departments.id')
+        //     ->join('designations', 'officials.Designation_Id', '=', 'designations.id')
+        //     ->where('l.employee_id', $id)
+        //     ->whereYear('l.from_date', $currentYear)
+        //     ->groupBy('lt.id', 'lt.leave_name', 'lt.max_leave_days')
+        //     ->get();
+
         $leavesWithEarned = DB::table('leaves as l')
             ->select(
                 'lt.id as leave_type_id',
                 'lt.leave_name',
                 'lt.max_leave_days',
+                'departments.Name as department_name',
+                'designations.Name as designation_name',
+                'emp_imgs.img_url',
+                'employees.Full_Name',
                 DB::raw('SUM(DATEDIFF(l.to_date, l.from_date) + 1) as leave_count'),
                 DB::raw('(SELECT FLOOR(COUNT(DISTINCT a.Date)/18)
-                    FROM attendences a
-                    WHERE a.EID = ' . $id . '
-                        AND a.Status IN ("P","L")
-                        AND YEAR(a.Date) = ' . $currentYear . ') as earned_leave')
+            FROM attendences a
+            WHERE a.EID = ' . $id . '
+                AND a.Status IN ("P","L")
+                AND YEAR(a.Date) = ' . $currentYear . ') as earned_leave')
             )
             ->join('leave_types as lt', 'lt.id', '=', 'l.leave_type_id')
+            ->join('employees', 'l.employee_id', '=', 'employees.id')
+            ->leftjoin('emp_imgs', 'emp_imgs.EID', '=', 'employees.id')
+            ->join('officials', 'officials.EID', '=', 'employees.id')
+            ->join('departments', 'officials.Department_Id', '=', 'departments.id')
+            ->join('designations', 'officials.Designation_Id', '=', 'designations.id')
             ->where('l.employee_id', $id)
             ->whereYear('l.from_date', $currentYear)
-            ->groupBy('lt.id', 'lt.leave_name', 'lt.max_leave_days')
+            ->groupBy(
+                'lt.id',
+                'lt.leave_name',
+                'lt.max_leave_days',
+                'departments.Name',
+                'designations.Name',
+                'emp_imgs.img_url',
+                'employees.Full_Name'
+            )
             ->get();
+
 
 
 

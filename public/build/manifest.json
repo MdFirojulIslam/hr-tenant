@@ -109,13 +109,29 @@
     "file": "assets/handsontable-5a46bd2a.css",
     "src": "handsontable.css"
   },
+  "public/storage/uploads/1718087744_artisan.png": {
+    "file": "assets/1718087744_artisan-329c2c40.png",
+    "src": "public/storage/uploads/1718087744_artisan.png"
+  },
+  "public/storage/uploads/bg-img-1.jpg": {
+    "file": "assets/bg-img-1-c391f45f.jpg",
+    "src": "public/storage/uploads/bg-img-1.jpg"
+  },
+  "public/storage/uploads/pin.png": {
+    "file": "assets/pin-c3abdbf9.png",
+    "src": "public/storage/uploads/pin.png"
+  },
+  "public/storage/uploads/unpin.png": {
+    "file": "assets/unpin-a17b5c21.png",
+    "src": "public/storage/uploads/unpin.png"
+  },
   "resources/css/app.css": {
     "file": "assets/app-4ed993c7.js",
     "isEntry": true,
     "src": "resources/css/app.css"
   },
   "resources/js/app.css": {
-    "file": "assets/app-f6876bb0.css",
+    "file": "assets/app-ac998d55.css",
     "src": "resources/js/app.css"
   },
   "resources/js/app.js": {
@@ -123,7 +139,7 @@
       "assets/1718087744_artisan-329c2c40.png"
     ],
     "css": [
-      "assets/app-f6876bb0.css"
+      "assets/app-ac998d55.css"
     ],
     "dynamicImports": [
       "resources/js/pages/login.vue",
@@ -171,7 +187,7 @@
       "resources/js/pages/payroll/salarySheet.vue",
       "resources/js/pages/payroll/salaryDetails.vue"
     ],
-    "file": "assets/app-9f5e0a09.js",
+    "file": "assets/app-8c8f602a.js",
     "imports": [
       "_axios-3a665b0f.js",
       "_vue-32981f8d.js",
@@ -201,7 +217,7 @@
     "src": "resources/js/assets/js/scripts.js"
   },
   "resources/js/pages/attendance/attendance.vue": {
-    "file": "assets/attendance-93a93572.js",
+    "file": "assets/attendance-2ab59065.js",
     "imports": [
       "_@vue-62909bb9.js",
       "_@handsontable-4ae45adc.js",
@@ -230,7 +246,7 @@
     "css": [
       "assets/fetchAttendance-898dc852.css"
     ],
-    "file": "assets/fetchAttendance-027ce49a.js",
+    "file": "assets/fetchAttendance-c70020df.js",
     "imports": [
       "_@vue-62909bb9.js",
       "_sweetalert2-cdd2d7a4.js",
@@ -253,7 +269,7 @@
     "css": [
       "assets/field-force-attendance-91d0e36f.css"
     ],
-    "file": "assets/field-force-attendance-2fcc651d.js",
+    "file": "assets/field-force-attendance-9f39689e.js",
     "imports": [
       "_@vue-62909bb9.js",
       "resources/js/app.js",
@@ -276,7 +292,7 @@
     "css": [
       "assets/dashboard-352df44c.css"
     ],
-    "file": "assets/dashboard-b4923560.js",
+    "file": "assets/dashboard-459b6d5d.js",
     "imports": [
       "resources/js/app.js",
       "_vue3-apexcharts-7f73db5c.js",
@@ -301,7 +317,7 @@
     "css": [
       "assets/otherExpenseForm-1c3e20de.css"
     ],
-    "file": "assets/otherExpenseForm-d6eab251.js",
+    "file": "assets/otherExpenseForm-d49a3e29.js",
     "imports": [
       "_@vue-62909bb9.js",
       "_sweetalert2-cdd2d7a4.js",
@@ -324,7 +340,7 @@
     "css": [
       "assets/travelForm-720c7460.css"
     ],
-    "file": "assets/travelForm-c41b1355.js",
+    "file": "assets/travelForm-209d79c0.js",
     "imports": [
       "_@vue-62909bb9.js",
       "_sweetalert2-cdd2d7a4.js",
@@ -347,7 +363,7 @@
     "css": [
       "assets/viewTrash-95adea55.css"
     ],
-    "file": "assets/viewTrash-3fa6efa2.js",
+    "file": "assets/viewTrash-113670d0.js",
     "imports": [
       "_@vue-62909bb9.js",
       "resources/js/app.js",
@@ -363,7 +379,7 @@
     "src": "resources/js/pages/expense/component/viewTrash.vue"
   },
   "resources/js/pages/expense/expenseForm.vue": {
-    "file": "assets/expenseForm-d44aeccb.js",
+    "file": "assets/expenseForm-ed2ffe06.js",
     "imports": [
       "_@vue-62909bb9.js",
       "_vue-router-478682ab.js",
@@ -387,7 +403,7 @@
     "css": [
       "assets/expensePermission-353442f5.css"
     ],
-    "file": "assets/expensePermission-23b0b3b7.js",
+    "file": "assets/expensePermission-93aeda91.js",
     "imports": [
       "resources/js/app.js",
       "_sweetalert2-cdd2d7a4.js",
@@ -408,7 +424,7 @@
       "resources/js/pages/expense/component/travelForm.vue",
       "resources/js/pages/expense/component/viewTrash.vue"
     ],
-    "file": "assets/expenseRecords-f52dcab4.js",
+    "file": "assets/expenseRecords-48dc4340.js",
     "imports": [
       "resources/js/app.js",
       "_@vue-62909bb9.js",
@@ -424,14 +440,14 @@
     "src": "resources/js/pages/expense/expenseRecords.vue"
   },
   "resources/js/pages/leave/component/holidayForm.css": {
-    "file": "assets/holidayForm-7346edc0.css",
+    "file": "assets/holidayForm-9d3c143b.css",
     "src": "resources/js/pages/leave/component/holidayForm.css"
   },
   "resources/js/pages/leave/component/holidayForm.vue": {
     "css": [
-      "assets/holidayForm-7346edc0.css"
+      "assets/holidayForm-9d3c143b.css"
     ],
-    "file": "assets/holidayForm-af355da1.js",
+    "file": "assets/holidayForm-5e472ad2.js",
     "imports": [
       "_@vue-62909bb9.js",
       "_sweetalert2-cdd2d7a4.js",
@@ -447,14 +463,14 @@
     "src": "resources/js/pages/leave/component/holidayForm.vue"
   },
   "resources/js/pages/leave/component/statusUpdateForm.css": {
-    "file": "assets/statusUpdateForm-ae47a4bc.css",
+    "file": "assets/statusUpdateForm-9705b452.css",
     "src": "resources/js/pages/leave/component/statusUpdateForm.css"
   },
   "resources/js/pages/leave/component/statusUpdateForm.vue": {
     "css": [
-      "assets/statusUpdateForm-ae47a4bc.css"
+      "assets/statusUpdateForm-9705b452.css"
     ],
-    "file": "assets/statusUpdateForm-c732ddcb.js",
+    "file": "assets/statusUpdateForm-af44769f.js",
     "imports": [
       "_@vue-62909bb9.js",
       "_sweetalert2-cdd2d7a4.js",
@@ -473,7 +489,7 @@
     "dynamicImports": [
       "resources/js/pages/leave/component/holidayForm.vue"
     ],
-    "file": "assets/holiday-2f096db6.js",
+    "file": "assets/holiday-facd6443.js",
     "imports": [
       "resources/js/app.js",
       "_@vue-62909bb9.js",
@@ -489,17 +505,17 @@
     "src": "resources/js/pages/leave/holiday.vue"
   },
   "resources/js/pages/leave/hrApproval.css": {
-    "file": "assets/hrApproval-0204defb.css",
-    "src": "resources/js/pages/leave/supervisorApproval.css"
+    "file": "assets/hrApproval-a8c04f95.css",
+    "src": "resources/js/pages/leave/hrApproval.css"
   },
   "resources/js/pages/leave/hrApproval.vue": {
     "css": [
-      "assets/hrApproval-0204defb.css"
+      "assets/hrApproval-a8c04f95.css"
     ],
     "dynamicImports": [
       "resources/js/pages/leave/component/statusUpdateForm.vue"
     ],
-    "file": "assets/hrApproval-e578cf9b.js",
+    "file": "assets/hrApproval-28c0bcad.js",
     "imports": [
       "resources/js/app.js",
       "_@vue-62909bb9.js",
@@ -522,7 +538,7 @@
     "css": [
       "assets/leaveApplicationManual-ad1ddeb3.css"
     ],
-    "file": "assets/leaveApplication-dc6167a8.js",
+    "file": "assets/leaveApplication-b5dd36c1.js",
     "imports": [
       "_@vue-62909bb9.js",
       "_axios-3a665b0f.js",
@@ -545,7 +561,7 @@
     "css": [
       "assets/leaveApplicationManual-ad1ddeb3.css"
     ],
-    "file": "assets/leaveApplicationManual-1e86f5f1.js",
+    "file": "assets/leaveApplicationManual-6da81d67.js",
     "imports": [
       "_@vue-62909bb9.js",
       "_axios-3a665b0f.js",
@@ -561,21 +577,21 @@
     "src": "resources/js/pages/leave/leaveApplicationManual.vue"
   },
   "resources/js/pages/leave/supervisorApproval.css": {
-    "file": "assets/hrApproval-0204defb.css",
+    "file": "assets/supervisorApproval-c7b1bfbb.css",
     "src": "resources/js/pages/leave/supervisorApproval.css"
   },
   "resources/js/pages/leave/supervisorApproval.vue": {
     "css": [
-      "assets/hrApproval-0204defb.css"
+      "assets/supervisorApproval-c7b1bfbb.css"
     ],
-    "file": "assets/supervisorApproval-03175a25.js",
+    "file": "assets/supervisorApproval-b88d324f.js",
     "imports": [
       "_@vue-62909bb9.js",
       "_sweetalert2-cdd2d7a4.js",
       "resources/js/app.js",
-      "_vuex-399e6dca.js",
       "_axios-3a665b0f.js",
       "_vue-32981f8d.js",
+      "_vuex-399e6dca.js",
       "_vue-router-478682ab.js",
       "_bootstrap-d48a88e5.js",
       "_@popperjs-8746c87e.js"
@@ -594,7 +610,7 @@
     "css": [
       "assets/login-3543be70.css"
     ],
-    "file": "assets/login-c639d090.js",
+    "file": "assets/login-7b7fc173.js",
     "imports": [
       "_@vue-62909bb9.js",
       "resources/js/app.js",
@@ -617,7 +633,7 @@
     "css": [
       "assets/loanSetupForm-9156d649.css"
     ],
-    "file": "assets/loanSetupForm-d8188033.js",
+    "file": "assets/loanSetupForm-0356598d.js",
     "imports": [
       "_@vue-62909bb9.js",
       "_sweetalert2-cdd2d7a4.js",
@@ -640,7 +656,7 @@
     "css": [
       "assets/salaryAdjustmentForm-485a2dd7.css"
     ],
-    "file": "assets/salaryAdjustmentForm-a299d288.js",
+    "file": "assets/salaryAdjustmentForm-32daa6df.js",
     "imports": [
       "_@vue-62909bb9.js",
       "_sweetalert2-cdd2d7a4.js",
@@ -663,7 +679,7 @@
     "css": [
       "assets/salarySetupForm-89f673b2.css"
     ],
-    "file": "assets/salarySetupForm-8174cffd.js",
+    "file": "assets/salarySetupForm-607338b0.js",
     "imports": [
       "_@vue-62909bb9.js",
       "_sweetalert2-cdd2d7a4.js",
@@ -682,7 +698,7 @@
     "dynamicImports": [
       "resources/js/pages/payroll/component/loanSetupForm.vue"
     ],
-    "file": "assets/employeeLoan-03ccace3.js",
+    "file": "assets/employeeLoan-4f054ad1.js",
     "imports": [
       "resources/js/app.js",
       "_@vue-62909bb9.js",
@@ -702,7 +718,7 @@
     "dynamicImports": [
       "resources/js/pages/payroll/component/salaryAdjustmentForm.vue"
     ],
-    "file": "assets/salaryAdjustment-4009f9ed.js",
+    "file": "assets/salaryAdjustment-193f1244.js",
     "imports": [
       "resources/js/app.js",
       "_@vue-62909bb9.js",
@@ -719,7 +735,7 @@
     "src": "resources/js/pages/payroll/salaryAdjustment.vue"
   },
   "resources/js/pages/payroll/salaryDetails.vue": {
-    "file": "assets/salaryDetails-96b7513b.js",
+    "file": "assets/salaryDetails-e44ec3ca.js",
     "imports": [
       "_vue-router-478682ab.js",
       "resources/js/app.js",
@@ -738,7 +754,7 @@
     "dynamicImports": [
       "resources/js/pages/payroll/component/salarySetupForm.vue"
     ],
-    "file": "assets/salarySetup-e8b05ae9.js",
+    "file": "assets/salarySetup-c8740961.js",
     "imports": [
       "resources/js/app.js",
       "_@vue-62909bb9.js",
@@ -755,7 +771,7 @@
     "src": "resources/js/pages/payroll/salarySetup.vue"
   },
   "resources/js/pages/payroll/salarySheet.vue": {
-    "file": "assets/salarySheet-b330264e.js",
+    "file": "assets/salarySheet-2746d0e5.js",
     "imports": [
       "_@vue-62909bb9.js",
       "resources/js/app.js",
@@ -778,7 +794,7 @@
     "css": [
       "assets/profile-9a74cdf0.css"
     ],
-    "file": "assets/profile-dafc4b23.js",
+    "file": "assets/profile-41198068.js",
     "imports": [
       "resources/js/app.js",
       "_vuex-399e6dca.js",
@@ -794,7 +810,7 @@
     "src": "resources/js/pages/profile.vue"
   },
   "resources/js/pages/report/AttendanceReport.vue": {
-    "file": "assets/AttendanceReport-11c5f65c.js",
+    "file": "assets/AttendanceReport-70574133.js",
     "imports": [
       "_@vue-62909bb9.js",
       "resources/js/app.js",
@@ -810,7 +826,7 @@
     "src": "resources/js/pages/report/AttendanceReport.vue"
   },
   "resources/js/pages/report/certificate.vue": {
-    "file": "assets/certificate-3f058d71.js",
+    "file": "assets/certificate-cd3cd958.js",
     "imports": [
       "_@vue-62909bb9.js",
       "resources/js/app.js",
@@ -826,7 +842,7 @@
     "src": "resources/js/pages/report/certificate.vue"
   },
   "resources/js/pages/report/component/expenseDetails.vue": {
-    "file": "assets/expenseDetails-05cca9d0.js",
+    "file": "assets/expenseDetails-0dfcc9cb.js",
     "imports": [
       "resources/js/app.js",
       "_vue-router-478682ab.js",
@@ -849,7 +865,7 @@
     "css": [
       "assets/expenseReport-2bc1903d.css"
     ],
-    "file": "assets/expenseReport-8eada1da.js",
+    "file": "assets/expenseReport-9799274c.js",
     "imports": [
       "_@vue-62909bb9.js",
       "resources/js/app.js",
@@ -865,7 +881,7 @@
     "src": "resources/js/pages/report/expenseReport.vue"
   },
   "resources/js/pages/report/leaveReport.vue": {
-    "file": "assets/leaveReport-f1522182.js",
+    "file": "assets/leaveReport-5cfb0453.js",
     "imports": [
       "_@vue-62909bb9.js",
       "resources/js/app.js",
@@ -888,7 +904,7 @@
     "css": [
       "assets/changePassword-e8fb2053.css"
     ],
-    "file": "assets/changePassword-e44c47e4.js",
+    "file": "assets/changePassword-5bf58ff8.js",
     "imports": [
       "_@vue-62909bb9.js",
       "resources/js/app.js",
@@ -904,7 +920,7 @@
     "src": "resources/js/pages/security/changePassword.vue"
   },
   "resources/js/pages/security/createRole.vue": {
-    "file": "assets/createRole-95ff6981.js",
+    "file": "assets/createRole-e7d521fb.js",
     "imports": [
       "_@vue-62909bb9.js",
       "resources/js/app.js",
@@ -927,7 +943,7 @@
     "css": [
       "assets/userPagePermission-33abb206.css"
     ],
-    "file": "assets/userPagePermission-2a869579.js",
+    "file": "assets/userPagePermission-ef55d69e.js",
     "imports": [
       "_@vue-62909bb9.js",
       "resources/js/app.js",
@@ -950,7 +966,7 @@
     "css": [
       "assets/userRegistration-7d4a20db.css"
     ],
-    "file": "assets/userRegistration-c8cb467c.js",
+    "file": "assets/userRegistration-443326b7.js",
     "imports": [
       "_@vue-62909bb9.js",
       "resources/js/app.js",
@@ -969,7 +985,7 @@
     "dynamicImports": [
       "resources/js/pages/setup/assets/components/assetsComponent.vue"
     ],
-    "file": "assets/assetInformation-803f4edb.js",
+    "file": "assets/assetInformation-1050e482.js",
     "imports": [
       "resources/js/app.js",
       "_@vue-62909bb9.js",
@@ -993,7 +1009,7 @@
     "css": [
       "assets/assetsComponent-35b236f4.css"
     ],
-    "file": "assets/assetsComponent-35474269.js",
+    "file": "assets/assetsComponent-9657a1dc.js",
     "imports": [
       "_@vue-62909bb9.js",
       "_sweetalert2-cdd2d7a4.js",
@@ -1016,7 +1032,7 @@
     "css": [
       "assets/empAssetInfo-1aa93adb.css"
     ],
-    "file": "assets/empAssetInfo-c6718e66.js",
+    "file": "assets/empAssetInfo-48d45e33.js",
     "imports": [
       "_@vue-62909bb9.js",
       "resources/js/app.js",
@@ -1039,7 +1055,7 @@
     "css": [
       "assets/academicComponent-6247df58.css"
     ],
-    "file": "assets/academicComponent-e18a71f7.js",
+    "file": "assets/academicComponent-ddf8f0e3.js",
     "imports": [
       "_@vue-62909bb9.js",
       "_@vueuse-a7ec7bdf.js",
@@ -1063,7 +1079,7 @@
     "css": [
       "assets/childComponent-fbcf9a5b.css"
     ],
-    "file": "assets/childComponent-6e075384.js",
+    "file": "assets/childComponent-90cb9249.js",
     "imports": [
       "_@vue-62909bb9.js",
       "_sweetalert2-cdd2d7a4.js",
@@ -1086,7 +1102,7 @@
     "css": [
       "assets/trainingComponent-7bf44020.css"
     ],
-    "file": "assets/trainingComponent-9ddc8acb.js",
+    "file": "assets/trainingComponent-27538543.js",
     "imports": [
       "_@vue-62909bb9.js",
       "_@vueuse-a7ec7bdf.js",
@@ -1110,7 +1126,7 @@
     "css": [
       "assets/workComponent-d0580acd.css"
     ],
-    "file": "assets/workComponent-148cc142.js",
+    "file": "assets/workComponent-ed286d7a.js",
     "imports": [
       "_@vue-62909bb9.js",
       "_@vueuse-a7ec7bdf.js",
@@ -1127,7 +1143,7 @@
     "src": "resources/js/pages/setup/employee/component/workComponent.vue"
   },
   "resources/js/pages/setup/employee/empExl.vue": {
-    "file": "assets/empExl-80a3e7d2.js",
+    "file": "assets/empExl-25db794e.js",
     "imports": [
       "_@handsontable-4ae45adc.js",
       "_handsontable-a7131f01.js",
@@ -1173,7 +1189,7 @@
     "css": [
       "assets/employeeDetails-4c9fae25.css"
     ],
-    "file": "assets/employeeDetails-4809e08a.js",
+    "file": "assets/employeeDetails-cb152396.js",
     "imports": [
       "resources/js/app.js",
       "_vue-router-478682ab.js",
@@ -1196,7 +1212,7 @@
     "css": [
       "assets/employeeInfo-c7ba94e6.css"
     ],
-    "file": "assets/employeeInfo-0002b5be.js",
+    "file": "assets/employeeInfo-aedcd8df.js",
     "imports": [
       "_@vue-62909bb9.js",
       "_vuex-399e6dca.js",
@@ -1219,7 +1235,7 @@
     "css": [
       "assets/employeeList-cb763382.css"
     ],
-    "file": "assets/employeeList-8159a715.js",
+    "file": "assets/employeeList-46548d57.js",
     "imports": [
       "_@vue-62909bb9.js",
       "_laravel-vue-pagination-f3bbc7e8.js",
@@ -1243,7 +1259,7 @@
     "css": [
       "assets/hierarchy-fbd81da8.css"
     ],
-    "file": "assets/hierarchy-177d0481.js",
+    "file": "assets/hierarchy-6781ff15.js",
     "imports": [
       "resources/js/app.js",
       "_@vue-62909bb9.js",
@@ -1266,7 +1282,7 @@
     "css": [
       "assets/officialInfo-e6ea2cf5.css"
     ],
-    "file": "assets/officialInfo-dae2f0bb.js",
+    "file": "assets/officialInfo-54b91b64.js",
     "imports": [
       "_@vue-62909bb9.js",
       "_axios-3a665b0f.js",
@@ -1293,7 +1309,7 @@
     "dynamicImports": [
       "resources/js/pages/setup/employee/component/childComponent.vue"
     ],
-    "file": "assets/personalInfo-1a24abe4.js",
+    "file": "assets/personalInfo-d6399d20.js",
     "imports": [
       "resources/js/app.js",
       "_@vue-62909bb9.js",
@@ -1314,7 +1330,7 @@
       "resources/js/pages/setup/employee/component/trainingComponent.vue",
       "resources/js/pages/setup/employee/component/workComponent.vue"
     ],
-    "file": "assets/professionalInfo-072adf02.js",
+    "file": "assets/professionalInfo-fbb1b593.js",
     "imports": [
       "resources/js/app.js",
       "_vue-router-478682ab.js",
@@ -1337,7 +1353,7 @@
     "css": [
       "assets/vehicleSetup-40050002.css"
     ],
-    "file": "assets/vehicleSetup-5188045a.js",
+    "file": "assets/vehicleSetup-277b57fa.js",
     "imports": [
       "_@vue-62909bb9.js",
       "resources/js/app.js",
@@ -1353,7 +1369,7 @@
     "src": "resources/js/pages/setup/vehicle/vehicleSetup.vue"
   },
   "resources/js/pages/vehicle/vehicleRequisition.vue": {
-    "file": "assets/vehicleRequisition-442eb20d.js",
+    "file": "assets/vehicleRequisition-465db96a.js",
     "imports": [
       "_@vue-62909bb9.js",
       "resources/js/app.js",
@@ -1369,7 +1385,7 @@
     "src": "resources/js/pages/vehicle/vehicleRequisition.vue"
   },
   "resources/js/pages/vehicle/vehicleRequisitionApproval.vue": {
-    "file": "assets/vehicleRequisitionApproval-16a0e6b5.js",
+    "file": "assets/vehicleRequisitionApproval-5ce3c0a9.js",
     "imports": [
       "resources/js/app.js",
       "_sweetalert2-cdd2d7a4.js",
@@ -1392,7 +1408,7 @@
     "css": [
       "assets/noteForm-cc1acbdc.css"
     ],
-    "file": "assets/noteForm-d8eaa790.js",
+    "file": "assets/noteForm-b502bc6a.js",
     "imports": [
       "_@vue-62909bb9.js",
       "resources/js/app.js",
@@ -1415,7 +1431,7 @@
     "css": [
       "assets/noteShareForm-10d80689.css"
     ],
-    "file": "assets/noteShareForm-57ffe1f8.js",
+    "file": "assets/noteShareForm-b21c9685.js",
     "imports": [
       "_@vue-62909bb9.js",
       "_vue-multiselect-22d4311d.js",
@@ -1447,7 +1463,7 @@
       "resources/js/pages/workstation/component/noteForm.vue",
       "resources/js/pages/workstation/component/noteShareForm.vue"
     ],
-    "file": "assets/notes-dd9c69e8.js",
+    "file": "assets/notes-cdab1bdd.js",
     "imports": [
       "resources/js/app.js",
       "_@vue-62909bb9.js",
@@ -1470,7 +1486,7 @@
     "css": [
       "assets/trashedNote-711a45ea.css"
     ],
-    "file": "assets/trashedNote-4b19ade2.js",
+    "file": "assets/trashedNote-b01a5ad1.js",
     "imports": [
       "_@vue-62909bb9.js",
       "resources/js/app.js",
@@ -1484,21 +1500,5 @@
     ],
     "isDynamicEntry": true,
     "src": "resources/js/pages/workstation/trashedNote.vue"
-  },
-  "storage/app/public/uploads/1718087744_artisan.png": {
-    "file": "assets/1718087744_artisan-329c2c40.png",
-    "src": "storage/app/public/uploads/1718087744_artisan.png"
-  },
-  "storage/app/public/uploads/bg-img-1.jpg": {
-    "file": "assets/bg-img-1-c391f45f.jpg",
-    "src": "storage/app/public/uploads/bg-img-1.jpg"
-  },
-  "storage/app/public/uploads/pin.png": {
-    "file": "assets/pin-c3abdbf9.png",
-    "src": "storage/app/public/uploads/pin.png"
-  },
-  "storage/app/public/uploads/unpin.png": {
-    "file": "assets/unpin-a17b5c21.png",
-    "src": "storage/app/public/uploads/unpin.png"
   }
 }

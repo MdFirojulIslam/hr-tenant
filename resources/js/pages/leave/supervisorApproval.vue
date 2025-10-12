@@ -12,6 +12,8 @@ const leaveType = ref([]);
 const allLeave = ref([]);
 const error = ref(null);
 
+const earnedLeave = ref("");
+
 // ====== Filter Controls ======
 const selectedDept = ref("");
 const selectedEmp = ref("");
@@ -58,6 +60,18 @@ const editLeaveStatus = async (id, status) => {
     }
 };
 
+const getLeaveInfo = async (id) => {
+    try {
+        const response = await api.get(`/leave/${id}`);
+        employee.value = response.data;
+
+        const responseEarned = await api.get(`/get-earned-leave/${id}`);
+        earnedLeave.value = responseEarned.data;
+    } catch (error) {
+        console.error("Error updating store:", error);
+    }
+};
+
 // ====== Fetch Department, Leave Types, and All Leaves ======
 const getData = async (page = 1) => {
     try {
@@ -93,40 +107,16 @@ const getEmployee = async (deptId) => {
 // ====== Filtered Leave Records ======
 const filteredData = computed(() => {
     return allLeave.value.filter((item) => {
+        console.log(item);
+        const deptMatch =
+            !selectedDept.value || item.dept_id == selectedDept.value;
         const empMatch = !selectedEmp.value || item.EID == selectedEmp.value;
         const typeMatch =
-            !selectedType.value || item.leave_type_id == selectedType.value;
+            !selectedType.value || item.leave_id == selectedType.value;
         const statusMatch =
             !selectedStatus.value || item.status == selectedStatus.value;
-        return empMatch && typeMatch && statusMatch;
+        return deptMatch && empMatch && typeMatch && statusMatch;
     });
-});
-
-// ====== Leave Summary Computation ======
-const totalLeaveDays = computed(() => {
-    const totals = {};
-
-    // Initialize leave types
-    leaveType.value.forEach((type) => {
-        totals[type.leave_name] = {
-            totalDays: 0,
-            maxDays: type.Max_Days || 0,
-        };
-    });
-
-    // Sum approved leaves for current employee
-    employee.value.forEach((item) => {
-        const typeName = item.leave_type;
-        if (!totals[typeName]) {
-            totals[typeName] = { totalDays: 0, maxDays: item.Max_Days || 0 };
-        }
-
-        if (item.status === "Approved") {
-            totals[typeName].totalDays += item.daysBetween;
-        }
-    });
-
-    return totals;
 });
 
 // ====== Open Attachment in New Tab ======
@@ -174,10 +164,14 @@ onMounted(async () => {
                                                         {{ item.Full_Name }}
                                                     </h3>
                                                     <h6 v-if="index === 0">
-                                                        {{ item.designation }}
+                                                        {{
+                                                            item.designation_name
+                                                        }}
                                                     </h6>
                                                     <h6 v-if="index === 0">
-                                                        {{ item.department }}
+                                                        {{
+                                                            item.department_name
+                                                        }}
                                                     </h6>
                                                 </div>
                                             </div>
@@ -220,18 +214,25 @@ onMounted(async () => {
                                     </thead>
                                     <tbody>
                                         <tr
-                                            v-for="(
-                                                info, typeName
-                                            ) in totalLeaveDays"
+                                            v-for="(info, typeName) in employee"
                                             :key="typeName"
                                         >
-                                            <th>{{ typeName }}</th>
-                                            <td>{{ info.maxDays }}</td>
-                                            <td>{{ info.totalDays }}</td>
+                                            <th>{{ info.leave_name }}</th>
                                             <td>
                                                 {{
-                                                    info.maxDays -
-                                                    info.totalDays
+                                                    info.max_leave_days === 0
+                                                        ? info.earned_leave
+                                                        : info.max_leave_days
+                                                }}
+                                            </td>
+                                            <td>{{ info.leave_count }}</td>
+                                            <td>
+                                                {{
+                                                    info.max_leave_days === 0
+                                                        ? info.earned_leave -
+                                                          info.leave_count
+                                                        : info.max_leave_days -
+                                                          info.leave_count
                                                 }}
                                             </td>
                                         </tr>
@@ -337,7 +338,7 @@ onMounted(async () => {
                                     <tr
                                         v-for="(l, index) in filteredData"
                                         :key="l.id"
-                                        @click="getEmployee(l.EID)"
+                                        @click="getLeaveInfo(l.EID)"
                                     >
                                         <td>{{ index + 1 }}</td>
                                         <td>{{ l.Full_Name }}</td>
@@ -408,7 +409,7 @@ onMounted(async () => {
 
 <style>
 .leave-table {
-    max-height: 200px;
+    max-height: 400px;
 }
 
 .leave-status th,

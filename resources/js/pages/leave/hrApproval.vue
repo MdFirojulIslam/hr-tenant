@@ -30,10 +30,19 @@ const statusClose = () => {
     getData();
 };
 
+const formatDate = (dateStr) => {
+    if (!dateStr) return "";
+    const date = new Date(dateStr);
+    const day = String(date.getDate()).padStart(2, "0");
+    const month = date.toLocaleString("en-US", { month: "short" });
+    const year = date.getFullYear();
+    return `${day} ${month}, ${year}`;
+};
+
 const editLeaveStatus = async (id) => {
     const leaveData = allLeave.value.find((leave) => leave.id === id);
     if (leaveData) {
-        selectedStore.value = leaveData; 
+        selectedStore.value = leaveData;
         statusId.value = id;
         statusOpen();
     } else {
@@ -55,13 +64,11 @@ const getData = async (page = 1) => {
         department.value = responsedept.data;
         leaveType.value = responsetype.data;
         allLeave.value = response.data;
-
     } catch (err) {
         error.value = err.message || "Error fetching data";
     } finally {
     }
 };
-
 
 const filteredData = computed(() => {
     return allLeave.value.filter((item) => {
@@ -142,8 +149,16 @@ onMounted(() => getData());
 </script>
 
 <template>
-    <component v-if="statusModel" :is="stausComponent" :isOpen="statusModel" :editStore="selectedStore"
-        :leave_type="leaveType" :stId="statusId" @modal-close="statusClose" name="first-modal" />
+    <component
+        v-if="statusModel"
+        :is="stausComponent"
+        :isOpen="statusModel"
+        :editStore="selectedStore"
+        :leave_type="leaveType"
+        :stId="statusId"
+        @modal-close="statusClose"
+        name="first-modal"
+    />
     <div class="container-fluid px-3">
         <div class="col-lg-12 grid-margin stretch-card">
             <div class="container">
@@ -154,25 +169,75 @@ onMounted(() => getData());
                         </div>
                         <div class="row">
                             <div class="col-lg-8 col-md-12 px-2 mb-4">
-                                <section class="section about-section gray-bg" id="about">
+                                <section
+                                    class="section about-section gray-bg"
+                                    id="about"
+                                >
                                     <div class="container">
-                                        <div class="row align-items-center flex-row-reverse">
-                                            <div class="col-lg-7 col-md-6 mb-4 mb-md-0">
-                                                <div class="about-text go-to" v-for="(item, index) in employee"
-                                                    :key="item.id">
-                                                    <h3 class="dark-color" v-if="index === 0">{{ item.Full_Name || "" }}
+                                        <div
+                                            class="row align-items-center flex-row-reverse"
+                                        >
+                                            <div
+                                                class="col-lg-7 col-md-6 mb-4 mb-md-0"
+                                            >
+                                                <div
+                                                    class="about-text go-to"
+                                                    v-for="(
+                                                        item, index
+                                                    ) in employee"
+                                                    :key="item.id"
+                                                >
+                                                    <h3
+                                                        class="dark-color"
+                                                        v-if="index === 0"
+                                                    >
+                                                        {{
+                                                            item.Full_Name || ""
+                                                        }}
                                                     </h3>
-                                                    <h6 class="theme-color lead" v-if="index === 0">{{ item.designation
-                                                        || "" }}</h6>
-                                                    <h6 class="theme-color lead" v-if="index === 0">{{ item.department
-                                                        || "" }}</h6>
+                                                    <h6
+                                                        class="theme-color lead"
+                                                        v-if="index === 0"
+                                                    >
+                                                        {{
+                                                            item.designation ||
+                                                            ""
+                                                        }}
+                                                    </h6>
+                                                    <h6
+                                                        class="theme-color lead"
+                                                        v-if="index === 0"
+                                                    >
+                                                        {{
+                                                            item.department ||
+                                                            ""
+                                                        }}
+                                                    </h6>
                                                 </div>
                                             </div>
-                                            <div class="col-lg-5 col-md-6" v-for="(item, index) in employee"
-                                                :key="item.id">
-                                                <div class="about-avatar" v-if="index === 0">
-                                                    <img :src="item.img_url ? item.img_url : ''" class="img-fluid"
-                                                        style="max-height: 150px; max-width: 130px;" />
+                                            <div
+                                                class="col-lg-5 col-md-6"
+                                                v-for="(
+                                                    item, index
+                                                ) in employee"
+                                                :key="item.id"
+                                            >
+                                                <div
+                                                    class="about-avatar"
+                                                    v-if="index === 0"
+                                                >
+                                                    <img
+                                                        :src="
+                                                            item.img_url
+                                                                ? item.img_url
+                                                                : ''
+                                                        "
+                                                        class="img-fluid"
+                                                        style="
+                                                            max-height: 150px;
+                                                            max-width: 130px;
+                                                        "
+                                                    />
                                                 </div>
                                             </div>
                                         </div>
@@ -191,11 +256,28 @@ onMounted(() => getData());
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        <tr v-for="(info, typeName) in totalLeaveDays" :key="typeName">
-                                            <th>{{ typeName }}</th>
-                                            <td>{{ info.maxDays }}</td>
-                                            <td>{{ info.totalDays }}</td>
-                                            <td>{{ info.maxDays - info.totalDays }}</td>
+                                        <tr
+                                            v-for="(info, typeName) in employee"
+                                            :key="typeName"
+                                        >
+                                            <th>{{ info.leave_name }}</th>
+                                            <td>
+                                                {{
+                                                    info.max_leave_days === 0
+                                                        ? info.earned_leave
+                                                        : info.max_leave_days
+                                                }}
+                                            </td>
+                                            <td>{{ info.leave_count }}</td>
+                                            <td>
+                                                {{
+                                                    info.max_leave_days === 0
+                                                        ? info.earned_leave -
+                                                          info.leave_count
+                                                        : info.max_leave_days -
+                                                          info.leave_count
+                                                }}
+                                            </td>
                                         </tr>
                                     </tbody>
                                 </table>
@@ -210,26 +292,47 @@ onMounted(() => getData());
                             <h1 class="mb-5">Leave Summary</h1>
                         </div>
 
-                        <div class="row d-flex justify-content-center justify-content-md-end mb-3">
+                        <div
+                            class="row d-flex justify-content-center justify-content-md-end mb-3"
+                        >
                             <div class="col-lg-3 col-md-4 col-sm-6 mb-3">
                                 <label>Department</label>
-                                <select v-model="selectedDept" class="form-control">
+                                <select
+                                    v-model="selectedDept"
+                                    class="form-control"
+                                >
                                     <option value="">All Department</option>
-                                    <option v-for="item in department" :key="item.id" :value="item.Name">{{ item.Name }}
+                                    <option
+                                        v-for="item in department"
+                                        :key="item.id"
+                                        :value="item.Name"
+                                    >
+                                        {{ item.Name }}
                                     </option>
                                 </select>
                             </div>
                             <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
                                 <label>Leave Type</label>
-                                <select v-model="selectedType" class="form-control">
+                                <select
+                                    v-model="selectedType"
+                                    class="form-control"
+                                >
                                     <option value="">All Type</option>
-                                    <option v-for="item in leaveType" :key="item.id" :value="item.Name">{{ item.Name }}
+                                    <option
+                                        v-for="item in leaveType"
+                                        :key="item.id"
+                                        :value="item.Name"
+                                    >
+                                        {{ item.Name }}
                                     </option>
                                 </select>
                             </div>
                             <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
                                 <label>Leave Status</label>
-                                <select v-model="selectedStatus" class="form-control">
+                                <select
+                                    v-model="selectedStatus"
+                                    class="form-control"
+                                >
                                     <option value="">All Status</option>
                                     <option value="Pending">Pending</option>
                                     <option value="Approved">Approved</option>
@@ -244,6 +347,7 @@ onMounted(() => getData());
                                     <tr>
                                         <th>S/N</th>
                                         <th>Employee Name</th>
+                                        <th>Department</th>
                                         <th>From Date</th>
                                         <th>To Date</th>
                                         <th>Total Days</th>
@@ -254,28 +358,52 @@ onMounted(() => getData());
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <tr class="ver-align" v-for="(l, index) in filteredData" :key="l.id"
-                                        @click="getEmployee(l.EID)">
+                                    <tr
+                                        v-for="(l, index) in filteredData"
+                                        :key="l.id"
+                                        @click="getEmployee(l.EID)"
+                                    >
                                         <td>{{ index + 1 }}</td>
                                         <td>{{ l.Full_Name }}</td>
-                                        <td>{{ l.From_Date }}</td>
-                                        <td>{{ l.To_Date }}</td>
+                                        <td class="text-left text-nowrap">
+                                            {{ l.department }}
+                                        </td>
+                                        <td>{{ formatDate(l.from_date) }}</td>
+                                        <td>{{ formatDate(l.to_date) }}</td>
                                         <td>{{ l.daysBetween }}</td>
-                                        <td>{{ l.Leave_Type }}</td>
-                                        <td>{{ l.Status }}</td>
-                                        <td v-if="l.Attachment_Url">
-                                            <button @click="openAttachment(l.Attachment_Url)"
-                                                class="btn btn-info btn-sm mx-1">
-                                                <i class="fa-solid fa-file-arrow-down"></i>
+                                        <td>{{ l.leave_name }}</td>
+                                        <td>{{ l.status }}</td>
+                                        <td v-if="l.attachment_url">
+                                            <button
+                                                @click="
+                                                    openAttachment(
+                                                        l.attachment_url
+                                                    )
+                                                "
+                                                class="btn btn-info btn-sm mx-1"
+                                            >
+                                                <i
+                                                    class="fa-solid fa-file-arrow-down"
+                                                ></i>
                                             </button>
                                         </td>
                                         <td v-else>-</td>
-                                        <td v-if="l.Notification == 1">
-                                            <button class="btn btn-warning btn-sm mx-1" @click="editLeaveStatus(l.id)">
-                                                <i class="fa-regular fa-pen-to-square"></i>
+                                        <td v-if="l.notification == 1">
+                                            <button
+                                                class="btn btn-warning btn-sm mx-1"
+                                                @click="editLeaveStatus(l.id)"
+                                            >
+                                                <i
+                                                    class="fa-regular fa-pen-to-square"
+                                                ></i>
                                             </button>
-                                            <button class="btn btn-danger btn-sm mx-1" @click="deleteLeave(l.id)">
-                                                <i class="fa-regular fa-trash-can"></i>
+                                            <button
+                                                class="btn btn-danger btn-sm mx-1"
+                                                @click="deleteLeave(l.id)"
+                                            >
+                                                <i
+                                                    class="fa-regular fa-trash-can"
+                                                ></i>
                                             </button>
                                         </td>
                                     </tr>
@@ -288,7 +416,6 @@ onMounted(() => getData());
         </div>
     </div>
 </template>
-
 
 <style>
 .leave-table {
@@ -345,6 +472,5 @@ tr:hover td {
     .card {
         margin-bottom: 20px;
     }
-
 }
 </style>
