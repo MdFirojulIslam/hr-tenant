@@ -1,5 +1,12 @@
 <script setup>
-import { ref, defineProps, getCurrentInstance, watch, onMounted, computed } from "vue";
+import {
+    ref,
+    defineProps,
+    getCurrentInstance,
+    watch,
+    onMounted,
+    computed,
+} from "vue";
 import Swal from "sweetalert2";
 import api from "@/api";
 
@@ -14,7 +21,7 @@ const { isOpen, editStore, updateinfo, EID, salId } = defineProps([
 const department = ref([]);
 const employee = ref([]);
 const emp_img = ref([]);
-const selected_designation = ref('');
+const selected_designation = ref("");
 
 const error = ref([]);
 
@@ -48,49 +55,52 @@ const form = ref({
 });
 
 const basic = computed(() => form.value.gross_salary * 0.5);
-watch(basic, (val) => form.value.basic = val);
+watch(basic, (val) => (form.value.basic = val));
 
 const house_rent = computed(() => form.value.gross_salary * 0.4);
-watch(house_rent, (val) => form.value.house_rent = val);
+watch(house_rent, (val) => (form.value.house_rent = val));
 
 const conveyance = computed(() => form.value.gross_salary * 0.05);
-watch(conveyance, (val) => form.value.conveyance = val);
+watch(conveyance, (val) => (form.value.conveyance = val));
 
 const medical_allowance = computed(() => form.value.gross_salary * 0.05);
-watch(medical_allowance, (val) => form.value.medical_allowance = val);
+watch(medical_allowance, (val) => (form.value.medical_allowance = val));
 
-const total_payment = computed(() =>
-    Number(basic.value) +
-    Number(form.value.house_rent) +
-    Number(form.value.conveyance) +
-    Number(form.value.medical_allowance) +
-    Number(form.value.consolidated) +
-    Number(form.value.festival_bonus) +
-    Number(form.value.travel_allowance) +
-    Number(form.value.overtime) +
-    Number(form.value.daily_allowance) +
-    Number(form.value.mobile_bill) +
-    Number(form.value.other_allowance)
+const total_payment = computed(
+    () =>
+        Number(basic.value) +
+        Number(form.value.house_rent) +
+        Number(form.value.conveyance) +
+        Number(form.value.medical_allowance) +
+        Number(form.value.consolidated) +
+        Number(form.value.festival_bonus) +
+        Number(form.value.travel_allowance) +
+        Number(form.value.overtime) +
+        Number(form.value.daily_allowance) +
+        Number(form.value.mobile_bill) +
+        Number(form.value.other_allowance)
 );
-watch(total_payment, (val) => form.value.total_payment = val);
+watch(total_payment, (val) => (form.value.total_payment = val));
 
-const total_deduction = computed(() =>
-    Number(form.value.provident_fund) +
-    Number(form.value.income_tax) +
-    Number(form.value.revenue_stamp) +
-    Number(form.value.leave_without_pay) +
-    Number(form.value.penalty_other_deduction) +
-    Number(form.value.advance)
+const total_deduction = computed(
+    () =>
+        Number(form.value.provident_fund) +
+        Number(form.value.income_tax) +
+        Number(form.value.revenue_stamp) +
+        Number(form.value.leave_without_pay) +
+        Number(form.value.penalty_other_deduction) +
+        Number(form.value.advance)
 );
-watch(total_deduction, (val) => form.value.total_deduction = val);
+watch(total_deduction, (val) => (form.value.total_deduction = val));
 
-const net_pay = computed(() => form.value.total_payment - form.value.total_deduction);
-watch(net_pay, (val) => form.value.net_pay = val);
-
+const net_pay = computed(
+    () => form.value.total_payment - form.value.total_deduction
+);
+watch(net_pay, (val) => (form.value.net_pay = val));
 
 const getData = async () => {
     try {
-        const response = await api.get('/department');
+        const response = await api.get("/department");
         department.value = response.data;
     } catch (err) {
         error.value = err.message || "Error fetching data";
@@ -115,14 +125,14 @@ const getEmployeeImg = async (id) => {
         const response = await api.get(`/empimg/${id}`);
         emp_img.value = response.data;
 
-        const selectedEmployee = employee.value.find(emp => emp.eid === id);
-        selected_designation.value = selectedEmployee ? selectedEmployee.Name : '';
+        const selectedEmployee = employee.value.find((emp) => emp.eid === id);
+        selected_designation.value = selectedEmployee
+            ? selectedEmployee.Name
+            : "";
     } catch (error) {
         console.error("Error updating store:", error);
     }
 };
-
-console.log(editStore);
 
 watch(
     () => editStore,
@@ -147,7 +157,8 @@ watch(
             form.value.income_tax = item.income_tax || "";
             form.value.revenue_stamp = item.revenue_stamp || "";
             form.value.leave_without_pay = item.leave_without_pay || "";
-            form.value.penalty_other_deduction = item.penalty_other_deduction || "";
+            form.value.penalty_other_deduction =
+                item.penalty_other_deduction || "";
             form.value.advance = item.advance || "";
             form.value.total_deduction = item.total_deduction || 0;
             form.value.total_earning = item.earning_amount || 0;
@@ -156,8 +167,6 @@ watch(
     },
     { immediate: true }
 );
-
-
 
 const instance = getCurrentInstance();
 
@@ -172,7 +181,7 @@ const resetForm = () => {
 };
 
 const closeModal = () => {
-    selected_designation.value = '';
+    selected_designation.value = "";
     instance.emit("modal-close");
 };
 
@@ -195,20 +204,20 @@ const create = async () => {
             instance.emit("modal-close");
             const messages = Object.values(error.response.data.message)
                 .flat()
-                .join('<br>');
+                .join("<br>");
             Swal.fire({
-                icon: 'error',
-                title: 'Validation Error',
+                icon: "error",
+                title: "Validation Error",
                 html: messages,
                 customClass: {
-                    popup: 'swal-popup-zindex'
-                }
+                    popup: "swal-popup-zindex",
+                },
             });
         } else {
             Swal.fire({
-                icon: 'error',
-                title: 'An error occurred',
-                text: 'Something went wrong. Please try again later.',
+                icon: "error",
+                title: "An error occurred",
+                text: "Something went wrong. Please try again later.",
             });
         }
         console.error("Error creating store:", error);
@@ -246,16 +255,25 @@ const submit = () => {
 onMounted(() => getData());
 </script>
 
-
 <template>
-    <div v-if="isOpen" class="modal-mask col-lg-6 col-md-6 grid-margin stretch-card" ref="target">
+    <div
+        v-if="isOpen"
+        class="modal-mask col-lg-6 col-md-6 grid-margin stretch-card"
+        ref="target"
+    >
         <div class="card">
             <div class="card-body">
                 <div class="card mb-2">
-                    <div v-if="updateinfo === 'Save'" class="card-header mb-1 bg-grey align-items-center">
+                    <div
+                        v-if="updateinfo === 'Save'"
+                        class="card-header mb-1 bg-grey align-items-center"
+                    >
                         <h5 class="mb-0">New Salary Setup</h5>
                     </div>
-                    <div v-else-if="updateinfo === 'Update'" class="card-header mb-1 bg-grey align-items-center">
+                    <div
+                        v-else-if="updateinfo === 'Update'"
+                        class="card-header mb-1 bg-grey align-items-center"
+                    >
                         <h5 class="mb-0">Salary Setup Update</h5>
                     </div>
                     <div class="card-body">
@@ -265,9 +283,18 @@ onMounted(() => getData());
                                     <div class="col-lg-3">Department Name</div>
                                     <div class="col-lg-1">:</div>
                                     <div class="col-lg-8">
-                                        <select class="form-control" v-model="form.department" @change="
-                                            getEmployee(form.department)">
-                                            <option v-for="dept in department" :key="dept.id" :value="dept.id">
+                                        <select
+                                            class="form-control"
+                                            v-model="form.department"
+                                            @change="
+                                                getEmployee(form.department)
+                                            "
+                                        >
+                                            <option
+                                                v-for="dept in department"
+                                                :key="dept.id"
+                                                :value="dept.id"
+                                            >
                                                 {{ dept.Name }}
                                             </option>
                                         </select>
@@ -278,10 +305,19 @@ onMounted(() => getData());
                                     <div class="col-lg-3">Employee Name</div>
                                     <div class="col-lg-1">:</div>
                                     <div class="col-lg-8">
-                                        <select class="form-control" v-model="form.eid"
-                                            @change="getEmployeeImg(form.eid)">
-                                            <option value="" disabled>Select Employee</option>
-                                            <option v-for="emp in employee" :key="emp.id" :value="emp.id">
+                                        <select
+                                            class="form-control"
+                                            v-model="form.eid"
+                                            @change="getEmployeeImg(form.eid)"
+                                        >
+                                            <option value="" disabled>
+                                                Select Employee
+                                            </option>
+                                            <option
+                                                v-for="emp in employee"
+                                                :key="emp.id"
+                                                :value="emp.id"
+                                            >
                                                 {{ emp.Full_Name }}
                                             </option>
                                         </select>
@@ -291,13 +327,23 @@ onMounted(() => getData());
                                     <div class="col-lg-3">Designation</div>
                                     <div class="col-lg-1">:</div>
                                     <div class="col-lg-8">
-                                        <input type="text" name="" class="form-control" :value="selected_designation"
-                                            readonly>
+                                        <input
+                                            type="text"
+                                            name=""
+                                            class="form-control"
+                                            :value="selected_designation"
+                                            readonly
+                                        />
                                     </div>
                                 </div>
                             </div>
                             <div class="col-lg-3">
-                                <img :src="emp_img ? emp_img.img_url : ''" alt="" height="110px" width="110px">
+                                <img
+                                    :src="emp_img ? emp_img.img_url : ''"
+                                    alt=""
+                                    height="110px"
+                                    width="110px"
+                                />
                             </div>
                         </div>
                     </div>
@@ -309,56 +355,53 @@ onMounted(() => getData());
                                 <div class="row mb-2">
                                     <div class="col-lg-3 col-md-6 col-sm-6">
                                         <div class="form-group">
-                                            <label for="exampleInputEmail1">Gross Salary</label>
-                                            <input type="number" class="form-control" v-model="form.gross_salary" />
+                                            <label for="exampleInputEmail1"
+                                                >Gross Salary</label
+                                            >
+                                            <input
+                                                type="number"
+                                                class="form-control"
+                                                v-model="form.gross_salary"
+                                            />
                                         </div>
                                     </div>
                                     <div class="col-lg-3 col-md-6 col-sm-6">
                                         <div class="form-group">
-                                            <label for="exampleInputEmail1">Basic</label>
-                                            <input type="number" class="form-control" v-model="form.basic" readonly />
+                                            <label for="exampleInputEmail1"
+                                                >Basic</label
+                                            >
+                                            <input
+                                                type="number"
+                                                class="form-control"
+                                                v-model="form.basic"
+                                                readonly
+                                            />
                                         </div>
                                     </div>
                                     <div class="col-lg-3 col-md-6 col-sm-6">
                                         <div class="form-group">
-                                            <label for="exampleInputEmail1">House Rent</label>
-                                            <input type="number" class="form-control" v-model="form.house_rent"
-                                                readonly />
+                                            <label for="exampleInputEmail1"
+                                                >House Rent</label
+                                            >
+                                            <input
+                                                type="number"
+                                                class="form-control"
+                                                v-model="form.house_rent"
+                                                readonly
+                                            />
                                         </div>
                                     </div>
                                     <div class="col-lg-3 col-md-6 col-sm-6">
                                         <div class="form-group">
-                                            <label for="exampleInputEmail1">Conveyance</label>
-                                            <input type="number" class="form-control" v-model="form.conveyance"
-                                                readonly />
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="row mb-2">
-                                    <div class="col-lg-3 col-md-6 col-sm-6">
-                                        <div class="form-group">
-                                            <label for="exampleInputEmail1">Medical Allowance</label>
-                                            <input type="number" class="form-control" v-model="form.medical_allowance"
-                                                readonly />
-                                        </div>
-                                    </div>
-                                    <div class="col-lg-3 col-md-6 col-sm-6">
-                                        <div class="form-group">
-                                            <label for="exampleInputEmail1">Consolidated</label>
-                                            <input type="number" class="form-control" v-model="form.consolidated" />
-                                        </div>
-                                    </div>
-                                    <div class="col-lg-3 col-md-6 col-sm-6">
-                                        <div class="form-group">
-                                            <label for="exampleInputEmail1">Festival Bonus</label>
-                                            <input type="number" class="form-control" v-model="form.festival_bonus" />
-                                        </div>
-                                    </div>
-                                    <div class="col-lg-3 col-md-6 col-sm-6">
-                                        <div class="form-group">
-                                            <label for="exampleInputEmail1">Travel Allowance</label>
-                                            <input type="number" class="form-control" v-model="form.travel_allowance" />
+                                            <label for="exampleInputEmail1"
+                                                >Conveyance</label
+                                            >
+                                            <input
+                                                type="number"
+                                                class="form-control"
+                                                v-model="form.conveyance"
+                                                readonly
+                                            />
                                         </div>
                                     </div>
                                 </div>
@@ -366,26 +409,102 @@ onMounted(() => getData());
                                 <div class="row mb-2">
                                     <div class="col-lg-3 col-md-6 col-sm-6">
                                         <div class="form-group">
-                                            <label for="exampleInputEmail1">Overtime</label>
-                                            <input type="number" class="form-control" v-model="form.overtime" />
+                                            <label for="exampleInputEmail1"
+                                                >Medical Allowance</label
+                                            >
+                                            <input
+                                                type="number"
+                                                class="form-control"
+                                                v-model="form.medical_allowance"
+                                                readonly
+                                            />
                                         </div>
                                     </div>
                                     <div class="col-lg-3 col-md-6 col-sm-6">
                                         <div class="form-group">
-                                            <label for="exampleInputEmail1">Daily Allowance</label>
-                                            <input type="number" class="form-control" v-model="form.daily_allowance" />
+                                            <label for="exampleInputEmail1"
+                                                >Consolidated</label
+                                            >
+                                            <input
+                                                type="number"
+                                                class="form-control"
+                                                v-model="form.consolidated"
+                                            />
                                         </div>
                                     </div>
                                     <div class="col-lg-3 col-md-6 col-sm-6">
                                         <div class="form-group">
-                                            <label for="exampleInputEmail1">Mobile Bill Allowance</label>
-                                            <input type="number" class="form-control" v-model="form.mobile_bill" />
+                                            <label for="exampleInputEmail1"
+                                                >Festival Bonus</label
+                                            >
+                                            <input
+                                                type="number"
+                                                class="form-control"
+                                                v-model="form.festival_bonus"
+                                            />
                                         </div>
                                     </div>
                                     <div class="col-lg-3 col-md-6 col-sm-6">
                                         <div class="form-group">
-                                            <label for="exampleInputEmail1">Other Allowance</label>
-                                            <input type="number" class="form-control" v-model="form.other_allowance" />
+                                            <label for="exampleInputEmail1"
+                                                >Travel Allowance</label
+                                            >
+                                            <input
+                                                type="number"
+                                                class="form-control"
+                                                v-model="form.travel_allowance"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="row mb-2">
+                                    <div class="col-lg-3 col-md-6 col-sm-6">
+                                        <div class="form-group">
+                                            <label for="exampleInputEmail1"
+                                                >Overtime</label
+                                            >
+                                            <input
+                                                type="number"
+                                                class="form-control"
+                                                v-model="form.overtime"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div class="col-lg-3 col-md-6 col-sm-6">
+                                        <div class="form-group">
+                                            <label for="exampleInputEmail1"
+                                                >Daily Allowance</label
+                                            >
+                                            <input
+                                                type="number"
+                                                class="form-control"
+                                                v-model="form.daily_allowance"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div class="col-lg-3 col-md-6 col-sm-6">
+                                        <div class="form-group">
+                                            <label for="exampleInputEmail1"
+                                                >Mobile Bill Allowance</label
+                                            >
+                                            <input
+                                                type="number"
+                                                class="form-control"
+                                                v-model="form.mobile_bill"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div class="col-lg-3 col-md-6 col-sm-6">
+                                        <div class="form-group">
+                                            <label for="exampleInputEmail1"
+                                                >Other Allowance</label
+                                            >
+                                            <input
+                                                type="number"
+                                                class="form-control"
+                                                v-model="form.other_allowance"
+                                            />
                                         </div>
                                     </div>
                                 </div>
@@ -396,42 +515,78 @@ onMounted(() => getData());
                                 <div class="row mb-2">
                                     <div class="col-lg-3 col-md-6 col-sm-6">
                                         <div class="form-group">
-                                            <label for="exampleInputEmail1">Provident Fund</label>
-                                            <input type="number" class="form-control" v-model="form.provident_fund" />
+                                            <label for="exampleInputEmail1"
+                                                >Provident Fund</label
+                                            >
+                                            <input
+                                                type="number"
+                                                class="form-control"
+                                                v-model="form.provident_fund"
+                                            />
                                         </div>
                                     </div>
                                     <div class="col-lg-3 col-md-6 col-sm-6">
                                         <div class="form-group">
-                                            <label for="exampleInputEmail1">Income Tax</label>
-                                            <input type="number" class="form-control" v-model="form.income_tax" />
+                                            <label for="exampleInputEmail1"
+                                                >Income Tax</label
+                                            >
+                                            <input
+                                                type="number"
+                                                class="form-control"
+                                                v-model="form.income_tax"
+                                            />
                                         </div>
                                     </div>
                                     <div class="col-lg-3 col-md-6 col-sm-6">
                                         <div class="form-group">
-                                            <label for="exampleInputEmail1">Revenue Stamp</label>
-                                            <input type="number" class="form-control" v-model="form.revenue_stamp" />
+                                            <label for="exampleInputEmail1"
+                                                >Revenue Stamp</label
+                                            >
+                                            <input
+                                                type="number"
+                                                class="form-control"
+                                                v-model="form.revenue_stamp"
+                                            />
                                         </div>
                                     </div>
                                     <div class="col-lg-3 col-md-6 col-sm-6">
                                         <div class="form-group">
-                                            <label for="exampleInputEmail1">Leave Without Pay</label>
-                                            <input type="number" class="form-control"
-                                                v-model="form.leave_without_pay" />
+                                            <label for="exampleInputEmail1"
+                                                >Leave Without Pay</label
+                                            >
+                                            <input
+                                                type="number"
+                                                class="form-control"
+                                                v-model="form.leave_without_pay"
+                                            />
                                         </div>
                                     </div>
                                 </div>
                                 <div class="row mb-2">
                                     <div class="col-lg-3 col-md-6 col-sm-6">
                                         <div class="form-group">
-                                            <label for="exampleInputEmail1">Penalty/Other Deduction</label>
-                                            <input type="number" class="form-control"
-                                                v-model="form.penalty_other_deduction" />
+                                            <label for="exampleInputEmail1"
+                                                >Penalty/Other Deduction</label
+                                            >
+                                            <input
+                                                type="number"
+                                                class="form-control"
+                                                v-model="
+                                                    form.penalty_other_deduction
+                                                "
+                                            />
                                         </div>
                                     </div>
                                     <div class="col-lg-3 col-md-6 col-sm-6">
                                         <div class="form-group">
-                                            <label for="exampleInputEmail1">Advance</label>
-                                            <input type="number" class="form-control" v-model="form.advance" />
+                                            <label for="exampleInputEmail1"
+                                                >Advance</label
+                                            >
+                                            <input
+                                                type="number"
+                                                class="form-control"
+                                                v-model="form.advance"
+                                            />
                                         </div>
                                     </div>
                                 </div>
@@ -444,39 +599,63 @@ onMounted(() => getData());
                                 <div class="row mb-2">
                                     <div class="col-lg-12 col-md-12 col-sm-12">
                                         <div class="form-group">
-                                            <label for="exampleInputEmail1">Total Payment</label>
-                                            <input type="number" class="form-control" v-model="form.total_payment"
-                                                readonly />
+                                            <label for="exampleInputEmail1"
+                                                >Total Payment</label
+                                            >
+                                            <input
+                                                type="number"
+                                                class="form-control"
+                                                v-model="form.total_payment"
+                                                readonly
+                                            />
                                         </div>
                                     </div>
                                 </div>
                                 <div class="row mb-2">
                                     <div class="col-lg-12 col-md-12 col-sm-12">
                                         <div class="form-group">
-                                            <label for="exampleInputEmail1">Total Deduction</label>
-                                            <input type="number" class="form-control" v-model="form.total_deduction"
-                                                readonly />
+                                            <label for="exampleInputEmail1"
+                                                >Total Deduction</label
+                                            >
+                                            <input
+                                                type="number"
+                                                class="form-control"
+                                                v-model="form.total_deduction"
+                                                readonly
+                                            />
                                         </div>
                                     </div>
                                 </div>
                                 <div class="row mb-2">
                                     <div class="col-lg-12 col-md-12 col-sm-12">
                                         <div class="form-group">
-                                            <label for="exampleInputEmail1">Total Earning</label>
-                                            <input type="number" class="form-control" v-model="form.total_earning"
-                                                readonly />
+                                            <label for="exampleInputEmail1"
+                                                >Total Earning</label
+                                            >
+                                            <input
+                                                type="number"
+                                                class="form-control"
+                                                v-model="form.total_earning"
+                                                readonly
+                                            />
                                         </div>
                                     </div>
                                 </div>
                                 <div class="row mb-2">
                                     <div class="col-lg-12 col-md-12 col-sm-12">
                                         <div class="form-group">
-                                            <label for="exampleInputEmail1">Net Pay</label>
-                                            <input type="number" class="form-control" v-model="form.net_pay" readonly />
+                                            <label for="exampleInputEmail1"
+                                                >Net Pay</label
+                                            >
+                                            <input
+                                                type="number"
+                                                class="form-control"
+                                                v-model="form.net_pay"
+                                                readonly
+                                            />
                                         </div>
                                     </div>
                                 </div>
-
                             </div>
                         </div>
                     </div>
@@ -486,33 +665,60 @@ onMounted(() => getData());
                         <div class="row">
                             <div class="col-lg-4 col-md-6 col-sm-6">
                                 <div class="form-group">
-                                    <label for="exampleInputEmail1">Salary Type</label>
-                                    <select v-model="form.salary_type" class="form-control">
-                                        <option selected disabled>-select-</option>
+                                    <label for="exampleInputEmail1"
+                                        >Salary Type</label
+                                    >
+                                    <select
+                                        v-model="form.salary_type"
+                                        class="form-control"
+                                    >
+                                        <option selected disabled>
+                                            -select-
+                                        </option>
                                         <option value="bank">Bank</option>
                                         <option value="cash">Cash</option>
                                     </select>
                                 </div>
                             </div>
-                            <div class="col-lg-4 col-md-6 col-sm-6" v-if="form.salary_type == 'bank'">
+                            <div
+                                class="col-lg-4 col-md-6 col-sm-6"
+                                v-if="form.salary_type == 'bank'"
+                            >
                                 <div class="form-group">
-                                    <label for="exampleInputEmail1">Bank Account No</label>
-                                    <input type="text" class="form-control" v-model="form.bank_account_no" />
+                                    <label for="exampleInputEmail1"
+                                        >Bank Account No</label
+                                    >
+                                    <input
+                                        type="text"
+                                        class="form-control"
+                                        v-model="form.bank_account_no"
+                                    />
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-
                 <div class="d-flex justify-content-between mt-3">
-                    <button type="submit" class="custom-btn btn-13 p-2" @click="submit">
+                    <button
+                        type="submit"
+                        class="custom-btn btn-13 p-2"
+                        @click="submit"
+                    >
                         <i class="fa-solid fa-check"></i> | {{ updateinfo }}
                     </button>
-                    <button type="submit" class="custom-btn btn-15 p-2" @click="resetForm">
+                    <button
+                        type="submit"
+                        class="custom-btn btn-15 p-2"
+                        @click="resetForm"
+                    >
                         <i class="fa-solid fa-power-off"></i> | Reset
                     </button>
-                    <button type="reset" class="custom-btn btn-12 p-2" @click.stop="closeModal">
+                    <button
+                        type="reset"
+                        class="custom-btn btn-12 p-2"
+                        @click.stop="closeModal"
+                    >
                         <i class="fa-solid fa-x"></i> | Cancel
                     </button>
                 </div>

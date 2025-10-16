@@ -45,12 +45,15 @@ Route::get('/scale', [EmployeeInformationController::class, 'getScale']);
 Route::get('/education', [EmployeeInformationController::class, 'getEducation']);
 Route::get('/education/{id}', [EmployeeInformationController::class, 'fetchDegree']);
 Route::get('/empimg/{id}', [EmployeeInformationController::class, 'fetchEmployeeImg']);
-Route::get('/get-notification', [EmployeeInformationController::class, 'getNotification']);
+
 Route::get('/user-details', [EmployeeInformationController::class, 'userDetails']);
 Route::get('/town', [EmployeeInformationController::class, 'getTown']);
 Route::get('/official-info', [EmployeeInformationController::class, 'getOfficialInfo']);
 Route::get('/get-supervisor', [EmployeeInformationController::class, 'getSupervisor']);
 Route::get('/get-employee/{id}', [EmployeeInformationController::class, 'getEmployee']);
+
+//Notification
+Route::get('/get-notification', [EmployeeInformationController::class, 'getNotification']);
 
 Route::get('/get-hierarchy', [EmployeeInformationController::class, 'getHierarchy']);
 
@@ -97,5 +100,3 @@ Route::get('/department', [DepartmentController::class, 'index']);
 Route::get('/designation', [DesignationController::class, 'index']);
 Route::get('/designation/{id}', [DesignationController::class, 'show']);
 Route::get('/dashboard-count', [DashboardController::class, 'index']);
-
-

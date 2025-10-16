@@ -174,23 +174,34 @@ class EmployeeInformationController extends Controller
     {
         $user = Auth::user();
 
-        if ($user->role_id == 1) {
-            $leave = leave::select('leaves.id', 'employees.Full_Name', 'leaves.status', 'leaves.purpose', 'leave_types.leave_name as Leave_Type')
-                ->join('employees', 'employees.id', '=', 'leaves.employee_id')
-                ->join('leave_types', 'leaves.leave_type_id', '=', 'leave_types.id')
-                ->where('leaves.status', '=', 'Approved (SV)')
-                ->get();
-        } else {
-            $leave = leave::select('leaves.id', 'employees.Full_Name', 'leaves.status', 'leaves.purpose', 'leave_types.leave_name as Leave_Type')
-                ->join('employees', 'employees.id', '=', 'leaves.employee_id')
-                ->join('officials', 'employees.id', '=', 'officials.EID')
-                ->join('leave_types', 'leaves.leave_type_id', '=', 'leave_types.id')
-                ->where('officials.Supervisor_Id', '=', $user->EID)
-                ->where('leaves.status', '=', 'Pending')
-                ->get();
-        }
+        // if ($user->role_id == 1) {
+        //     $leave = leave::select('leaves.id', 'employees.Full_Name', 'leaves.status', 'leaves.purpose', 'leave_types.leave_name as Leave_Type')
+        //         ->join('employees', 'employees.id', '=', 'leaves.employee_id')
+        //         ->join('leave_types', 'leaves.leave_type_id', '=', 'leave_types.id')
+        //         ->where('leaves.status', '=', 'Approved (SV)')
+        //         ->get();
+        // } else {
+        //     $leave = leave::select('leaves.id', 'employees.Full_Name', 'leaves.status', 'leaves.purpose', 'leave_types.leave_name as Leave_Type')
+        //         ->join('employees', 'employees.id', '=', 'leaves.employee_id')
+        //         ->join('officials', 'employees.id', '=', 'officials.EID')
+        //         ->join('leave_types', 'leaves.leave_type_id', '=', 'leave_types.id')
+        //         ->where('officials.Supervisor_Id', '=', $user->EID)
+        //         ->where('leaves.status', '=', 'Pending')
+        //         ->get();
+        // }
 
-        return response()->json($leave);
+
+        $pending_leave = official::select('leaves.id as leave_id', 'employees.Full_Name', 'departments.Name as department_name', 'leaves.status', 'leaves.purpose', 'leave_types.leave_name as Leave_Type')
+            ->join('leaves', 'leaves.employee_id', '=', 'officials.EID')
+            ->join('employees', 'employees.id', '=', 'officials.EID')
+            ->join('leave_types', 'leaves.leave_type_id', '=', 'leave_types.id')
+            ->join('departments', 'departments.id', '=', 'officials.Department_Id')
+            ->where('officials.Supervisor_Id', '=', $user->EID)
+            ->where('leaves.status', '=', 'Pending')
+            ->get();
+
+
+        return response()->json($pending_leave);
     }
 
 

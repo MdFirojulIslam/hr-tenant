@@ -14,12 +14,12 @@ const selectedStatus = ref("");
 
 const form = ref({
     department: "",
-    Employee_Id: "",
-    From_Date: "",
-    To_Date: "",
-    Purpose: "",
-    Leave_Type_Id: "",
-    Status: "",
+    employee_id: "",
+    from_date: "",
+    to_date: "",
+    purpose: "",
+    leave_type_id: "",
+    status: "",
     file: null,
 });
 const getData = async () => {
@@ -30,7 +30,7 @@ const getData = async () => {
         ]);
         leave_information.value = responseemp.data;
         leaveType.value = responsetype.data;
-        form.value.Employee_Id = leave_information.value.employee.id;
+        form.value.employee_id = leave_information.value.employee.id;
     } catch (err) {
         error.value = err.message || "Error fetching data";
     } finally {
@@ -129,7 +129,7 @@ const getImage = (e) => {
 };
 
 const submit = async () => {
-    form.value.Status = "Pending";
+    form.value.status = "Pending";
     const config = {
         headers: {
             "Content-Type": "multipart/form-data",
@@ -252,7 +252,7 @@ onMounted(() => getData());
                                                     type="date"
                                                     class="form-control"
                                                     id="fromDate"
-                                                    v-model="form.From_Date"
+                                                    v-model="form.from_date"
                                                 />
                                             </div>
                                         </div>
@@ -267,7 +267,7 @@ onMounted(() => getData());
                                                     type="date"
                                                     class="form-control"
                                                     id="toDate"
-                                                    v-model="form.To_Date"
+                                                    v-model="form.to_date"
                                                 />
                                             </div>
                                         </div>
@@ -283,7 +283,7 @@ onMounted(() => getData());
                                                     class="form-control"
                                                     id="purpose"
                                                     rows="2"
-                                                    v-model="form.Purpose"
+                                                    v-model="form.purpose"
                                                 ></textarea>
                                             </div>
                                         </div>
@@ -299,7 +299,7 @@ onMounted(() => getData());
                                                 >
                                                 <select
                                                     class="form-control"
-                                                    v-model="form.Leave_Type_Id"
+                                                    v-model="form.leave_type_id"
                                                 >
                                                     <option selected disabled>
                                                         select
@@ -309,7 +309,7 @@ onMounted(() => getData());
                                                         :key="leave.id"
                                                         :value="leave.id"
                                                     >
-                                                        {{ leave.Name }} Leave
+                                                        {{ leave.leave_name }}
                                                     </option>
                                                 </select>
                                             </div>

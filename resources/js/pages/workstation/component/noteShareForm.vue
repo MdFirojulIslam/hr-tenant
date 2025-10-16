@@ -2,9 +2,18 @@
     <div v-if="isOpen" class="modal-mask" @click="handleOutsideClick">
         <div class="modal-container" @click.stop>
             <label for="multiSelect">Employee Name</label>
-            <multiselect class="custom-multiselect" v-model="form.emp_id" :options="employeeData" :multiple="true"
-                :close-on-select="false" :clear-on-select="false" :preserve-search="true"
-                placeholder="Select Employee Name" label="Full_Name" track-by="id"></multiselect>
+            <multiselect
+                class="custom-multiselect"
+                v-model="form.emp_id"
+                :options="employeeData"
+                :multiple="true"
+                :close-on-select="false"
+                :clear-on-select="false"
+                :preserve-search="true"
+                placeholder="Select Employee Name"
+                label="Full_Name"
+                track-by="id"
+            ></multiselect>
 
             <div class="button-group">
                 <button @click="shareNote" class="action-btn">Save</button>
@@ -47,25 +56,21 @@ const getData = async () => {
                 },
             });
             shareIDs.value = shareidres.data;
-            console.log(shareIDs.value);
 
             // Set preselected employees
-            form.value.emp_id = employeeData.value.filter(emp =>
+            form.value.emp_id = employeeData.value.filter((emp) =>
                 shareIDs.value.includes(emp.id)
             );
         }
-
     } catch (err) {
         error.value = err.message || "Error fetching data";
     }
 };
 
-
 watch(
     () => props.isOpen,
     (val) => {
         if (val) {
-            console.log(props.editNote.id);
             form.value.note_id = props.editNote.id || "";
             getData();
         }
@@ -79,7 +84,7 @@ const closeModal = () => {
 
 const shareNote = async () => {
     try {
-        const selectedIds = form.value.emp_id.map(emp => emp.id);
+        const selectedIds = form.value.emp_id.map((emp) => emp.id);
         await api.post(`/notes/share`, {
             emp_ids: selectedIds,
             note_id: form.value.note_id,

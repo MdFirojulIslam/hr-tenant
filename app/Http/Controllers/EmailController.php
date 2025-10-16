@@ -23,11 +23,43 @@ use Illuminate\Support\Facades\Mail;
 
 class EmailController extends Controller
 {
+    // added by firoj
+
+
+
+    public function hrApprovalEmail($id)
+    {
+        $leave = leave::select('employees.Full_Name', 'users.email', 'leaves.from_date', 'leaves.to_date', 'leaves.status', 'leave_types.leave_name')
+            ->join('employees', 'employees.id', '=', 'leaves.employee_id')
+            ->join('leave_types', 'leave_types.id', '=', 'leaves.leave_type_id')
+            ->join('users', 'employees.id', '=', 'users.EID')
+            ->where('leaves.id', $id)
+            ->first();
+
+        $toEmail = $leave->email;
+        $name = $leave->Full_Name;
+        $from_date = $leave->from_date;
+        $to_date = $leave->to_date;
+        $status = $leave->status;
+        $leave_type = $leave->leave_name;
+        if ($leave->status == 'Approved (SV)') {
+            $status = 'Approved';
+        } else {
+            $status = 'Rejected';
+        }
+
+        Mail::to([$toEmail, 'tahmina@artisanbn.com'])
+            ->send(new HrApproval($from_date, $to_date, $status, $leave_type, $name));
+
+        return response()->json(['message' => 'Email sent successfully']);
+    }
+
+
     public function leaveRequestEmail($id)
     {
-        $leave = leave::select('employees.Full_Name', 'employees.Employee_Id', 'leaves.From_Date', 'leaves.To_Date', 'leaves.Purpose', 'leave_types.Name as leave_type', 'officials.Supervisor_Id', 'designations.Name as designation')
-            ->join('employees', 'employees.id', '=', 'leaves.EID')
-            ->join('leave_types', 'leave_types.id', '=', 'leaves.Leave_Type_Id')
+        $leave = leave::select('employees.Full_Name', 'employees.Employee_Id', 'leaves.from_date', 'leaves.to_date', 'leaves.purpose', 'leave_types.leave_name', 'officials.Supervisor_Id', 'designations.Name as designation')
+            ->join('employees', 'employees.id', '=', 'leaves.employee_id')
+            ->join('leave_types', 'leave_types.id', '=', 'leaves.leave_type_id')
             ->join('officials', 'officials.EID', '=', 'employees.id')
             ->join('designations', 'designations.id', '=', 'officials.Designation_Id')
             ->where('leaves.id', $id)
@@ -38,58 +70,35 @@ class EmailController extends Controller
         $name = $leave->Full_Name;
         $eid = $leave->Employee_Id;
         $designation = $leave->designation;
-        $from_date = $leave->From_Date;
-        $to_date = $leave->To_Date;
-        $purpose = $leave->Purpose;
-        $leave_type = $leave->leave_type;
+        $from_date = $leave->from_date;
+        $to_date = $leave->to_date;
+        $purpose = $leave->purpose;
+        $leave_type = $leave->leave_name;
         Mail::to($toEmail)->send(new LeaveEmail($from_date, $to_date, $purpose, $leave_type, $name, $eid, $designation));
         return response()->json(['message' => 'Email sent successfully']);
     }
 
     public function leaveStatusEmail($id)
     {
-        $leave = leave::select('employees.Full_Name', 'users.email', 'leaves.From_Date', 'leaves.To_Date', 'leaves.Status', 'leave_types.Name as leave_type')
-            ->join('employees', 'employees.id', '=', 'leaves.EID')
-            ->join('leave_types', 'leave_types.id', '=', 'leaves.Leave_Type_Id')
+        $leave = leave::select('employees.Full_Name', 'users.email', 'leaves.from_date', 'leaves.to_date', 'leaves.status', 'leave_types.leave_name')
+            ->join('employees', 'employees.id', '=', 'leaves.employee_id')
+            ->join('leave_types', 'leave_types.id', '=', 'leaves.leave_type_id')
             ->join('users', 'employees.id', '=', 'users.EID')
             ->where('leaves.id', $id)
             ->first();
 
         $toEmail = $leave->email;
         $name = $leave->Full_Name;
-        $from_date = $leave->From_Date;
-        $to_date = $leave->To_Date;
-        $status = $leave->Status;
-        $leave_type = $leave->leave_type;
+        $from_date = $leave->from_date;
+        $to_date = $leave->to_date;
+        $status = $leave->status;
+        $leave_type = $leave->leave_name;
         Mail::to($toEmail)->send(new LeaveStatusEmail($from_date, $to_date, $status, $leave_type, $name));
         return response()->json(['message' => 'Email sent successfully']);
     }
 
 
-    public function hrApprovalEmail($id)
-    {
-        $leave = leave::select('employees.Full_Name', 'users.email', 'leaves.From_Date', 'leaves.To_Date', 'leaves.Status', 'leave_types.Name as leave_type')
-            ->join('employees', 'employees.id', '=', 'leaves.EID')
-            ->join('leave_types', 'leave_types.id', '=', 'leaves.Leave_Type_Id')
-            ->join('users', 'employees.id', '=', 'users.EID')
-            ->where('leaves.id', $id)
-            ->first();
 
-        $toEmail = $leave->email;
-        $name = $leave->Full_Name;
-        $from_date = $leave->From_Date;
-        $to_date = $leave->To_Date;
-        $status = $leave->Status;
-        $leave_type = $leave->leave_type;
-        if ($leave->Status == 'Pending') {
-            $status = 'Approved';
-        }
-
-        Mail::to([$toEmail, 'tahmina@artisanbn.com'])
-            ->send(new HrApproval($from_date, $to_date, $status, $leave_type, $name));
-
-        return response()->json(['message' => 'Email sent successfully']);
-    }
 
 
 
@@ -188,10 +197,11 @@ class EmailController extends Controller
 
         // Fetch leave data once
         $leaveData = leave::select(
-            'leaves.EID', 
+            'leaves.EID',
             'leaves.From_Date',
             'leaves.To_Date',
-            'leave_types.Name as leave_type')
+            'leave_types.Name as leave_type'
+        )
             ->join('leave_types', 'leaves.Leave_Type_Id', '=', 'leave_types.id')
             ->where('leaves.Status', '=', 'Approved')
             ->where(function ($query) use ($date) {
@@ -272,19 +282,19 @@ class EmailController extends Controller
     public function ffAttendance($date)
     {
         $attendenceData = employee::selectRaw(
-            'employees.id as EID, 
-             employees.Full_Name, 
+            'employees.id as EID,
+             employees.Full_Name,
              towns.Name as town_name,
-             employees.Employee_Id, 
-             app_attendances.latitude, 
-             app_attendances.longitude, 
-             departments.Name as department, 
+             employees.Employee_Id,
+             app_attendances.latitude,
+             app_attendances.longitude,
+             departments.Name as department,
              designations.Name as designation,
              officials.Supervisor_Id,
-             DATE(app_attendances.updated_at) as date, 
+             DATE(app_attendances.updated_at) as date,
              DAYNAME(app_attendances.updated_at) as weekday,
-             MIN(CASE WHEN app_attendances.status = "in" THEN TIME(app_attendances.updated_at) END) as time_in, 
-             MIN(CASE WHEN app_attendances.status = "in" THEN app_attendances.village END) as in_location, 
+             MIN(CASE WHEN app_attendances.status = "in" THEN TIME(app_attendances.updated_at) END) as time_in,
+             MIN(CASE WHEN app_attendances.status = "in" THEN app_attendances.village END) as in_location,
              MIN(CASE WHEN app_attendances.status = "in" THEN app_attendances.image_path END) as in_image'
         )
             ->leftJoin('app_attendances', function ($join) use ($date) {
@@ -354,7 +364,7 @@ class EmailController extends Controller
         //     18 => 'tushar@artisanbn.com',
         //     19 => 'sohag@artisanbn.com'
         // ];
-         Mail::to('tahmina@artisanbn.com')
+        Mail::to('tahmina@artisanbn.com')
             ->cc(['sudiptya@artisanbn.com'])
             ->bcc('ferojul@artisanbn.com')
             ->send(new FFAttendanceEmail($attendences, $date, $title));
@@ -387,19 +397,19 @@ class EmailController extends Controller
     public function ffAttendancePrev($date)
     {
         $attendenceData = employee::selectRaw(
-            'employees.id as EID, 
-             employees.Full_Name, 
+            'employees.id as EID,
+             employees.Full_Name,
              towns.Name as town_name,
-             employees.Employee_Id, 
-             app_attendances.latitude, 
-             app_attendances.longitude, 
-             departments.Name as department, 
-             designations.Name as designation, 
+             employees.Employee_Id,
+             app_attendances.latitude,
+             app_attendances.longitude,
+             departments.Name as department,
+             designations.Name as designation,
              officials.Supervisor_Id,
-             DATE(app_attendances.updated_at) as date, 
+             DATE(app_attendances.updated_at) as date,
              DAYNAME(app_attendances.updated_at) as weekday,
-             MIN(CASE WHEN app_attendances.status = "out" THEN TIME(app_attendances.updated_at) END) as time_in, 
-             MIN(CASE WHEN app_attendances.status = "out" THEN app_attendances.village END) as in_location, 
+             MIN(CASE WHEN app_attendances.status = "out" THEN TIME(app_attendances.updated_at) END) as time_in,
+             MIN(CASE WHEN app_attendances.status = "out" THEN app_attendances.village END) as in_location,
              MIN(CASE WHEN app_attendances.status = "out" THEN app_attendances.image_path END) as in_image'
         )
             ->leftJoin('app_attendances', function ($join) use ($date) {
@@ -471,7 +481,7 @@ class EmailController extends Controller
 
         // ];
 
-         Mail::to('tahmina@artisanbn.com')
+        Mail::to('tahmina@artisanbn.com')
             ->cc(['sudiptya@artisanbn.com'])
             ->bcc('ferojul@artisanbn.com')
             ->send(new FFAttendanceEmail($attendences, $date, $title));
@@ -518,14 +528,14 @@ class EmailController extends Controller
         $month = $request->month + 1;
         $year = $request->year;
         $monthName = Carbon::createFromDate($year, $month, 1)->format('F');
-        
+
 
         // $attendances = attendence::select('employees.id', 'employees.Employee_Id', 'employees.Full_Name', 'employees.Official_Email', 'attendences.Date', 'attendences.Time_In', 'attendences.Time_Out', 'designations.Name')
         //     ->join('employees', 'employees.id', '=', 'attendences.EID')
         //     ->join('officials', 'employees.id', '=', 'officials.EID')
         //     ->leftjoin('branches', 'branches.id', '=', 'officials.Job_Location_Id')
         //     ->join('designations', 'designations.id', '=', 'officials.Designation_Id')
-        //     ->where('officials.Status', '=', 'N') 
+        //     ->where('officials.Status', '=', 'N')
         //     ->whereMonth('attendences.Date', '=', $month)
         //     ->whereYear('attendences.Date', '=', $year)
         //     ->whereNotNull('employees.Official_Email')
@@ -534,41 +544,41 @@ class EmailController extends Controller
         //     ->distinct()
         //     ->get()
         //     ->groupBy('Employee_Id');
- 
+
 
         $attendances = DB::table('attendences')
-                ->select(
-                    'employees.id',
-                    'employees.Employee_Id',
-                    'employees.Full_Name',
-                    'employees.Official_Email',
-                    DB::raw('designations.Name AS Designation_Name'),
-                    'attendences.Date',
-                    DB::raw('MIN(attendences.Time_In) AS First_In'),
-                    DB::raw('MAX(attendences.Time_Out) AS Last_Out')
-                )
-                ->join('employees', 'employees.id', '=', 'attendences.EID')
-                ->join('officials', 'officials.EID', '=', 'employees.id')
-                ->leftJoin('branches', 'branches.id', '=', 'officials.Job_location_Id')
-                ->join('designations', 'designations.id', '=', 'officials.Designation_Id')
-                ->where('officials.Status', 'N')
-                ->where('attendences.EID', 13)
-                ->whereMonth('attendences.Date', 5)
-                ->whereYear('attendences.Date', 2025)
-                ->whereNotNull('employees.Official_Email')
-                ->groupBy(
-                    'employees.id',
-                    'employees.Employee_Id',
-                    'employees.Full_Name',
-                    'employees.Official_Email',
-                    'designations.Name',
-                    'attendences.Date'
-                )
-                ->orderBy('employees.id', 'asc')
-                ->orderBy('attendences.Date', 'asc')
-                ->get();
+            ->select(
+                'employees.id',
+                'employees.Employee_Id',
+                'employees.Full_Name',
+                'employees.Official_Email',
+                DB::raw('designations.Name AS Designation_Name'),
+                'attendences.Date',
+                DB::raw('MIN(attendences.Time_In) AS First_In'),
+                DB::raw('MAX(attendences.Time_Out) AS Last_Out')
+            )
+            ->join('employees', 'employees.id', '=', 'attendences.EID')
+            ->join('officials', 'officials.EID', '=', 'employees.id')
+            ->leftJoin('branches', 'branches.id', '=', 'officials.Job_location_Id')
+            ->join('designations', 'designations.id', '=', 'officials.Designation_Id')
+            ->where('officials.Status', 'N')
+            ->where('attendences.EID', 13)
+            ->whereMonth('attendences.Date', 5)
+            ->whereYear('attendences.Date', 2025)
+            ->whereNotNull('employees.Official_Email')
+            ->groupBy(
+                'employees.id',
+                'employees.Employee_Id',
+                'employees.Full_Name',
+                'employees.Official_Email',
+                'designations.Name',
+                'attendences.Date'
+            )
+            ->orderBy('employees.id', 'asc')
+            ->orderBy('attendences.Date', 'asc')
+            ->get();
 
-      
+
 
         $leaveData = leave::select('leaves.EID', 'leaves.From_Date', 'leaves.To_Date', 'leave_types.Name as leave_type')
             ->join('leave_types', 'leaves.Leave_Type_Id', '=', 'leave_types.id')
@@ -579,14 +589,14 @@ class EmailController extends Controller
 
 
         foreach ($attendances as $employeeId => $records) {
-            
-            $employeeEmail = $records->Official_Email;   
 
-            foreach ($records as $item) { 
-                $item->weekday = Carbon::parse($item->Date)->format('l'); 
+            $employeeEmail = $records->Official_Email;
+
+            foreach ($records as $item) {
+                $item->weekday = Carbon::parse($item->Date)->format('l');
             }
 
-            $employeeLeaves = $leaveData->where('EID', $records->id); 
+            $employeeLeaves = $leaveData->where('EID', $records->id);
 
             dd($employeeLeaves);
 
@@ -603,24 +613,23 @@ class EmailController extends Controller
                 }
 
                 return $attendance;
-                
-            }); 
-            
+            });
+
             dd($employeeEmail);
             Mail::to($employeeEmail)
                 ->send(new MonthlyAttendence($employeeAttendance, $monthName, $year));
         }
 
- 
-        // foreach ($attendances as $employeeId => $records) {
-            
-        //     $employeeEmail = $records->Official_Email;   
 
-        //     foreach ($records as $item) { 
-        //         $item->weekday = Carbon::parse($item->Date)->format('l'); 
+        // foreach ($attendances as $employeeId => $records) {
+
+        //     $employeeEmail = $records->Official_Email;
+
+        //     foreach ($records as $item) {
+        //         $item->weekday = Carbon::parse($item->Date)->format('l');
         //     }
 
-        //     $employeeLeaves = $leaveData->where('EID', $records->first()->id); 
+        //     $employeeLeaves = $leaveData->where('EID', $records->first()->id);
 
         //     $employeeAttendance = $records->map(function ($attendance) use ($employeeLeaves) {
         //         $attendanceDate = $attendance->Date;
@@ -635,14 +644,14 @@ class EmailController extends Controller
         //         }
 
         //         return $attendance;
-                
-        //     }); 
-            
+
+        //     });
+
         //     dd($employeeEmail);
         //     Mail::to($employeeEmail)
         //         ->send(new MonthlyAttendence($employeeAttendance, $monthName, $year));
         // }
-        
+
 
         return response()->json(['message' => 'Emails sent successfully', 'success' => true]);
     }

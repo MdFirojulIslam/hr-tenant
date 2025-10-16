@@ -17,12 +17,12 @@ const selectedStatus = ref("");
 
 const form = ref({
     department: "",
-    Employee_Id: "",
-    From_Date: "",
-    To_Date: "",
-    Purpose: "",
-    Leave_Type_Id: "",
-    Status: "",
+    employee_id: "",
+    from_date: "",
+    to_date: "",
+    purpose: "",
+    leave_type_id: "",
+    status: "",
     file: null,
 });
 
@@ -126,7 +126,7 @@ const getImage = (e) => {
 };
 
 const submit = async () => {
-    form.value.Status = "Pending";
+    form.value.status = "Pending";
     const config = {
         headers: {
             "Content-Type": "multipart/form-data",
@@ -152,12 +152,12 @@ const submit = async () => {
                 timer: 1500,
             });
             await api.get(`/leave-req-mail/${response.data.id}`);
-            getEmployeeImg(form.value.Employee_Id);
             resetForm();
         }
     } catch (err) {
         error.value = err.response.data.errors;
     }
+    getData();
 };
 
 const totalDays = (start, end) => {
@@ -182,29 +182,68 @@ onMounted(() => getData());
                 <div class="card">
                     <div class="card-body">
                         <div class="text-center">
-                            <h1 class="mb-5">Leave Application Manual (Only By HR)</h1>
+                            <h1 class="mb-5">
+                                Leave Application Manual (Only By HR)
+                            </h1>
                         </div>
                         <div class="row">
                             <!-- Form Section -->
                             <div class="col-lg-6 col-md-12 col-sm-12 mb-4">
-                                <form class="forms-sample" @submit.prevent="submit">
+                                <form
+                                    class="forms-sample"
+                                    @submit.prevent="submit"
+                                >
                                     <div class="row">
-                                        <div class="col-lg-6 col-md-6 col-sm-12 mb-3">
+                                        <div
+                                            class="col-lg-6 col-md-6 col-sm-12 mb-3"
+                                        >
                                             <div class="form-group">
-                                                <label for="exampleInputEmail1">Department</label>
-                                                <select class="form-control" v-model="form.department" @change="getEmployee(form.department)">
-                                                    <option selected disabled>select</option>
-                                                    <option v-for="dept in department" :key="dept.id" :value="dept.id">
+                                                <label for="exampleInputEmail1"
+                                                    >Department</label
+                                                >
+                                                <select
+                                                    class="form-control"
+                                                    v-model="form.department"
+                                                    @change="
+                                                        getEmployee(
+                                                            form.department
+                                                        )
+                                                    "
+                                                >
+                                                    <option selected disabled>
+                                                        select
+                                                    </option>
+                                                    <option
+                                                        v-for="dept in department"
+                                                        :key="dept.id"
+                                                        :value="dept.id"
+                                                    >
                                                         {{ dept.Name }}
                                                     </option>
                                                 </select>
                                             </div>
                                         </div>
-                                        <div class="col-lg-6 col-md-6 col-sm-12 mb-3">
+                                        <div
+                                            class="col-lg-6 col-md-6 col-sm-12 mb-3"
+                                        >
                                             <div class="form-group">
-                                                <label for="exampleInputEmail1">Employee Name</label>
-                                                <select class="form-control" v-model="form.Employee_Id" @change="getEmployeeImg(form.Employee_Id)">
-                                                    <option v-for="e in employee" :key="e.id" :value="e.id">
+                                                <label for="exampleInputEmail1"
+                                                    >Employee Name</label
+                                                >
+                                                <select
+                                                    class="form-control"
+                                                    v-model="form.employee_id"
+                                                    @change="
+                                                        getEmployeeImg(
+                                                            form.Employee_Id
+                                                        )
+                                                    "
+                                                >
+                                                    <option
+                                                        v-for="e in employee"
+                                                        :key="e.id"
+                                                        :value="e.id"
+                                                    >
                                                         {{ e.Full_Name }}
                                                     </option>
                                                 </select>
@@ -213,16 +252,34 @@ onMounted(() => getData());
                                     </div>
 
                                     <div class="row">
-                                        <div class="col-lg-6 col-md-6 col-sm-12 mb-3">
+                                        <div
+                                            class="col-lg-6 col-md-6 col-sm-12 mb-3"
+                                        >
                                             <div class="form-group">
-                                                <label for="fromDate">From Date</label>
-                                                <input type="date" class="form-control" id="fromDate" v-model="form.From_Date" />
+                                                <label for="fromDate"
+                                                    >From Date</label
+                                                >
+                                                <input
+                                                    type="date"
+                                                    class="form-control"
+                                                    id="fromDate"
+                                                    v-model="form.from_date"
+                                                />
                                             </div>
                                         </div>
-                                        <div class="col-lg-6 col-md-6 col-sm-12 mb-3">
+                                        <div
+                                            class="col-lg-6 col-md-6 col-sm-12 mb-3"
+                                        >
                                             <div class="form-group">
-                                                <label for="toDate">To Date</label>
-                                                <input type="date" class="form-control" id="toDate" v-model="form.To_Date" />
+                                                <label for="toDate"
+                                                    >To Date</label
+                                                >
+                                                <input
+                                                    type="date"
+                                                    class="form-control"
+                                                    id="toDate"
+                                                    v-model="form.to_date"
+                                                />
                                             </div>
                                         </div>
                                     </div>
@@ -230,40 +287,78 @@ onMounted(() => getData());
                                     <div class="row">
                                         <div class="col-12 mb-3">
                                             <div class="form-group">
-                                                <label for="purpose">Purpose/Reason</label>
-                                                <textarea class="form-control" id="purpose" rows="2" v-model="form.Purpose"></textarea>
+                                                <label for="purpose"
+                                                    >Purpose/Reason</label
+                                                >
+                                                <textarea
+                                                    class="form-control"
+                                                    id="purpose"
+                                                    rows="2"
+                                                    v-model="form.purpose"
+                                                ></textarea>
                                             </div>
                                         </div>
                                     </div>
 
                                     <div class="row">
-                                        <div class="col-lg-6 col-md-6 col-sm-12 mb-3">
+                                        <div
+                                            class="col-lg-6 col-md-6 col-sm-12 mb-3"
+                                        >
                                             <div class="form-group">
-                                                <label for="leaveType">Leave Type</label>
-                                                <select class="form-control" v-model="form.Leave_Type_Id">
-                                                    <option selected disabled>select</option>
-                                                    <option v-for="leave in leaveType" :key="leave.id" :value="leave.id">
-                                                        {{ leave.Name }} Leave
+                                                <label for="leaveType"
+                                                    >Leave Type</label
+                                                >
+                                                <select
+                                                    class="form-control"
+                                                    v-model="form.leave_type_id"
+                                                >
+                                                    <option selected disabled>
+                                                        select
+                                                    </option>
+                                                    <option
+                                                        v-for="leave in leaveType"
+                                                        :key="leave.id"
+                                                        :value="leave.id"
+                                                    >
+                                                        {{ leave.leave_name }}
                                                     </option>
                                                 </select>
                                             </div>
                                         </div>
-                                        <div class="col-lg-6 col-md-6 col-sm-12 mb-3">
+                                        <div
+                                            class="col-lg-6 col-md-6 col-sm-12 mb-3"
+                                        >
                                             <div class="form-group">
                                                 <label for="documentUpload">
-                                                    Documents (If sick leave is more than 2 days)
-                                                    <div v-if="fileSizeWarning" class="text-danger">
-                                                        File size exceeds 500 KB. Please choose a smaller file.
+                                                    Documents (If sick leave is
+                                                    more than 2 days)
+                                                    <div
+                                                        v-if="fileSizeWarning"
+                                                        class="text-danger"
+                                                    >
+                                                        File size exceeds 500
+                                                        KB. Please choose a
+                                                        smaller file.
                                                     </div>
                                                 </label>
-                                                <input type="file" class="form-control" id="documentUpload" @change="getImage" />
+                                                <input
+                                                    type="file"
+                                                    class="form-control"
+                                                    id="documentUpload"
+                                                    @change="getImage"
+                                                />
                                             </div>
                                         </div>
                                     </div>
 
                                     <div class="row">
                                         <div class="col-12">
-                                            <button type="submit" class="btn btn-primary btn-block">Submit</button>
+                                            <button
+                                                type="submit"
+                                                class="btn btn-primary btn-block"
+                                            >
+                                                Submit
+                                            </button>
                                         </div>
                                     </div>
                                 </form>
@@ -282,20 +377,46 @@ onMounted(() => getData());
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        <tr v-for="(info, typeName) in totalLeaveDays" :key="typeName">
-                                            <td>{{ typeName }}</td>
-                                            <td>{{ info.maxDays }}</td>
-                                            <td>{{ info.totalDays }}</td>
-                                            <td>{{ info.maxDays - info.totalDays }}</td>
+                                        <tr
+                                            v-for="(info, typeName) in employee"
+                                            :key="typeName"
+                                        >
+                                            <th>{{ info.leave_name }}</th>
+                                            <td>
+                                                {{
+                                                    info.max_leave_days === 0
+                                                        ? info.earned_leave
+                                                        : info.max_leave_days
+                                                }}
+                                            </td>
+                                            <td>{{ info.leave_count }}</td>
+                                            <td>
+                                                {{
+                                                    info.max_leave_days === 0
+                                                        ? info.earned_leave -
+                                                          info.leave_count
+                                                        : info.max_leave_days -
+                                                          info.leave_count
+                                                }}
+                                            </td>
                                         </tr>
                                     </tbody>
                                 </table>
                             </div>
 
                             <!-- Employee Image Section -->
-                            <div class="col-lg-2 col-md-6 col-sm-12 d-flex justify-content-center align-items-center mb-4">
+                            <div
+                                class="col-lg-2 col-md-6 col-sm-12 d-flex justify-content-center align-items-center mb-4"
+                            >
                                 <div v-if="emp_img" class="img-container">
-                                    <img :src="emp_img.img_url" class="img-fluid rounded" style="max-height: 220px; max-width: 220px" />
+                                    <img
+                                        :src="emp_img.img_url"
+                                        class="img-fluid rounded"
+                                        style="
+                                            max-height: 220px;
+                                            max-width: 220px;
+                                        "
+                                    />
                                 </div>
                             </div>
                         </div>
@@ -313,7 +434,10 @@ onMounted(() => getData());
                         <div class="row mb-3 d-flex justify-content-end">
                             <div class="col-md-4 col-sm-6 mb-2">
                                 <label for="leaveTypeFilter">Leave Type</label>
-                                <select v-model="selectedType" class="form-control">
+                                <select
+                                    v-model="selectedType"
+                                    class="form-control"
+                                >
                                     <option value="">All Type</option>
                                     <option value="Casual">Casual</option>
                                     <option value="Sick">Sick</option>
@@ -322,8 +446,13 @@ onMounted(() => getData());
                                 </select>
                             </div>
                             <div class="col-md-4 col-sm-6 mb-2">
-                                <label for="leaveStatusFilter">Leave Status</label>
-                                <select v-model="selectedStatus" class="form-control">
+                                <label for="leaveStatusFilter"
+                                    >Leave Status</label
+                                >
+                                <select
+                                    v-model="selectedStatus"
+                                    class="form-control"
+                                >
                                     <option value="">All Status</option>
                                     <option value="Pending">Pending</option>
                                     <option value="Approved">Approved</option>
@@ -345,15 +474,25 @@ onMounted(() => getData());
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <tr v-for="(l, index) in filteredData" :key="l.id">
+                                    <tr
+                                        v-for="(l, index) in filteredData"
+                                        :key="l.id"
+                                    >
                                         <td>{{ index + 1 }}</td>
-                                        <td>{{ l.From_Date }}</td>
-                                        <td>{{ l.To_Date }}</td>
+                                        <td>{{ l.from_date }}</td>
+                                        <td>{{ l.to_date }}</td>
                                         <td>{{ l.daysBetween }}</td>
-                                        <td>{{ l.Purpose }}</td>
-                                        <td>{{ l.Status }}</td>
-                                        <td v-if="l.Attachment_Url">
-                                            <button @click="openAttachment(l.Attachment_Url)" class="btn btn-info">
+                                        <td>{{ l.purpose }}</td>
+                                        <td>{{ l.status }}</td>
+                                        <td v-if="l.attachment_url">
+                                            <button
+                                                @click="
+                                                    openAttachment(
+                                                        l.attachment_url
+                                                    )
+                                                "
+                                                class="btn btn-info"
+                                            >
                                                 <i class="fa fa-download"></i>
                                             </button>
                                         </td>
@@ -368,7 +507,6 @@ onMounted(() => getData());
         </div>
     </div>
 </template>
-
 
 <style>
 .leave-status th,

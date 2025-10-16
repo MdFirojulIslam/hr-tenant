@@ -43,7 +43,7 @@ const months = ref([
 
 const changeDate = () => {
     getData();
-}
+};
 
 // Fetch department and navigation data
 const getData = async () => {
@@ -51,18 +51,18 @@ const getData = async () => {
         const response = await api.get(`/salary-sheet`, {
             params: {
                 year: selectedYear.value,
-                month: selectedMonth.value
-            }
+                month: selectedMonth.value,
+            },
         });
 
         salaries.value = response.data;
-
-
     } catch (err) {
         if (err.response && err.response.status === 401) {
             // Assuming 'router' is defined elsewhere or passed as a prop
             // router.push({ name: "Login" });
-            console.error("Authentication failed, redirect to login if router is available.");
+            console.error(
+                "Authentication failed, redirect to login if router is available."
+            );
         } else {
             error.value = err.message || "Error fetching data";
         }
@@ -75,8 +75,8 @@ const generateSalary = async () => {
         const response = await api.get(`/generate-salary`, {
             params: {
                 year: selectedYear.value,
-                month: selectedMonth.value
-            }
+                month: selectedMonth.value,
+            },
         });
         if (response.data.success) {
             Swal.fire({
@@ -95,22 +95,21 @@ const generateSalary = async () => {
 
 const downloadSalary = async () => {
     try {
-        const response = await api.get('/export-salary-sheet', {
-            responseType: 'blob', // This tells Axios it's a file
+        const response = await api.get("/export-salary-sheet", {
+            responseType: "blob", // This tells Axios it's a file
             params: {
                 year: selectedYear.value,
-                month: selectedMonth.value
-            }
+                month: selectedMonth.value,
+            },
         });
 
         // Create a link element and trigger download
         const url = window.URL.createObjectURL(new Blob([response.data]));
-        const link = document.createElement('a');
+        const link = document.createElement("a");
         link.href = url;
-        link.setAttribute('download', 'salary_sheet.xlsx');
+        link.setAttribute("download", "salary_sheet.xlsx");
         document.body.appendChild(link);
         link.click();
-
     } catch (error) {
         console.error("Error downloading salary sheet:", error);
         Swal.fire({
@@ -124,7 +123,6 @@ const downloadSalary = async () => {
 // Computed property for filtered salaries
 const filteredSalaries = computed(() => {
     if (!searchQuery.value) {
-        console.log(salaries.value);
         return salaries.value;
     }
     // const lowerCaseQuery = searchQuery.value.toLowerCase();
@@ -139,7 +137,6 @@ const filteredSalaries = computed(() => {
     // });
 });
 
-
 onMounted(() => getData());
 </script>
 
@@ -149,25 +146,59 @@ onMounted(() => getData());
             <div class="d-flex justify-content-start">
                 <div class="form-group mx-2">
                     <label>Salary Year</label>
-                    <select class="form-control" v-model="selectedYear" @change="changeDate">
-                        <option v-for="(year, index) in years" :key="year" :value="year">
+                    <select
+                        class="form-control"
+                        v-model="selectedYear"
+                        @change="changeDate"
+                    >
+                        <option
+                            v-for="(year, index) in years"
+                            :key="year"
+                            :value="year"
+                        >
                             {{ year }}
                         </option>
                     </select>
                 </div>
                 <div class="form-group mx-2">
                     <label>Salary Month</label>
-                    <select class="form-control" v-model="selectedMonth" @change="changeDate">
-                        <option v-for="(month, index) in months" :key="month" :value="index + 1">
+                    <select
+                        class="form-control"
+                        v-model="selectedMonth"
+                        @change="changeDate"
+                    >
+                        <option
+                            v-for="(month, index) in months"
+                            :key="month"
+                            :value="index + 1"
+                        >
                             {{ month }}
                         </option>
                     </select>
                 </div>
-                <div><button class="btn btn-warning mt-4 mx-2" @click="generateSalary">Generate Sheet</button></div>
-                <div><button class="btn btn-info mt-4 mx-2" @click="downloadSalary">Download Sheet</button></div>
                 <div>
-                    <input type="text" class="form-control mt-4 mx-2"
-                        placeholder="Search by Employee Name, ID, or Bank A/C" v-model="searchQuery">
+                    <button
+                        class="btn btn-warning mt-4 mx-2"
+                        @click="generateSalary"
+                    >
+                        Generate Sheet
+                    </button>
+                </div>
+                <div>
+                    <button
+                        class="btn btn-info mt-4 mx-2"
+                        @click="downloadSalary"
+                    >
+                        Download Sheet
+                    </button>
+                </div>
+                <div>
+                    <input
+                        type="text"
+                        class="form-control mt-4 mx-2"
+                        placeholder="Search by Employee Name, ID, or Bank A/C"
+                        v-model="searchQuery"
+                    />
                 </div>
             </div>
 
@@ -186,7 +217,10 @@ onMounted(() => getData());
                         </tr>
                     </thead>
                     <tbody>
-                        <tr class="ver-align" v-for="(salary, index) in filteredSalaries">
+                        <tr
+                            class="ver-align"
+                            v-for="(salary, index) in filteredSalaries"
+                        >
                             <td>{{ index + 1 }}</td>
                             <td>ABNB-{{ salary.Employee_Id }}</td>
                             <td>{{ salary.Full_Name }}</td>
@@ -197,7 +231,9 @@ onMounted(() => getData());
                             <td>{{ salary.net_pay }}</td>
                         </tr>
                         <tr v-if="filteredSalaries.length === 0">
-                            <td colspan="7" class="text-center">No matching salaries found.</td>
+                            <td colspan="7" class="text-center">
+                                No matching salaries found.
+                            </td>
                         </tr>
                     </tbody>
                 </table>

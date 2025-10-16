@@ -54,7 +54,6 @@ const searchAsset = async () => {
     }
 };
 
-
 const getData = async (page = 1) => {
     try {
         const response = await api.get("/asset", {
@@ -81,9 +80,10 @@ const getData = async (page = 1) => {
             status: statusFilter.value,
         };
 
-        const responsedata = await api.get("/get-column-data", { params: filterParams });
-        uniqueFileds.value = responsedata.data
-        
+        const responsedata = await api.get("/get-column-data", {
+            params: filterParams,
+        });
+        uniqueFileds.value = responsedata.data;
     } catch (err) {
         error.value = err.message || "Error fetching data";
     } finally {
@@ -106,7 +106,9 @@ watch(
 
 const editAsset = async (id) => {
     try {
-        selectedStore.value = assets.value.data.find((asset) => asset.id === id);
+        selectedStore.value = assets.value.data.find(
+            (asset) => asset.id === id
+        );
         // const response = await api.get(`/asset/${id}`);
         // selectedStore.value = response.data;
         assetId.value = id;
@@ -119,7 +121,6 @@ const editAsset = async (id) => {
 const deleteAsset = async (id) => {
     try {
         const response = await api.delete(`/delete-asset/${id}`);
-        console.log(response.data.success);
         if (response.data.success) {
             Swal.fire({
                 position: "middle",
@@ -143,9 +144,17 @@ onMounted(() => getData());
 
 <template>
     <div class="p-5">
-        <component v-if="assetModel" :is="assetComponent" :isOpen="assetModel" :editStore="selectedStore"
-            :updateinfo="heading" :assetId="assetId" @modal-close="holidayClose" @submit="submitHandler"
-            name="first-modal" />
+        <component
+            v-if="assetModel"
+            :is="assetComponent"
+            :isOpen="assetModel"
+            :editStore="selectedStore"
+            :updateinfo="heading"
+            :assetId="assetId"
+            @modal-close="holidayClose"
+            @submit="submitHandler"
+            name="first-modal"
+        />
         <div class="col-lg-12 grid-margin stretch-card">
             <div class="card mb-3">
                 <div class="card-body">
@@ -154,14 +163,23 @@ onMounted(() => getData());
                             <h4 class="card-title m-2">Asset List</h4>
                         </div>
                         <div class="p-2">
-                            <button @click="assetOpen('Save')" type="button" class="btn-plus">
+                            <button
+                                @click="assetOpen('Save')"
+                                type="button"
+                                class="btn-plus"
+                            >
                                 <i class="fa-solid fa-plus"></i>
                             </button>
                         </div>
 
                         <div class="p-2">
-                            <input type="text" class="form-control" placeholder="Search..." v-model.trim="filter"
-                                @input="searchAsset" />
+                            <input
+                                type="text"
+                                class="form-control"
+                                placeholder="Search..."
+                                v-model.trim="filter"
+                                @input="searchAsset"
+                            />
                         </div>
                     </div>
 
@@ -171,57 +189,120 @@ onMounted(() => getData());
                                 <tr>
                                     <th>Serial</th>
                                     <th>
-                                        <select class="form-control" v-model="deviceCodeFilter">
-                                            <option value="all">Device Code</option>
-                                            <option v-for="item in uniqueFileds.device_code" :key="item" :value="item">
+                                        <select
+                                            class="form-control"
+                                            v-model="deviceCodeFilter"
+                                        >
+                                            <option value="all">
+                                                Device Code
+                                            </option>
+                                            <option
+                                                v-for="item in uniqueFileds.device_code"
+                                                :key="item"
+                                                :value="item"
+                                            >
                                                 AD{{ item }}
                                             </option>
                                         </select>
                                     </th>
                                     <th>
-                                        <select class="form-control" v-model="deviceNameFilter">
-                                            <option value="all">Device Name</option>
-                                            <option v-for="item in uniqueFileds.device_name" :key="item" :value="item">
+                                        <select
+                                            class="form-control"
+                                            v-model="deviceNameFilter"
+                                        >
+                                            <option value="all">
+                                                Device Name
+                                            </option>
+                                            <option
+                                                v-for="item in uniqueFileds.device_name"
+                                                :key="item"
+                                                :value="item"
+                                            >
                                                 {{ item }}
                                             </option>
                                         </select>
                                     </th>
                                     <th>
-                                        <select class="form-control" v-model="deviceTypeFilter">
-                                            <option value="all">Device Type</option>
-                                            <option v-for="item in uniqueFileds.device_type" :key="item" :value="item">
+                                        <select
+                                            class="form-control"
+                                            v-model="deviceTypeFilter"
+                                        >
+                                            <option value="all">
+                                                Device Type
+                                            </option>
+                                            <option
+                                                v-for="item in uniqueFileds.device_type"
+                                                :key="item"
+                                                :value="item"
+                                            >
                                                 {{ item }}
                                             </option>
                                         </select>
                                     </th>
                                     <th>
-                                        <select class="form-control" v-model="purchaseDateFilter">
-                                            <option value="all">Purchase Date</option>
-                                            <option v-for="item in uniqueFileds.purchase_date" :key="item" :value="item">
+                                        <select
+                                            class="form-control"
+                                            v-model="purchaseDateFilter"
+                                        >
+                                            <option value="all">
+                                                Purchase Date
+                                            </option>
+                                            <option
+                                                v-for="item in uniqueFileds.purchase_date"
+                                                :key="item"
+                                                :value="item"
+                                            >
                                                 {{ item }}
                                             </option>
                                         </select>
                                     </th>
                                     <th>
-                                        <select class="form-control" v-model="serialNumberFilter">
-                                            <option value="all">Serial Number</option>
-                                            <option v-for="item in uniqueFileds.serial_number" :key="item" :value="item">
+                                        <select
+                                            class="form-control"
+                                            v-model="serialNumberFilter"
+                                        >
+                                            <option value="all">
+                                                Serial Number
+                                            </option>
+                                            <option
+                                                v-for="item in uniqueFileds.serial_number"
+                                                :key="item"
+                                                :value="item"
+                                            >
                                                 {{ item }}
                                             </option>
                                         </select>
                                     </th>
                                     <th>
-                                        <select class="form-control" v-model="warrantyExpirationFilter">
-                                            <option value="all">Warranty Expiration</option>
-                                            <option v-for="item in uniqueFileds.warranty_expiration" :key="item" :value="item">
+                                        <select
+                                            class="form-control"
+                                            v-model="warrantyExpirationFilter"
+                                        >
+                                            <option value="all">
+                                                Warranty Expiration
+                                            </option>
+                                            <option
+                                                v-for="item in uniqueFileds.warranty_expiration"
+                                                :key="item"
+                                                :value="item"
+                                            >
                                                 {{ item }}
                                             </option>
                                         </select>
                                     </th>
                                     <th>
-                                        <select class="form-control" v-model="statusFilter">
-                                            <option value="all" selected>Status</option>
-                                            <option v-for="item in uniqueFileds.status" :key="item" :value="item">
+                                        <select
+                                            class="form-control"
+                                            v-model="statusFilter"
+                                        >
+                                            <option value="all" selected>
+                                                Status
+                                            </option>
+                                            <option
+                                                v-for="item in uniqueFileds.status"
+                                                :key="item"
+                                                :value="item"
+                                            >
                                                 {{ item }}
                                             </option>
                                         </select>
@@ -230,7 +311,10 @@ onMounted(() => getData());
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr v-for="(asset, index) in assets.data" :key="asset.id">
+                                <tr
+                                    v-for="(asset, index) in assets.data"
+                                    :key="asset.id"
+                                >
                                     <td>{{ assets.from + index }}</td>
                                     <td>
                                         AD{{ asset ? asset.Device_Code : "" }}
@@ -250,16 +334,28 @@ onMounted(() => getData());
                                         {{ asset ? asset.Serial_Number : "" }}
                                     </td>
                                     <td>
-                                        {{ asset ? asset.Warranty_Expiration : "" }}
+                                        {{
+                                            asset
+                                                ? asset.Warranty_Expiration
+                                                : ""
+                                        }}
                                     </td>
                                     <td>
                                         {{ asset ? asset.Status : "" }}
                                     </td>
                                     <td>
-                                        <button class="custom-btn btn-15" @click="editAsset(asset.id)">
-                                            <i class="fa-regular fa-pen-to-square"></i>
+                                        <button
+                                            class="custom-btn btn-15"
+                                            @click="editAsset(asset.id)"
+                                        >
+                                            <i
+                                                class="fa-regular fa-pen-to-square"
+                                            ></i>
                                         </button>
-                                        <button class="custom-btn btn-12 mx-2" @click="deleteAsset(asset.id)">
+                                        <button
+                                            class="custom-btn btn-12 mx-2"
+                                            @click="deleteAsset(asset.id)"
+                                        >
                                             <i class="fa-solid fa-trash"></i>
                                         </button>
                                     </td>
@@ -268,13 +364,14 @@ onMounted(() => getData());
                         </table>
                     </div>
                     <div class="d-flex justify-content-center">
-                        <Bootstrap4Pagination :data="assets" :limit="2" @pagination-change-page="getData" />
+                        <Bootstrap4Pagination
+                            :data="assets"
+                            :limit="2"
+                            @pagination-change-page="getData"
+                        />
                     </div>
                 </div>
             </div>
         </div>
     </div>
-
 </template>
-
-

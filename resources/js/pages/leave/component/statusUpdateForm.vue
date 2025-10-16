@@ -9,16 +9,17 @@ const { isOpen, editStore, leave_type, stId } = defineProps([
     "leave_type",
     "stId",
 ]);
+
 console.log(editStore);
 
 const form = ref({
     Full_Name: "",
-    From_Date: "",
-    To_Date: "",
-    Leave_Type: "",
-    Status: "",
+    from_date: "",
+    to_date: "",
+    leave_name: "", // will hold leave_type_id
+    status: "", // "Pending" / "Approved" / "Rejected"
     duration: "",
-    Purpose: "",
+    purpose: "",
 });
 
 watch(
@@ -26,21 +27,21 @@ watch(
     (item) => {
         if (item) {
             form.value.Full_Name = item.Full_Name || "";
-            form.value.From_Date = item.From_Date || "";
-            form.value.To_Date = item.To_Date || "";
-            form.value.Leave_Type = item.leave_id || "";
-            form.value.Status = item.Status || "";
+            form.value.from_date = item.from_date || "";
+            form.value.to_date = item.to_date || "";
+            form.value.leave_type = item.leave_type_id || ""; // maps to dropdown value
+            form.value.status = item.status || ""; // actual leave status
             form.value.duration = item.daysBetween || "";
-            form.value.Purpose = item.Purpose || "";
+            form.value.purpose = item.purpose || "";
         }
     },
     { immediate: true }
 );
 
 const computeDuration = async () => {
-    if (form.value.From_Date && form.value.To_Date) {
-        const from = new Date(form.value.From_Date);
-        const to = new Date(form.value.To_Date);
+    if (form.value.from_date && form.value.to_date) {
+        const from = new Date(form.value.from_date);
+        const to = new Date(form.value.to_date);
         const differenceInTime = to.getTime() - from.getTime();
         // Calculate the difference in days
         form.value.duration =
@@ -89,9 +90,7 @@ const update = async () => {
                     <div class="row">
                         <div class="col-lg-12 col-md-12 col-sm-12 mb-2">
                             <div class="form-group">
-                                <label for="exampleInputEmail1"
-                                    >Employee Name</label
-                                >
+                                <label for="employee_name">Employee Name</label>
                                 <input
                                     type="text"
                                     class="form-control"
@@ -105,22 +104,15 @@ const update = async () => {
                     <div class="row">
                         <div class="col-lg-6 col-md-6 col-sm-6 mb-2">
                             <div class="form-group">
-                                <label for="exampleInputEmail1"
-                                    >Leave Type</label
-                                >
+                                <label for="leave_type">Leave Type</label>
                                 <select
-                                    name=""
-                                    id=""
+                                    v-model="form.leave_type"
                                     class="form-control"
-                                    v-model="form.Leave_Type"
                                 >
-                                    <option
-                                        v-for="item in leave_type"
-                                        :key="item.id"
-                                        :value="item.id"
-                                    >
-                                        {{ item.Name }}
-                                    </option>
+                                    <option value="">All Type</option>
+                                    <option value="1">Casual</option>
+                                    <option value="2">Sick</option>
+                                    <option value="3">Earned</option>
                                 </select>
                             </div>
                         </div>
@@ -130,11 +122,12 @@ const update = async () => {
                                     >Leave Status</label
                                 >
                                 <select
-                                    name=""
-                                    id=""
                                     class="form-control"
-                                    v-model="form.Status"
+                                    v-model="form.status"
                                 >
+                                    <option value="Approved (SV)">
+                                        Approved (SV)
+                                    </option>
                                     <option value="Pending">Pending</option>
                                     <option value="Approved">Approved</option>
                                     <option value="Rejected">Rejected</option>
@@ -149,7 +142,7 @@ const update = async () => {
                                 <textarea
                                     type="text"
                                     class="form-control"
-                                    v-model="form.Purpose"
+                                    v-model="form.purpose"
                                     rows="2"
                                     readonly
                                 ></textarea>
@@ -166,7 +159,7 @@ const update = async () => {
                                 <input
                                     type="date"
                                     class="form-control"
-                                    v-model="form.From_Date"
+                                    v-model="form.from_date"
                                     @change="computeDuration"
                                 />
                             </div>
@@ -177,7 +170,7 @@ const update = async () => {
                                 <input
                                     type="date"
                                     class="form-control"
-                                    v-model="form.To_Date"
+                                    v-model="form.to_date"
                                     @change="computeDuration"
                                 />
                             </div>

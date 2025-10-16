@@ -1,7 +1,7 @@
 <script setup>
 import { ref, defineProps, getCurrentInstance, watch, onMounted } from "vue";
 import Swal from "sweetalert2";
-import api from '@/api';
+import api from "@/api";
 
 const { isOpen, editStore, updateinfo, EID, Id } = defineProps([
     "isOpen",
@@ -10,7 +10,6 @@ const { isOpen, editStore, updateinfo, EID, Id } = defineProps([
     "EID",
     "Id",
 ]);
-console.log(editStore);
 
 const form = ref({
     eid: EID,
@@ -20,7 +19,6 @@ const form = ref({
     contactNo: "",
     dob: "",
 });
-
 
 const instance = getCurrentInstance();
 
@@ -92,7 +90,11 @@ const submit = () => {
 </script>
 
 <template>
-    <div v-if="isOpen" class="modal-mask col-lg-6 col-md-6 grid-margin stretch-card" ref="target">
+    <div
+        v-if="isOpen"
+        class="modal-mask col-lg-6 col-md-6 grid-margin stretch-card"
+        ref="target"
+    >
         <div class="card">
             <div class="card-body">
                 <h4 class="card-title">Children Information</h4>
@@ -100,30 +102,54 @@ const submit = () => {
                     <div class="row">
                         <div class="col-lg-12 col-md-12 col-sm-12">
                             <div class="form-group">
-                                <label for="exampleInputEmail1">Child Name*</label>
-                                <input type="text" class="form-control" v-model="form.childName" />
+                                <label for="exampleInputEmail1"
+                                    >Child Name*</label
+                                >
+                                <input
+                                    type="text"
+                                    class="form-control"
+                                    v-model="form.childName"
+                                />
                             </div>
                         </div>
                     </div>
                     <div class="row">
                         <div class="col-lg-12 col-md-12 col-sm-12">
                             <div class="form-group">
-                                <label for="exampleInputEmail1">NID/Birth Certificate*</label>
-                                <input type="text" class="form-control" v-model="form.nid" />
+                                <label for="exampleInputEmail1"
+                                    >NID/Birth Certificate*</label
+                                >
+                                <input
+                                    type="text"
+                                    class="form-control"
+                                    v-model="form.nid"
+                                />
                             </div>
                         </div>
                     </div>
                     <div class="row">
                         <div class="col-lg-6 col-md-6 col-sm-12">
                             <div class="form-group">
-                                <label for="exampleInputEmail1">Date of Birth</label>
-                                <input type="date" class="form-control" v-model="form.dob" />
+                                <label for="exampleInputEmail1"
+                                    >Date of Birth</label
+                                >
+                                <input
+                                    type="date"
+                                    class="form-control"
+                                    v-model="form.dob"
+                                />
                             </div>
                         </div>
                         <div class="col-lg-6 col-md-6 col-sm-12">
                             <div class="form-group">
-                                <label for="exampleInputEmail1">Contact No</label>
-                                <input type="text" class="form-control" v-model="form.contactNo" />
+                                <label for="exampleInputEmail1"
+                                    >Contact No</label
+                                >
+                                <input
+                                    type="text"
+                                    class="form-control"
+                                    v-model="form.contactNo"
+                                />
                             </div>
                         </div>
                     </div>
@@ -131,7 +157,11 @@ const submit = () => {
                         <div class="col-lg-12 col-md-12 col-sm-12">
                             <div class="form-group">
                                 <label for="exampleInputEmail1">Email Id</label>
-                                <input type="email" class="form-control" v-model="form.email" />
+                                <input
+                                    type="email"
+                                    class="form-control"
+                                    v-model="form.email"
+                                />
                             </div>
                         </div>
                     </div>
@@ -139,7 +169,11 @@ const submit = () => {
                     <button type="submit" class="custom-btn btn-13 m-3 p-2">
                         <i class="fa-solid fa-check"></i> | {{ updateinfo }}
                     </button>
-                    <button type="reset" class="custom-btn btn-12 m-3 p-2" @click.stop="closeModal">
+                    <button
+                        type="reset"
+                        class="custom-btn btn-12 m-3 p-2"
+                        @click.stop="closeModal"
+                    >
                         <i class="fa-solid fa-x"></i> | Cancel
                     </button>
                 </form>

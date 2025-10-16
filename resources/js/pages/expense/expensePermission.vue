@@ -19,9 +19,8 @@ const getData = async () => {
 
 const togglePermission = async (id, type) => {
     // Find the specific item and toggle the value locally
-    const item = permissions.value.find(emp => emp.id === id);
+    const item = permissions.value.find((emp) => emp.id === id);
     if (!item) return;
-    console.log(id);
 
     // Toggle the value
     if (type === "date") {
@@ -32,10 +31,10 @@ const togglePermission = async (id, type) => {
 
     try {
         // Send API request to update permission
-        await api.post('/update-expense-permission', {
+        await api.post("/update-expense-permission", {
             id: id,
             type: type,
-            value: type === "date" ? item.Date_Lock : item.Attendance_Lock
+            value: type === "date" ? item.Date_Lock : item.Attendance_Lock,
         });
 
         Swal.fire({
@@ -45,7 +44,6 @@ const togglePermission = async (id, type) => {
             showConfirmButton: false,
             timer: 1000,
         });
-
     } catch (err) {
         console.error(err.message || "Error updating permission");
         Swal.fire("Error", "Failed to update permission", "error");
@@ -60,7 +58,6 @@ const togglePermission = async (id, type) => {
 
 onMounted(() => getData());
 </script>
-
 
 <template>
     <div class="container">
@@ -79,21 +76,40 @@ onMounted(() => getData());
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr v-for="(item, index) in permissions" :key="item.id">
+                                <tr
+                                    v-for="(item, index) in permissions"
+                                    :key="item.id"
+                                >
                                     <td>{{ index + 1 }}</td>
                                     <td>ABNB{{ item.Employee_Id }}</td>
                                     <td>{{ item.Full_Name }}</td>
                                     <td>
                                         <label class="switch">
-                                            <input type="checkbox" :checked="item.Date_Lock"
-                                                @change="togglePermission(item.id, 'date')" />
+                                            <input
+                                                type="checkbox"
+                                                :checked="item.Date_Lock"
+                                                @change="
+                                                    togglePermission(
+                                                        item.id,
+                                                        'date'
+                                                    )
+                                                "
+                                            />
                                             <span class="slider"></span>
                                         </label>
                                     </td>
                                     <td>
                                         <label class="switch">
-                                            <input type="checkbox" :checked="item.Attendance_Lock"
-                                                @change="togglePermission(item.id, 'att')" />
+                                            <input
+                                                type="checkbox"
+                                                :checked="item.Attendance_Lock"
+                                                @change="
+                                                    togglePermission(
+                                                        item.id,
+                                                        'att'
+                                                    )
+                                                "
+                                            />
                                             <span class="slider"></span>
                                         </label>
                                     </td>
@@ -152,11 +168,11 @@ onMounted(() => getData());
     border-radius: 50%;
 }
 
-input:checked+.slider {
+input:checked + .slider {
     background-color: #4caf50;
 }
 
-input:checked+.slider:before {
+input:checked + .slider:before {
     transform: translateX(20px);
     /* Adjusted movement */
 }

@@ -14,6 +14,5 @@ Route::get('/leave-req-mail/{id}', [EmailController::class, "leaveRequestEmail"]
 Route::get('/leave-status-mail/{id}', [EmailController::class, "leaveStatusEmail"]);
 Route::get('/hr-approval/{id}', [EmailController::class, "hrApprovalEmail"]);
 Route::post('/user-mail', [EmailController::class, "sendUserEmail"]);
-Route::get('/attendance-mail', [EmailController::class, "attendanceEmail"]); 
+Route::get('/attendance-mail', [EmailController::class, "attendanceEmail"]);
 Route::get('/monthly-attendance', [EmailController::class, "monthlyAttendance"]);
-

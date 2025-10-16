@@ -1,26 +1,32 @@
 <script setup>
-import { ref, onMounted, computed } from "vue";
+import { ref, onMounted, computed, watch } from "vue";
+import { useRoute, useRouter } from "vue-router";
 import Swal from "sweetalert2";
 import api from "@/api";
-import axios from "axios";
+import { useStore } from "vuex";
 
-// ====== Reactive State ======
-const employeesByDept = ref([]); // employees filtered by department
-const employee = ref([]); // selected employee detail
+// ----------------- Vuex & Router -----------------
+const store = useStore();
+const user = store.getters.getUser;
+const router = useRouter();
+const route = useRoute();
+
+// ----------------- Reactive State -----------------
 const department = ref([]);
 const leaveType = ref([]);
 const allLeave = ref([]);
-const error = ref(null);
-
+const employeesByDept = ref([]);
+const employee = ref([]);
 const earnedLeave = ref("");
 
-// ====== Filter Controls ======
 const selectedDept = ref("");
 const selectedEmp = ref("");
 const selectedType = ref("");
-const selectedStatus = ref("");
+const selectedStatus = ref("Pending");
 
-// ====== Date Formatting ======
+const error = ref(null);
+
+// ----------------- Helper Functions -----------------
 const formatDate = (dateStr) => {
     if (!dateStr) return "";
     const date = new Date(dateStr);
@@ -30,57 +36,51 @@ const formatDate = (dateStr) => {
     return `${day} ${month}, ${year}`;
 };
 
-// ====== Fetch Leave Approval Update ======
+const openAttachment = (url) => url && window.open(url, "_blank");
+
 const editLeaveStatus = async (id, status) => {
     try {
-        await api.get(`/leave-approval`, { params: { id, status } });
-        Swal.fire({
-            position: "center",
-            icon: "success",
-            title: "Update sent to HR",
-            showConfirmButton: false,
-            timer: 1500,
-        });
+        const { data } = await api.put("/leave-approval", { id, status });
 
-        // Update the leave locally
-        const leaveIndex = allLeave.value.findIndex((l) => l.id === id);
-        if (leaveIndex !== -1) {
-            allLeave.value[leaveIndex].status = status;
-            allLeave.value[leaveIndex].notification = 1;
+        if (data.success) {
+            window.location.reload();
+            Swal.fire({
+                position: "center",
+                icon: "success",
+                title: data.message || "Update sent to HR",
+                showConfirmButton: false,
+                timer: 1500,
+            });
+            // Update locally
+            const leaveIndex = allLeave.value.findIndex((l) => l.id === id);
+            if (leaveIndex !== -1) {
+                allLeave.value[leaveIndex].status = status;
+                allLeave.value[leaveIndex].notification = 1;
+            }
+
+            selectedDept.value = "";
+            selectedEmp.value = "";
+            selectedType.value = "";
+            selectedStatus.value = "Pending"; // default status again
+            employee.value = [];
+            employeesByDept.value = [];
+            earnedLeave.value = "";
+
+            await api.get(`/hr-approval/${id}`);
         }
-
-        // Trigger HR approval (optional)
-        await api.get(`/hr-approval/${id}`);
     } catch (err) {
-        Swal.fire({
-            icon: "error",
-            title: "Update Failed",
-            text: err.message,
-        });
+        Swal.fire({ icon: "error", title: "Update Failed", text: err.message });
     }
 };
 
-const getLeaveInfo = async (id) => {
+// ----------------- Data Fetching -----------------
+const getData = async () => {
     try {
-        const response = await api.get(`/leave/${id}`);
-        employee.value = response.data;
-
-        const responseEarned = await api.get(`/get-earned-leave/${id}`);
-        earnedLeave.value = responseEarned.data;
-    } catch (error) {
-        console.error("Error updating store:", error);
-    }
-};
-
-// ====== Fetch Department, Leave Types, and All Leaves ======
-const getData = async (page = 1) => {
-    try {
-        const [deptRes, typeRes, leaveRes] = await axios.all([
+        const [deptRes, typeRes, leaveRes] = await Promise.all([
             api.get("/department"),
             api.get("/leave-type"),
-            api.get(`/all-leave?page=${page}`),
+            api.get("/all-leave?page=1"),
         ]);
-
         department.value = deptRes.data;
         leaveType.value = typeRes.data;
         allLeave.value = leaveRes.data;
@@ -89,46 +89,96 @@ const getData = async (page = 1) => {
     }
 };
 
-// ====== Fetch Employees by Department ======
 const getEmployee = async (deptId) => {
     if (!deptId) {
         employeesByDept.value = [];
         return;
     }
-
     try {
-        const response = await api.get(`/emp/${deptId}`);
-        employeesByDept.value = response.data;
+        const res = await api.get(`/emp/${deptId}`);
+        employeesByDept.value = res.data;
     } catch (err) {
-        console.error("Error fetching employees:", err);
+        console.error(err);
     }
 };
 
-// ====== Filtered Leave Records ======
-const filteredData = computed(() => {
-    return allLeave.value.filter((item) => {
-        console.log(item);
+const getLeaveInfo = async (id) => {
+    try {
+        const res = await api.get(`/leave/${id}`);
+        employee.value = res.data;
+
+        const earnedRes = await api.get(`/get-earned-leave/${id}`);
+        earnedLeave.value = earnedRes.data;
+    } catch (err) {
+        console.error(err);
+    }
+};
+
+// ----------------- Filtered Leaves -----------------
+const filteredData = computed(() =>
+    allLeave.value.filter((item) => {
         const deptMatch =
             !selectedDept.value || item.dept_id == selectedDept.value;
         const empMatch = !selectedEmp.value || item.EID == selectedEmp.value;
         const typeMatch =
-            !selectedType.value || item.leave_id == selectedType.value;
+            !selectedType.value || item.leave_type_id == selectedType.value;
         const statusMatch =
             !selectedStatus.value || item.status == selectedStatus.value;
         return deptMatch && empMatch && typeMatch && statusMatch;
-    });
-});
+    })
+);
 
-// ====== Open Attachment in New Tab ======
-const openAttachment = (url) => {
-    if (!url) return;
-    window.open(url, "_blank");
+// ----------------- Auto-select from query -----------------
+const setQuerySelection = async () => {
+    if (!department.value.length || !leaveType.value.length) return;
+
+    let needUpdate = false;
+
+    // Department
+    if (route.query.department_name) {
+        const dept = department.value.find(
+            (d) => d.Name === route.query.department_name
+        );
+        if (dept) {
+            selectedDept.value = dept.id;
+            await getEmployee(dept.id);
+            needUpdate = true;
+
+            // Employee
+            if (route.query.full_name) {
+                const emp = employeesByDept.value.find(
+                    (e) => e.Full_Name === route.query.full_name
+                );
+                if (emp) {
+                    selectedEmp.value = emp.id;
+                    await getLeaveInfo(emp.id);
+                }
+            }
+        }
+    }
+
+    // Leave Type
+    // if (route.query.leave_type) {
+    //     const type = leaveType.value.find(
+    //         (t) => t.leave_name === route.query.leave_type
+    //     );
+    //     if (type) selectedType.value = type.id;
+    //     needUpdate = true;
+    // }
+
+    // Remove query parameters from URL after using them
+    if (needUpdate) {
+        router.replace({ path: route.path, query: {} });
+    }
 };
 
-// ====== Lifecycle ======
+// ----------------- Watch Query Changes -----------------
+watch(route, () => setQuerySelection(), { immediate: true });
+
+// ----------------- Lifecycle -----------------
 onMounted(async () => {
     await getData();
-    console.log("All leaves:", allLeave.value);
+    await setQuerySelection();
 });
 </script>
 
@@ -212,6 +262,7 @@ onMounted(async () => {
                                             <th>Balance</th>
                                         </tr>
                                     </thead>
+
                                     <tbody>
                                         <tr
                                             v-for="(info, typeName) in employee"
@@ -252,11 +303,17 @@ onMounted(async () => {
 
                         <!-- Filters -->
                         <div class="row justify-content-end mb-3">
-                            <div class="col-lg-3 col-md-4 col-sm-6 mb-3">
+                            <!-- Department Filter -->
+                            <div
+                                class="col-lg-3 col-md-4 col-sm-6 mb-3 position-relative"
+                            >
                                 <label>Department</label>
                                 <select
                                     v-model="selectedDept"
-                                    @change="getEmployee(selectedDept)"
+                                    @change="
+                                        getEmployee(selectedDept);
+                                        selectedEmp = '';
+                                    "
                                     class="form-control"
                                 >
                                     <option value="">All Department</option>
@@ -268,9 +325,26 @@ onMounted(async () => {
                                         {{ item.Name }}
                                     </option>
                                 </select>
+                                <button
+                                    v-if="selectedDept"
+                                    type="button"
+                                    class="btn btn-sm btn-link position-absolute top-50 end-0 me-4 p-0"
+                                    @click="
+                                        () => {
+                                            selectedDept = '';
+                                            selectedEmp = '';
+                                            employeesByDept = [];
+                                        }
+                                    "
+                                >
+                                    <i class="fa fa-times text-danger"></i>
+                                </button>
                             </div>
 
-                            <div class="col-lg-3 col-md-4 col-sm-6 mb-3">
+                            <!-- Employee Filter -->
+                            <div
+                                class="col-lg-3 col-md-4 col-sm-6 mb-3 position-relative"
+                            >
                                 <label>Employee Name</label>
                                 <select
                                     v-model="selectedEmp"
@@ -285,9 +359,20 @@ onMounted(async () => {
                                         {{ emp.Full_Name }}
                                     </option>
                                 </select>
+                                <button
+                                    v-if="selectedEmp"
+                                    type="button"
+                                    class="btn btn-sm btn-link position-absolute top-50 end-0 me-4 p-0"
+                                    @click="selectedEmp = ''"
+                                >
+                                    <i class="fa fa-times text-danger"></i>
+                                </button>
                             </div>
 
-                            <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+                            <!-- Leave Type Filter -->
+                            <div
+                                class="col-lg-2 col-md-4 col-sm-6 mb-3 position-relative"
+                            >
                                 <label>Leave Type</label>
                                 <select
                                     v-model="selectedType"
@@ -302,9 +387,20 @@ onMounted(async () => {
                                         {{ type.leave_name }}
                                     </option>
                                 </select>
+                                <button
+                                    v-if="selectedType"
+                                    type="button"
+                                    class="btn btn-sm btn-link position-absolute top-50 end-0 me-4 p-0"
+                                    @click="selectedType = ''"
+                                >
+                                    <i class="fa fa-times text-danger"></i>
+                                </button>
                             </div>
 
-                            <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+                            <!-- Status Filter -->
+                            <div
+                                class="col-lg-2 col-md-4 col-sm-6 mb-3 position-relative"
+                            >
                                 <label>Status</label>
                                 <select
                                     v-model="selectedStatus"
@@ -315,6 +411,14 @@ onMounted(async () => {
                                     <option value="Approved">Approved</option>
                                     <option value="Rejected">Rejected</option>
                                 </select>
+                                <button
+                                    v-if="selectedStatus"
+                                    type="button"
+                                    class="btn btn-sm btn-link position-absolute top-50 end-0 me-4 p-0"
+                                    @click="selectedStatus = ''"
+                                >
+                                    <i class="fa fa-times text-danger"></i>
+                                </button>
                             </div>
                         </div>
 
@@ -366,15 +470,16 @@ onMounted(async () => {
                                         <td
                                             v-if="
                                                 l.notification == 0 &&
-                                                l.status == 'Pending'
+                                                l.status == 'Pending' &&
+                                                l.Supervisor_Id === user.id
                                             "
                                         >
                                             <button
                                                 class="custom-btn btn-13 mx-1"
                                                 @click.stop="
                                                     editLeaveStatus(
-                                                        l.id,
-                                                        'Approved'
+                                                        l.leave_id,
+                                                        'Approved (SV)'
                                                     )
                                                 "
                                             >
@@ -386,7 +491,7 @@ onMounted(async () => {
                                                 class="custom-btn btn-12 mx-1"
                                                 @click.stop="
                                                     editLeaveStatus(
-                                                        l.id,
+                                                        l.leave_id,
                                                         'Rejected'
                                                     )
                                                 "
@@ -409,7 +514,7 @@ onMounted(async () => {
 
 <style>
 .leave-table {
-    max-height: 400px;
+    max-height: 500px;
 }
 
 .leave-status th,

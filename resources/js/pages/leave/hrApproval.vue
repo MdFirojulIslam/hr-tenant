@@ -40,7 +40,7 @@ const formatDate = (dateStr) => {
 };
 
 const editLeaveStatus = async (id) => {
-    const leaveData = allLeave.value.find((leave) => leave.id === id);
+    const leaveData = allLeave.value.find((leave) => leave.leave_id === id);
     if (leaveData) {
         selectedStore.value = leaveData;
         statusId.value = id;
@@ -51,6 +51,26 @@ const editLeaveStatus = async (id) => {
             title: "Oops...",
             text: "Unable to find leave data.",
         });
+    }
+};
+
+const leaveApprove = async (id, status) => {
+    try {
+        const { data } = await api.put("/hr-approved", { id, status });
+
+        if (data.success) {
+            Swal.fire({
+                position: "center",
+                icon: "success",
+                title: data.message || "Leave Approved",
+                showConfirmButton: false,
+                timer: 1500,
+            });
+
+            await api.get(`/hr-approval/${id}`);
+        }
+    } catch (err) {
+        Swal.fire({ icon: "error", title: "Update Failed", text: err.message });
     }
 };
 
@@ -74,9 +94,9 @@ const filteredData = computed(() => {
     return allLeave.value.filter((item) => {
         return (
             (selectedType.value === "" ||
-                item.Leave_Type === selectedType.value) &&
+                item.leave_type_id === selectedType.value) &&
             (selectedStatus.value === "" ||
-                item.Status === selectedStatus.value) &&
+                item.status === selectedStatus.value) &&
             (selectedDept.value === "" ||
                 item.department === selectedDept.value)
         );
@@ -91,37 +111,6 @@ const getEmployee = async (id) => {
         console.error("Error updating store:", error);
     }
 };
-
-const totalLeaveDays = computed(() => {
-    const totals = {};
-
-    if (Array.isArray(leaveType.value) && leaveType.value.length > 0) {
-        leaveType.value.forEach((type) => {
-            totals[type.Name] = {
-                totalDays: 0,
-                maxDays: type.Max_Days || 0,
-            };
-        });
-
-        employee.value.forEach((item) => {
-            const typeName = item.leave_type;
-            if (!totals[typeName]) {
-                totals[typeName] = {
-                    totalDays: 0,
-                    maxDays: item.Max_Days,
-                };
-            }
-
-            totals[typeName].maxDays = item.Max_Days;
-
-            if (item.Status === "Approved") {
-                totals[typeName].totalDays += item.daysBetween;
-            }
-        });
-    }
-
-    return totals;
-});
 
 const deleteLeave = async (id) => {
     try {
@@ -321,9 +310,9 @@ onMounted(() => getData());
                                     <option
                                         v-for="item in leaveType"
                                         :key="item.id"
-                                        :value="item.Name"
+                                        :value="item.id"
                                     >
-                                        {{ item.Name }}
+                                        {{ item.leave_name }}
                                     </option>
                                 </select>
                             </div>
@@ -336,6 +325,9 @@ onMounted(() => getData());
                                     <option value="">All Status</option>
                                     <option value="Pending">Pending</option>
                                     <option value="Approved">Approved</option>
+                                    <option value="Approved (SV)">
+                                        Approved (SV)
+                                    </option>
                                     <option value="Rejected">Rejected</option>
                                 </select>
                             </div>
@@ -388,10 +380,26 @@ onMounted(() => getData());
                                             </button>
                                         </td>
                                         <td v-else>-</td>
-                                        <td v-if="l.notification == 1">
+                                        <td>
+                                            <button
+                                                v-if="l.status != 'Approved'"
+                                                class="custom-btn btn-13 mx-1"
+                                                @click.stop="
+                                                    leaveApprove(
+                                                        l.leave_id,
+                                                        'Approved'
+                                                    )
+                                                "
+                                            >
+                                                <i
+                                                    class="fa-solid fa-check"
+                                                ></i>
+                                            </button>
                                             <button
                                                 class="btn btn-warning btn-sm mx-1"
-                                                @click="editLeaveStatus(l.id)"
+                                                @click.stop="
+                                                    editLeaveStatus(l.leave_id)
+                                                "
                                             >
                                                 <i
                                                     class="fa-regular fa-pen-to-square"
@@ -399,7 +407,9 @@ onMounted(() => getData());
                                             </button>
                                             <button
                                                 class="btn btn-danger btn-sm mx-1"
-                                                @click="deleteLeave(l.id)"
+                                                @click.stop="
+                                                    deleteLeave(l.leave_id)
+                                                "
                                             >
                                                 <i
                                                     class="fa-regular fa-trash-can"

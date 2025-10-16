@@ -92,7 +92,6 @@ const editholiday = async (id) => {
 const deleteholiday = async (id) => {
     try {
         const response = await api.delete(`/delete-holiday/${id}`);
-        console.log(response.data.success);
         if (response.data.success) {
             Swal.fire({
                 position: "middle",

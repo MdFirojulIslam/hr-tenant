@@ -12,16 +12,16 @@ class leave extends Model
     use SoftDeletes;
 
     protected $fillable = [
-        'EID',
-        'Leave_Type_Id',
-        'From_Date',
-        'To_Date',
-        'Purpose',
-        'Status',
-        'Attachment_Url',
+        'employee_id',
+        'leave_type_id',
+        'from_date',
+        'to_date',
+        'purpose',
+        'status',
+        'attachment_url',
         'created_by',
         'updated_by',
-        'Notification',
+        'notification',
     ];
 
     public function employee()

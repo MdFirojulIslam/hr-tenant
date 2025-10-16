@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\attendence;
 use App\Models\leave;
 use App\Models\holiday;
+use App\Models\official;
 use App\Models\employee;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
@@ -52,7 +53,7 @@ class LeaveController extends Controller
     {
         $currentYear = now()->year;
 
-        $subordinates = leave::select('leaves.id', 'employees.id as EID', 'employees.Full_Name', 'employees.Employee_Id', 'leaves.from_date', 'leaves.to_date', 'leaves.status', 'leaves.attachment_url', 'leaves.purpose', 'leaves.notification', 'leave_types.leave_name', 'leave_types.id as leave_id', 'designations.Name as designation', 'departments.Name as department', 'departments.id as dept_id', 'officials.Supervisor_Id')
+        $subordinates = leave::select('leaves.id as leave_id', 'employees.id as EID', 'employees.Full_Name', 'employees.Employee_Id', 'leaves.from_date', 'leaves.to_date', 'leaves.status', 'leaves.attachment_url', 'leaves.purpose', 'leaves.notification', 'leave_types.leave_name', 'leave_types.id as leave_type_id', 'designations.Name as designation', 'departments.Name as department', 'departments.id as dept_id', 'officials.Supervisor_Id')
             ->join('employees', 'leaves.employee_id', '=', 'employees.id')
             ->join('leave_types', 'leaves.leave_type_id', '=', 'leave_types.id')
             ->join('officials', 'officials.EID', '=', 'employees.id')
@@ -67,68 +68,148 @@ class LeaveController extends Controller
         return $subordinates;
     }
 
-
-
     public function getSubordinates($userId)
     {
-        $subordinates = [];
-        $allSubordinateIds = [];
-        $queue = [$userId];
-
-        // Step 1: Fetch the hierarchy of subordinates
-        while (!empty($queue)) {
-            $currentUserId = array_shift($queue);
-
-            // Get the subordinates of the current user
-            $subordinateUsers = DB::table('officials')
-                ->join('employees', 'officials.EID', '=', 'employees.id')
-                ->select('employees.id as EID', 'employees.Full_Name')
-                ->where('officials.Supervisor_Id', '=', $currentUserId)
-                ->where('officials.Status', '=', 'N')
-                ->get();
-
-            foreach ($subordinateUsers as $subordinate) {
-                if (!in_array($subordinate->EID, $allSubordinateIds)) {
-                    $allSubordinateIds[] = $subordinate->EID;
-                    $queue[] = $subordinate->EID;
-                }
-            }
-        }
-
-        $currentYear = now()->year;
-
-        // Step 2: Fetch leave records for all subordinates
-        if (!empty($allSubordinateIds)) {
-            $subordinates = leave::select(
-                'leaves.id',
-                'employees.id as EID',
-                'employees.Full_Name',
-                'employees.Employee_Id',
-                'leaves.from_date',
-                'leaves.to_date',
-                'leaves.status',
-                'leaves.attachment_url',
-                'leaves.purpose',
-                'leaves.notification',
-                'leave_types.leave_name',
-                'leave_types.id as leave_id',
-                'designations.Name as designation',
-                'departments.Name as department',
-                'departments.id as dept_id',
-                'officials.Supervisor_Id'
-            )
-                ->leftjoin('employees', 'leaves.EID', '=', 'employees.id')
-                ->leftjoin('leave_types', 'leaves.leave_type_id', '=', 'leave_types.id')
-                ->leftjoin('officials', 'officials.EID', '=', 'employees.id')
-                ->leftjoin('departments', 'officials.Department_Id', '=', 'departments.id')
-                ->leftjoin('designations', 'officials.Designation_Id', '=', 'designations.id')
-                ->whereIn('employees.id', $allSubordinateIds)
-                ->whereYear('leaves.from_date', '=', $currentYear)
-                ->orderby('leaves.id', 'desc')
-                ->get();
-        }
-        return $subordinates;
+        $data = official::select('leaves.id as leave_id', 'employees.Full_Name', 'employees.id as EID',  'departments.Name as department', 'departments.id as dept_id', 'leaves.status', 'leaves.from_date', 'leaves.to_date', 'leaves.purpose', 'leave_types.leave_name')
+            ->join('leaves', 'leaves.employee_id', '=', 'officials.EID')
+            ->join('employees', 'employees.id', '=', 'officials.EID')
+            ->join('leave_types', 'leaves.leave_type_id', '=', 'leave_types.id')
+            ->join('departments', 'departments.id', '=', 'officials.Department_Id')
+            ->where('officials.Supervisor_Id', '=', $userId)
+            ->get();
+        return $data;
     }
+
+
+
+
+    // public function getSubordinates($userId)
+    // {
+    //     $subordinates = [];
+    //     $allSubordinateIds = [];
+    //     $queue = [$userId];
+
+    //     // Step 1: Fetch the hierarchy of subordinates
+    //     while (!empty($queue)) {
+    //         $currentUserId = array_shift($queue);
+
+    //         // Get the subordinates of the current user
+    //         $subordinateUsers = DB::table('officials')
+    //             ->join('employees', 'officials.EID', '=', 'employees.id')
+    //             ->select('employees.id as EID', 'employees.Full_Name')
+    //             ->where('officials.Supervisor_Id', '=', $currentUserId)
+    //             ->where('officials.Status', '=', 'N')
+    //             ->get();
+
+    //         foreach ($subordinateUsers as $subordinate) {
+    //             if (!in_array($subordinate->EID, $allSubordinateIds)) {
+    //                 $allSubordinateIds[] = $subordinate->EID;
+    //                 $queue[] = $subordinate->EID;
+    //             }
+    //         }
+    //     }
+
+    //     $currentYear = now()->year;
+
+    //     // Step 2: Fetch leave records for all subordinates
+    //     if (!empty($allSubordinateIds)) {
+    //         $subordinates = leave::select(
+    //             'leaves.id',
+    //             'employees.id as EID',
+    //             'employees.Full_Name',
+    //             'employees.Employee_Id',
+    //             'leaves.from_date',
+    //             'leaves.to_date',
+    //             'leaves.status',
+    //             'leaves.attachment_url',
+    //             'leaves.purpose',
+    //             'leaves.notification',
+    //             'leave_types.leave_name',
+    //             'leave_types.id as leave_id',
+    //             'designations.Name as designation',
+    //             'departments.Name as department',
+    //             'departments.id as dept_id',
+    //             'officials.Supervisor_Id'
+    //         )
+    //             ->leftjoin('employees', 'leaves.EID', '=', 'employees.id')
+    //             ->leftjoin('leave_types', 'leaves.leave_type_id', '=', 'leave_types.id')
+    //             ->leftjoin('officials', 'officials.EID', '=', 'employees.id')
+    //             ->leftjoin('departments', 'officials.Department_Id', '=', 'departments.id')
+    //             ->leftjoin('designations', 'officials.Designation_Id', '=', 'designations.id')
+    //             ->whereIn('employees.id', $allSubordinateIds)
+    //             ->whereYear('leaves.from_date', '=', $currentYear)
+    //             ->orderby('leaves.id', 'desc')
+    //             ->get();
+    //     }
+    //     return $subordinates;
+    // }
+
+
+    // public function getSubordinates($userId)
+    // {
+    //     $subordinates = [];
+    //     $allSubordinateIds = [];
+    //     $queue = [$userId];
+
+    //     dd($queue);
+
+    //     // Step 1: Fetch the hierarchy of subordinates
+    //     while (!empty($queue)) {
+    //         $currentUserId = array_shift($queue);
+
+    //         // Get the subordinates of the current user
+    //         $subordinateUsers = DB::table('officials')
+    //             ->join('employees', 'officials.EID', '=', 'employees.id')
+    //             ->select('employees.id as EID', 'employees.Full_Name')
+    //             ->where('officials.Supervisor_Id', '=', $currentUserId)
+    //             ->where('officials.Status', '=', 'N')
+    //             ->get();
+
+    //         foreach ($subordinateUsers as $subordinate) {
+    //             if (!in_array($subordinate->EID, $allSubordinateIds)) {
+    //                 $allSubordinateIds[] = $subordinate->EID;
+    //                 $queue[] = $subordinate->EID;
+    //             }
+    //         }
+    //     }
+
+    //     $currentYear = now()->year;
+
+    //     dd($allSubordinateIds);
+
+    //     // Step 2: Fetch leave records for all subordinates
+    //     if (!empty($allSubordinateIds)) {
+    //         $subordinates = leave::select(
+    //             'leaves.id as leave_id',
+    //             'employees.id as EID',
+    //             'employees.Full_Name',
+    //             'employees.Employee_Id',
+    //             'leaves.from_date',
+    //             'leaves.to_date',
+    //             'leaves.status',
+    //             'leaves.attachment_url',
+    //             'leaves.purpose',
+    //             'leaves.notification',
+    //             'leave_types.leave_name',
+    //             'leave_types.id as leaves_type_id',
+    //             'designations.Name as designation',
+    //             'departments.Name as department',
+    //             'departments.id as dept_id',
+    //             'officials.Supervisor_Id'
+    //         )
+    //             ->leftjoin('employees', 'leaves.EID', '=', 'employees.id')
+    //             ->leftjoin('leave_types', 'leaves.leave_type_id', '=', 'leave_types.id')
+    //             ->leftjoin('officials', 'officials.EID', '=', 'employees.id')
+    //             ->leftjoin('departments', 'officials.Department_Id', '=', 'departments.id')
+    //             ->leftjoin('designations', 'officials.Designation_Id', '=', 'designations.id')
+    //             ->whereIn('employees.id', $allSubordinateIds)
+    //             ->whereYear('leaves.from_date', '=', $currentYear)
+    //             ->orderby('leaves.id', 'desc')
+    //             ->get();
+    //     }
+    //     return $subordinates;
+    // }
+
 
 
 
@@ -195,15 +276,15 @@ class LeaveController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'Employee_Id' => 'required',
-            'From_Date' => 'required',
-            'To_Date' => 'required',
-            'Leave_Type_Id' => 'required',
+            'employee_id' => 'required',
+            'from_date' => 'required',
+            'to_date' => 'required',
+            'leave_type_id' => 'required',
         ], [
-            'Employee_Id.required' => 'The Employee ID is required.',
-            'Leave_Type_Id.required' => 'The Leave Type is required.',
-            'From_Date.unique' => 'The Form Date is required.',
-            'To_Date.required' => 'The To Date is required.',
+            'employee_id.required' => 'The Employee ID is required.',
+            'leave_type_id.required' => 'The Leave Type is required.',
+            'from_date.unique' => 'The From Date is required.',
+            'to_date.required' => 'The To Date is required.',
         ]);
 
         $file_path = null;
@@ -212,9 +293,9 @@ class LeaveController extends Controller
 
         $userId = Auth::user()->EID;
 
-        $leaveExists = leave::where('EID', $request->Employee_Id)
-            ->where('From_Date', $request->From_Date)
-            ->where('To_Date', $request->To_Date)
+        $leaveExists = leave::where('employee_id', $request->employee_id)
+            ->where('from_date', $request->from_date)
+            ->where('to_date', $request->to_date)
             ->exists();
 
         $response = [
@@ -234,26 +315,26 @@ class LeaveController extends Controller
             $file_name = time() . '_' . $request->file->getClientOriginalName();
             $file_path = $request->file('file')->storeAs('uploads', $file_name, 'public');
             $leave = leave::create([
-                'EID' => $request->input('Employee_Id'),
-                'Leave_Type_Id' => $request->input('Leave_Type_Id'),
-                'From_Date' => $request->input('From_Date'),
-                'To_Date' => $request->input('To_Date'),
-                'Purpose' => $request->input('Purpose'),
-                'Status' => $request->input('Status'),
-                'Attachment_Url' => '/storage/' . $file_path,
-                'Notification' => 0,
+                'employee_id' => $request->input('employee_id'),
+                'leave_type_id' => $request->input('leave_type_id'),
+                'from_date' => $request->input('from_date'),
+                'to_date' => $request->input('to_date'),
+                'purpose' => $request->input('purpose'),
+                'status' => $request->input('status'),
+                'attachment_url' => '/storage/' . $file_path,
+                'notification' => 0,
                 'created_by' => $userId,
                 'updated_by' => 0,
             ]);
         } else {
             $leave = leave::create([
-                'EID' => $request->input('Employee_Id'),
-                'Leave_Type_Id' => $request->input('Leave_Type_Id'),
-                'From_Date' => $request->input('From_Date'),
-                'To_Date' => $request->input('To_Date'),
-                'Purpose' => $request->input('Purpose'),
-                'Status' => $request->input('Status'),
-                'Notification' => 0,
+                'employee_id' => $request->input('employee_id'),
+                'leave_type_id' => $request->input('leave_type_id'),
+                'from_date' => $request->input('from_date'),
+                'to_date' => $request->input('to_date'),
+                'purpose' => $request->input('purpose'),
+                'status' => $request->input('status'),
+                'notification' => 0,
                 'created_by' => $userId,
                 'updated_by' => 0,
             ]);
@@ -283,80 +364,6 @@ class LeaveController extends Controller
     public function show($id)
     {
         $currentYear = now()->year;
-
-        // $leaves = leave::select('employees.id', 'employees.Full_Name', 'emp_imgs.img_url', 'employees.Employee_Id', 'leaves.from_date', 'leaves.to_date', 'leaves.status', 'leaves.attachment_url', 'leave_types.leave_name', 'designations.Name as designation', 'departments.Name as department', 'leave_types.leave_name as leave_type', 'leave_types.max_leave_days', 'leaves.purpose')
-        //     ->join('employees', 'leaves.employee_id', '=', 'employees.id')
-        //     ->leftjoin('emp_imgs', 'emp_imgs.EID', '=', 'employees.id')
-        //     ->join('leave_types', 'leaves.leave_type_id', '=', 'leave_types.id')
-        //     ->join('officials', 'officials.EID', '=', 'employees.id')
-        //     ->join('departments', 'officials.Department_Id', '=', 'departments.id')
-        //     ->join('designations', 'officials.Designation_Id', '=', 'designations.id')
-        //     ->where('leaves.employee_id', '=', $id)
-        //     ->whereYear('leaves.from_date', '=', $currentYear)
-        //     ->orderby('leaves.id', 'desc')
-        //     ->get();
-
-        //    $leaves = DB::table(function ($query) use ($id, $currentYear) {
-        //     $query->select(
-        //             'leaves.leave_type_id',
-        //             DB::raw('SUM(DATEDIFF(to_date, from_date) + 1) as leave_days')
-        //         )
-        //         ->from('leaves')
-        //         ->where('leaves.employee_id', $id)
-        //         ->whereYear('leaves.from_date', $currentYear)
-        //         ->groupBy('leaves.id', 'leaves.leave_type_id');
-        // }, 'aaa')
-        // ->join('leave_types as lt', 'lt.id', '=', 'aaa.leave_type_id')
-        // ->select(
-        //     'aaa.leave_type_id',
-        //     'lt.leave_name',
-        //     'lt.max_leave_days',
-        //     DB::raw('SUM(aaa.leave_days) as leave_count')
-        // )
-        // ->groupBy('aaa.leave_type_id', 'lt.leave_name', 'lt.max_leave_days')
-        // ->get();
-
-
-        //     $attendanceRecords = DB::table('attendences')
-        //         ->join('employees', 'employees.id', '=', 'attendences.EID')
-        //         ->where('employees.id', $id)
-        //         ->whereIn('attendences.Status', ['P', 'L'])
-        //         ->whereYear('attendences.Date', $currentYear)
-        //         ->distinct()
-        //         ->count();
-
-        //         $earnedLeave = floor($attendanceRecords / 18);
-
-
-        // foreach ($leaves as $leave) {
-        //     $startDate = new \DateTime($leave->from_date);
-        //     $endDate = new \DateTime($leave->to_date);
-
-        //     $interval = $startDate->diff($endDate);
-        //     $leave->daysBetween = $interval->days + 1;
-        // }
-
-        // $leavesWithEarned = DB::table('leaves as l')
-        //     ->select(
-        //         'lt.id as leave_type_id',
-        //         'lt.leave_name',
-        //         'lt.max_leave_days',
-        //         DB::raw('SUM(DATEDIFF(l.to_date, l.from_date) + 1) as leave_count'),
-        //         DB::raw('(SELECT FLOOR(COUNT(DISTINCT a.Date)/18)
-        //             FROM attendences a
-        //             WHERE a.EID = ' . $id . '
-        //                 AND a.Status IN ("P","L")
-        //                 AND YEAR(a.Date) = ' . $currentYear . ') as earned_leave')
-        //     )
-        //     ->join('leave_types as lt', 'lt.id', '=', 'l.leave_type_id')
-        //     ->join('employees', 'l.employee_id', '=', 'employees.id')
-        //     ->join('officials', 'officials.EID', '=', 'employees.id')
-        //     ->join('departments', 'officials.Department_Id', '=', 'departments.id')
-        //     ->join('designations', 'officials.Designation_Id', '=', 'designations.id')
-        //     ->where('l.employee_id', $id)
-        //     ->whereYear('l.from_date', $currentYear)
-        //     ->groupBy('lt.id', 'lt.leave_name', 'lt.max_leave_days')
-        //     ->get();
 
         $leavesWithEarned = DB::table('leaves as l')
             ->select(
@@ -394,8 +401,6 @@ class LeaveController extends Controller
             ->get();
 
 
-
-
         return response()->json($leavesWithEarned);
     }
 
@@ -429,11 +434,11 @@ class LeaveController extends Controller
         $leave = leave::find($id);
         $userId = Auth::user()->EID;
         $leave->update([
-            'leave_type_id' => $request->input('Leave_Type'),
-            'status' => $request->input('Status'),
-            'from_date' => $request->input('From_Date'),
-            'to_date' => $request->input('To_Date'),
-            'purpose' => $request->input('Purpose'),
+            'leave_type_id' => $request->input('leave_type'),
+            'status' => $request->input('status'),
+            'from_date' => $request->input('from_date'),
+            'to_date' => $request->input('to_date'),
+            'purpose' => $request->input('purpose'),
             'updated_by' => $userId,
             'Notification' => 0,
         ]);
@@ -551,7 +556,6 @@ class LeaveController extends Controller
     {
         DB::beginTransaction();
 
-        dd($id);
         $holiday = holiday::findorfail($id);
         $holiday->update([
             'holiday_name' => $request->input('name'),
@@ -606,6 +610,86 @@ class LeaveController extends Controller
                 'message'   =>  'Holiday deleted successfully',
             ];
             return response()->json($response);
+        }
+    }
+
+
+    //added by firoj
+    public function supervisedApproval(Request $request)
+    {
+        $user_id = Auth::user()->EID;
+        $id = $request->input('id');
+        $status = $request->input('status');
+
+        DB::beginTransaction();
+        try {
+            $existLeaveID = Leave::find($id);
+
+            if (!$existLeaveID) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Leave not found',
+                ], 404);
+            }
+
+            $existLeaveID->update([
+                'status' => $status,
+                'updated_by' => $user_id
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Leave status updated successfully',
+                'leave' => $existLeaveID,
+            ]);
+        } catch (\Exception $e) {
+            DB::rollback();
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error while updating: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    public function hrApproval(Request $request)
+    {
+        $user_id = Auth::user()->EID;
+        $id = $request->input('id');
+        $status = $request->input('status');
+
+        DB::beginTransaction();
+        try {
+            $existLeaveID = Leave::find($id);
+
+            if (!$existLeaveID) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Leave not found',
+                ], 404);
+            }
+
+            $existLeaveID->update([
+                'status' => $status,
+                'updated_by' => $user_id
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Leave status updated successfully',
+                'leave' => $existLeaveID,
+            ]);
+        } catch (\Exception $e) {
+            DB::rollback();
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error while updating: ' . $e->getMessage(),
+            ], 500);
         }
     }
 }

@@ -37,7 +37,6 @@ const computeDuration = async () => {
     if (form.value.from_date && form.value.to_date) {
         const from = new Date(form.value.from_date);
         const to = new Date(form.value.to_date);
-        console.log(to);
 
         const differenceInTime = to.getTime() - from.getTime();
 

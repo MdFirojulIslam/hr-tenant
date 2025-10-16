@@ -2,7 +2,7 @@
 import { ref, onMounted, computed } from "vue";
 import { Bootstrap4Pagination } from "laravel-vue-pagination";
 import router from "../../../router";
-import api from '@/api';
+import api from "@/api";
 
 const employees = ref([]);
 const isLoading = ref(true);
@@ -78,9 +78,7 @@ const submitHandler = async () => {
 };
 
 onMounted(() => {
-
-    console.log(router);
-    getData()
+    getData();
 });
 </script>
 
@@ -94,15 +92,25 @@ onMounted(() => {
                     </div>
                     <div class="p-2">
                         <Router-Link :to="{ name: 'Employee' }">
-                            <button style="float: left" type="button" class="btn-plus">
+                            <button
+                                style="float: left"
+                                type="button"
+                                class="btn-plus"
+                            >
                                 <i class="fa-solid fa-plus"></i>
                             </button>
                         </Router-Link>
                     </div>
 
                     <div class="p-2">
-                        <input type="text" class="form-control" id="exampleInputUsername1" placeholder="Search..."
-                            v-model.trim="filter" @input="searchemp" />
+                        <input
+                            type="text"
+                            class="form-control"
+                            id="exampleInputUsername1"
+                            placeholder="Search..."
+                            v-model.trim="filter"
+                            @input="searchemp"
+                        />
                     </div>
                 </div>
 
@@ -122,12 +130,21 @@ onMounted(() => {
                             </tr>
                         </thead>
                         <tbody>
-                            <tr class="ver-align" v-for="(employee, index) in employees.data" :key="employee.id">
+                            <tr
+                                class="ver-align"
+                                v-for="(employee, index) in employees.data"
+                                :key="employee.id"
+                            >
                                 <td>{{ employees.from + index }}</td>
                                 <template v-if="employee.emp_img">
                                     <td>
-                                        <img :src="employee.emp_img?.img_url" alt="Image" height="40px" width="40px"
-                                            style="border-radius: 50%" />
+                                        <img
+                                            :src="employee.emp_img?.img_url"
+                                            alt="Image"
+                                            height="40px"
+                                            width="40px"
+                                            style="border-radius: 50%"
+                                        />
                                     </td>
                                 </template>
                                 <template v-else>
@@ -140,29 +157,44 @@ onMounted(() => {
                                 <td>{{ employee.Official_Email }}</td>
                                 <td>{{ employee.id }}</td>
                                 <td>
-                                    <button class="custom-btn btn-13 mx-1" @click="
-                                        router.push(
-                                            `/setup/employee/empdetails/${employee.id}`
-                                        )
-                                        ">
+                                    <button
+                                        class="custom-btn btn-13 mx-1"
+                                        @click="
+                                            router.push(
+                                                `/setup/employee/empdetails/${employee.id}`
+                                            )
+                                        "
+                                    >
                                         <i class="fa-regular fa-user"></i>
                                     </button>
-                                    <button class="custom-btn btn-15 mx-1" @click="
-                                        router.push({
-                                            name: 'Employee',
-                                            params: { id: employee.id },
-                                        })
-                                        ">
-                                        <i class="fa-regular fa-pen-to-square"></i>
+                                    <button
+                                        class="custom-btn btn-15 mx-1"
+                                        @click="
+                                            router.push({
+                                                name: 'Employee',
+                                                params: { id: employee.id },
+                                            })
+                                        "
+                                    >
+                                        <i
+                                            class="fa-regular fa-pen-to-square"
+                                        ></i>
                                     </button>
-                                    <button class="custom-btn btn-13 mx-1" @click="cvPdf(employee.id)">
+                                    <button
+                                        class="custom-btn btn-13 mx-1"
+                                        @click="cvPdf(employee.id)"
+                                    >
                                         <i class="fa-regular fa-file"></i>
                                     </button>
                                 </td>
                             </tr>
                         </tbody>
                     </table>
-                    <Bootstrap4Pagination :data="employees" :limit="2" @pagination-change-page="getData" />
+                    <Bootstrap4Pagination
+                        :data="employees"
+                        :limit="2"
+                        @pagination-change-page="getData"
+                    />
                 </div>
             </div>
         </div>
