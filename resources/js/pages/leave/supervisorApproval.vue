@@ -426,7 +426,7 @@ onMounted(async () => {
                         <div class="table-responsive leave-table">
                             <table class="table table-bordered text-center">
                                 <thead>
-                                    <tr>
+                                    <tr class="text-nowrap">
                                         <th>S/N</th>
                                         <th>Employee Name</th>
                                         <th>From Date</th>
@@ -440,6 +440,7 @@ onMounted(async () => {
                                 </thead>
                                 <tbody>
                                     <tr
+                                        class="text-nowrap"
                                         v-for="(l, index) in filteredData"
                                         :key="l.id"
                                         @click="getLeaveInfo(l.EID)"

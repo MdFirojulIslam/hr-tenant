@@ -184,10 +184,9 @@ onMounted(() => getData());
                         </div>
                     </div>
                 </div>
-
                 <!-- Salary Table -->
                 <div class="border rounded mt-5">
-                    <div
+                    <!-- <div
                         class="d-flex align-items-center px-2 py-2 fw-semibold border-bottom bg-light"
                     >
                         <span class="me-2">Total Holidays:</span>
@@ -195,7 +194,7 @@ onMounted(() => getData());
                             class="bg-white border rounded px-3 py-1 fw-medium"
                             >{{ holidays.total }}</span
                         >
-                    </div>
+                    </div> -->
 
                     <div class="table-responsive px-2 bg-light">
                         <table class="table table-hover table-sm">

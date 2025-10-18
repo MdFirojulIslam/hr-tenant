@@ -189,7 +189,7 @@ onMounted(() => getData());
                                                         v-if="index === 0"
                                                     >
                                                         {{
-                                                            item.designation ||
+                                                            item.designation_name ||
                                                             ""
                                                         }}
                                                     </h6>
@@ -198,7 +198,7 @@ onMounted(() => getData());
                                                         v-if="index === 0"
                                                     >
                                                         {{
-                                                            item.department ||
+                                                            item.department_name ||
                                                             ""
                                                         }}
                                                     </h6>
@@ -336,7 +336,7 @@ onMounted(() => getData());
                         <div class="table-responsive leave-table">
                             <table class="table table-bordered text-center">
                                 <thead>
-                                    <tr>
+                                    <tr class="text-nowrap">
                                         <th>S/N</th>
                                         <th>Employee Name</th>
                                         <th>Department</th>
@@ -351,6 +351,7 @@ onMounted(() => getData());
                                 </thead>
                                 <tbody>
                                     <tr
+                                        class="text-nowrap"
                                         v-for="(l, index) in filteredData"
                                         :key="l.id"
                                         @click="getEmployee(l.EID)"
@@ -429,7 +430,7 @@ onMounted(() => getData());
 
 <style>
 .leave-table {
-    max-height: 200px;
+    max-height: 400px;
 }
 
 .leave-status th,
