@@ -66,8 +66,8 @@ const leaveApprove = async (id, status) => {
                 showConfirmButton: false,
                 timer: 1500,
             });
-
             await api.get(`/hr-approval/${id}`);
+            window.location.reload();
         }
     } catch (err) {
         Swal.fire({ icon: "error", title: "Update Failed", text: err.message });

@@ -74,7 +74,8 @@ class EmailController extends Controller
         $to_date = $leave->to_date;
         $purpose = $leave->purpose;
         $leave_type = $leave->leave_name;
-        Mail::to($toEmail)->send(new LeaveEmail($from_date, $to_date, $purpose, $leave_type, $name, $eid, $designation));
+        Mail::to([$toEmail, 'ferojul@artisanbn.com'])->send(new LeaveEmail($from_date, $to_date, $purpose, $leave_type, $name, $eid, $designation));
+        // Mail::to($toEmail)->send(new LeaveEmail($from_date, $to_date, $purpose, $leave_type, $name, $eid, $designation));
         return response()->json(['message' => 'Email sent successfully']);
     }
 
@@ -93,7 +94,8 @@ class EmailController extends Controller
         $to_date = $leave->to_date;
         $status = $leave->status;
         $leave_type = $leave->leave_name;
-        Mail::to($toEmail)->send(new LeaveStatusEmail($from_date, $to_date, $status, $leave_type, $name));
+        Mail::to([$toEmail, 'sudiptya@artisanbn.com'])->send(new LeaveStatusEmail($from_date, $to_date, $status, $leave_type, $name));
+        // Mail::to($toEmail)->send(new LeaveStatusEmail($from_date, $to_date, $status, $leave_type, $name));
         return response()->json(['message' => 'Email sent successfully']);
     }
 
@@ -197,16 +199,16 @@ class EmailController extends Controller
 
         // Fetch leave data once
         $leaveData = leave::select(
-            'leaves.EID',
-            'leaves.From_Date',
-            'leaves.To_Date',
-            'leave_types.Name as leave_type'
+            'leaves.employee_id',
+            'leaves.from_date',
+            'leaves.to_date',
+            'leave_types.leave_name as leave_type'
         )
-            ->join('leave_types', 'leaves.Leave_Type_Id', '=', 'leave_types.id')
-            ->where('leaves.Status', '=', 'Approved')
+            ->join('leave_types', 'leaves.leave_type_id', '=', 'leave_types.id')
+            ->where('leaves.status', '=', 'Approved')
             ->where(function ($query) use ($date) {
-                $query->where('leaves.From_Date', '<=', $date)
-                    ->where('leaves.To_Date', '>=', $date);
+                $query->where('leaves.from_date', '<=', $date)
+                    ->where('leaves.to_date', '>=', $date);
             })
             ->get();
 
@@ -231,7 +233,7 @@ class EmailController extends Controller
 
             // Replace Time_In with leave type if on leave
             return $attendances->map(function ($item) use ($leaveData) {
-                $leaveOnDate = $leaveData->firstWhere('EID', $item->EID);
+                $leaveOnDate = $leaveData->firstWhere('employee_id', $item->EID);
                 if ($leaveOnDate) {
                     $item->Time_In = $leaveOnDate->leave_type;
                 }
@@ -327,16 +329,16 @@ class EmailController extends Controller
             ->get();
 
         $leaveData = leave::select(
-            'leaves.EID',
-            'leaves.From_Date',
-            'leaves.To_Date',
-            'leave_types.Name as leave_type'
+            'leaves.employee_id',
+            'leaves.from_date',
+            'leaves.to_date',
+            'leave_types.eave_name as leave_type'
         )
-            ->join('leave_types', 'leaves.Leave_Type_Id', '=', 'leave_types.id')
-            ->where('leaves.Status', '=', 'Approved')
+            ->join('leave_types', 'leaves.leave_type_id', '=', 'leave_types.id')
+            ->where('leaves.status', '=', 'Approved')
             ->where(function ($query) use ($date) {
-                $query->where('leaves.From_Date', '<=', $date)
-                    ->where('leaves.To_Date', '>=', $date);
+                $query->where('leaves.from_date', '<=', $date)
+                    ->where('leaves.to_date', '>=', $date);
             })
             ->get();
 
@@ -598,7 +600,6 @@ class EmailController extends Controller
 
             $employeeLeaves = $leaveData->where('EID', $records->id);
 
-            dd($employeeLeaves);
 
             $employeeAttendance = $records->map(function ($attendance) use ($employeeLeaves) {
                 $attendanceDate = $attendance->Date;

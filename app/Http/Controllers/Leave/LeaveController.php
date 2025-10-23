@@ -70,7 +70,7 @@ class LeaveController extends Controller
 
     public function getSubordinates($userId)
     {
-        $data = official::select('leaves.id as leave_id', 'employees.Full_Name', 'employees.id as EID',  'departments.Name as department', 'departments.id as dept_id', 'leaves.status', 'leaves.from_date', 'leaves.to_date', 'leaves.purpose', 'leave_types.leave_name')
+        $data = official::select('leaves.id as leave_id', 'officials.Supervisor_Id', 'employees.Full_Name', 'employees.id as EID',  'departments.Name as department', 'departments.id as dept_id', 'leaves.status', 'leaves.from_date', 'leaves.to_date', 'leaves.purpose', 'leave_types.leave_name')
             ->join('leaves', 'leaves.employee_id', '=', 'officials.EID')
             ->join('employees', 'employees.id', '=', 'officials.EID')
             ->join('leave_types', 'leaves.leave_type_id', '=', 'leave_types.id')

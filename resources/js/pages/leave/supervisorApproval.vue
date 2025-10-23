@@ -43,7 +43,6 @@ const editLeaveStatus = async (id, status) => {
         const { data } = await api.put("/leave-approval", { id, status });
 
         if (data.success) {
-            window.location.reload();
             Swal.fire({
                 position: "center",
                 icon: "success",
@@ -67,6 +66,7 @@ const editLeaveStatus = async (id, status) => {
             earnedLeave.value = "";
 
             await api.get(`/hr-approval/${id}`);
+            window.location.reload();
         }
     } catch (err) {
         Swal.fire({ icon: "error", title: "Update Failed", text: err.message });

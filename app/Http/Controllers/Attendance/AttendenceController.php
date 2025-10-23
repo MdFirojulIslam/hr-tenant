@@ -18,7 +18,7 @@ use Illuminate\Support\Facades\Artisan;
 class AttendenceController extends Controller
 {
     /**
-     * Display a listing of the resource. 
+     * Display a listing of the resource.
      */
 
     protected $zk;
@@ -36,9 +36,9 @@ class AttendenceController extends Controller
         $year = $request->query('year');
         $machine_attendance = attendence::whereMonth('date', $month + 1)->whereYear('date', $year)->get();
         $app_attendance = app_attendance::selectRaw(
-            'app_attendances.id, 
-         app_attendances.EID, 
-         DATE(app_attendances.updated_at) as Date, 
+            'app_attendances.id,
+         app_attendances.EID,
+         DATE(app_attendances.updated_at) as Date,
          MIN(CASE WHEN app_attendances.status = "in" THEN TIME(app_attendances.updated_at) END) as Time_In,
          MAX(CASE WHEN app_attendances.status = "out" THEN TIME(app_attendances.updated_at) END) as Time_Out'
         )->groupBy(
@@ -78,7 +78,7 @@ class AttendenceController extends Controller
             ->join('employees', 'attendences.EID', '=', 'employees.id')
             ->where('Date', $date)
             ->get();
-        return response()->json($location); 
+        return response()->json($location);
     }
 
     public function store(Request $request)
@@ -196,8 +196,8 @@ class AttendenceController extends Controller
     //     $lastProcessedDate = attendence::max('Date');
 
     //     // Set the start date to the last processed date or a default date
-    //     $startDate = $lastProcessedDate 
-    //         ? Carbon::parse($lastProcessedDate)->startOfMonth()->addMonth()->format('Y-m-d') 
+    //     $startDate = $lastProcessedDate
+    //         ? Carbon::parse($lastProcessedDate)->startOfMonth()->addMonth()->format('Y-m-d')
     //         : '2023-11-01';  // Default start date if no previous record exists
 
     //     // Set the end date as the current date
@@ -259,9 +259,9 @@ class AttendenceController extends Controller
     {
         // Fetch all holidays, leaves, and attendance records as before
         $holidays = holiday::all();
-        $leaves = leave::select('leaves.EID', 'leaves.From_Date', 'leaves.To_Date', 'leave_types.short_name')
-            ->join('leave_types', 'leaves.Leave_Type_Id', '=', 'leave_types.id')
-            ->where('leaves.Status', '=', 'Approved')
+        $leaves = leave::select('leaves.employee_id', 'leaves.from_date', 'leaves.to_date', 'leave_types.short_leave_name')
+            ->join('leave_types', 'leaves.leave_type_id', '=', 'leave_types.id')
+            ->where('leaves.status', '=', 'Approved')
             ->get();
 
         // Get the last processed date from the attendances table
@@ -315,6 +315,7 @@ class AttendenceController extends Controller
 
                 // If the batch size exceeds 1000, insert the data and reset the array
                 if (count($insertData) >= 1000) {
+
                     // DB::table('attendences')->insert($insertData);
                     DB::table('attendences')->upsert(
                         $insertData,
@@ -350,7 +351,7 @@ class AttendenceController extends Controller
     {
         // Check if the date falls within any leave period
         $isOnLeave = $leaves->first(function ($leave) use ($userId, $date) {
-            return $leave->EID == $userId && $date >= $leave->From_Date && $date <= $leave->To_Date;
+            return $leave->employee_id == $userId && $date >= $leave->from_date && $date <= $leave->to_date;
         });
 
         if ($isOnLeave) {
@@ -359,7 +360,7 @@ class AttendenceController extends Controller
 
         // Check if the date falls within any holiday period
         $isHoliday = $holidays->contains(function ($holiday) use ($date) {
-            return $date >= $holiday->From_Date && $date <= $holiday->To_Date;
+            return $date >= $holiday->from_date && $date <= $holiday->to_date;
         });
 
         if ($isHoliday) {

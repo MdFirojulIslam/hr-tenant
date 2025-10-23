@@ -84,12 +84,12 @@
                     <td>{{ $leave->Full_Name }}</td>
                     <td>{{ $leave->department }}</td>
                     <td>{{ $leave->designation }}</td>
-                    <td>{{ $leave->From_Date }}</td>
-                    <td>{{ $leave->To_Date }}</td>
+                    <td>{{ $leave->from_date }}</td>
+                    <td>{{ $leave->to_date }}</td>
                     <td>{{ $leave->Leave_Type }}</td>
-                    <td>{{ $leave->Status }}</td>
+                    <td>{{ $leave->status }}</td>
                     <td style="text-align: center">{{ $leave->Total_Days }}</td>
-                    
+
                 </tr>
                 @endforeach
             </tbody>

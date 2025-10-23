@@ -6,14 +6,22 @@
                     <div class="d-flex justify-content-center mb-3">
                         <h2>Fetch Attendance data</h2>
                     </div>
-                    <div class="row d-flex justify-content-center align-items-center">
+                    <div
+                        class="row d-flex justify-content-center align-items-center"
+                    >
                         <div class="col-auto">
-                            <button class="custom-btn btn-12 p-2" @click="fetchMachineAttendence">
+                            <button
+                                class="custom-btn btn-12 p-2"
+                                @click="fetchMachineAttendence"
+                            >
                                 Fetch Machine Attendence
                             </button>
                         </div>
                         <div class="col-auto">
-                            <button class="custom-btn btn-13 p-2" @click="fetchAttendence">
+                            <button
+                                class="custom-btn btn-13 p-2"
+                                @click="fetchAttendence"
+                            >
                                 Fetch Attendence
                             </button>
                         </div>
@@ -25,19 +33,31 @@
                 </div>
             </div>
 
-
             <div class="card pb-3 mb-4">
                 <div class="card-body">
                     <div class="d-flex justify-content-center mb-3">
                         <h2>Daily Attendance Email</h2>
                     </div>
-                    <div class="row d-flex justify-content-center align-items-center">
+                    <div
+                        class="row d-flex justify-content-center align-items-center"
+                    >
                         <div class="col-auto">
-                            <input type="date" class="form-control" v-model="date" required />
-                            <small v-if="!date" class="text-danger">* You must select a date</small>
+                            <input
+                                type="date"
+                                class="form-control"
+                                v-model="date"
+                                required
+                            />
+                            <small v-if="!date" class="text-danger"
+                                >* You must select a date</small
+                            >
                         </div>
                         <div class="col-auto">
-                            <button class="custom-btn btn-15 p-2" @click="sendAttendenceMail" :disabled="!date">
+                            <button
+                                class="custom-btn btn-15 p-2"
+                                @click="sendAttendenceMail"
+                                :disabled="!date"
+                            >
                                 Send Attendence Mail
                             </button>
                         </div>
@@ -50,31 +70,48 @@
                     <div class="d-flex justify-content-center mb-3">
                         <h2>Monthly Attendance Email</h2>
                     </div>
-                    <div class="row d-flex justify-content-center align-items-center mb-3">
+                    <div
+                        class="row d-flex justify-content-center align-items-center mb-3"
+                    >
                         <div class="col-auto">
                             <label for="">Select a Year</label>
                             <select class="form-control" v-model="selectedYear">
-                                <option v-for="(year, index) in years" :key="year" :value="year">
+                                <option
+                                    v-for="(year, index) in years"
+                                    :key="year"
+                                    :value="year"
+                                >
                                     {{ year }}
                                 </option>
                             </select>
                         </div>
                         <div class="col-auto">
                             <label for="">Select a Month</label>
-                            <select class="form-control" v-model="selectedMonth">
-                                <option v-for="(month, index) in months" :key="month" :value="index">
+                            <select
+                                class="form-control"
+                                v-model="selectedMonth"
+                            >
+                                <option
+                                    v-for="(month, index) in months"
+                                    :key="month"
+                                    :value="index"
+                                >
                                     {{ month }}
                                 </option>
                             </select>
                         </div>
                     </div>
-                    <div class="row d-flex justify-content-center align-items-center">
+                    <div
+                        class="row d-flex justify-content-center align-items-center"
+                    >
                         <div class="col-auto">
-                            <button class="custom-btn btn-13 p-2" @click="sendMonthlyAttendence">
+                            <button
+                                class="custom-btn btn-13 p-2"
+                                @click="sendMonthlyAttendence"
+                            >
                                 Monthly Attendence
                             </button>
                         </div>
-
                     </div>
                 </div>
             </div>
@@ -87,7 +124,7 @@ import { ref } from "vue";
 import Swal from "sweetalert2";
 import api from "@/api";
 const loading = ref(false);
-const date = ref(new Date().toISOString().split('T')[0]);
+const date = ref(new Date().toISOString().split("T")[0]);
 const selectedMonth = ref(new Date().getMonth());
 const selectedYear = ref(new Date().getFullYear());
 
@@ -240,7 +277,6 @@ const fetchMachineAttendence = async () => {
     }
 };
 </script>
-
 
 <style scoped>
 .wrapper {

@@ -31,8 +31,8 @@ class FetchAttendance extends Command
 
         foreach ($zkt_info as $info) {
             $this->info("Processing machine: IP {$info->IP}, Port {$info->port}");
-            $zk = new ZKTeco($info->IP, $info->port);
 
+            $zk = new ZKTeco($info->IP, $info->port);
             if ($zk->connect()) {
                 $attendanceData = $zk->getAttendance();
 
@@ -72,7 +72,7 @@ class FetchAttendance extends Command
                 } else {
                     $this->info('No attendance data available.');
                 }
- 		//$zk->clearAttendance(); 
+                //$zk->clearAttendance();
                 $zk->disconnect();
             } else {
                 $this->error("Unable to connect to device: IP {$info->IP}, Port {$info->port}");

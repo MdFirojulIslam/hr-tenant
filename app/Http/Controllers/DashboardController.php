@@ -48,7 +48,7 @@ class DashboardController extends Controller
     public function deptWiseLeave()
     {
         $deptWiseLeave = leave::select('departments.Name as department_name', DB::raw('count(leaves.id) as leave_count'))
-            ->join('employees', 'leaves.EID', '=', 'employees.id')
+            ->join('employees', 'leaves.employee_id', '=', 'employees.id')
             ->join('officials', 'officials.EID', '=', 'employees.id')
             ->join('departments', 'officials.Department_Id', '=', 'departments.id')
             ->groupBy('departments.id', 'departments.name')
@@ -86,7 +86,7 @@ class DashboardController extends Controller
     {
         $divisionWiseEmpCount = Department::selectRaw('COUNT(officials.id) as employee_count, departments.Division')
             ->join('officials', 'officials.Department_Id', '=', 'departments.id')
-            ->groupBy('departments.Division') 
+            ->groupBy('departments.Division')
             ->where('officials.Status', 'N')
             ->get();
 

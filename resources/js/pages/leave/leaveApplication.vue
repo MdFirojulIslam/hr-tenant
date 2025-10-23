@@ -70,43 +70,6 @@ const filteredData = computed(() => {
     });
 });
 
-// const totalLeaveDays = computed(() => {
-//     const totals = {};
-
-//     if (Array.isArray(leaveType.value) && leaveType.value.length > 0) {
-//         leaveType.value.forEach((type) => {
-//             totals[type.Name] = {
-//                 totalDays: 0,
-//                 maxDays: type.Max_Days || 0,
-//             };
-//         });
-
-//         if (!leave_information.value || !leave_information.value.leaves) {
-//             return [];
-//         }
-
-//         const leaveArray = Object.values(leave_information.value.leaves);
-
-//         leaveArray.forEach((item) => {
-//             const typeName = item.leave_type;
-//             if (!totals[typeName]) {
-//                 totals[typeName] = {
-//                     totalDays: 0,
-//                     maxDays: item.Max_Days,
-//                 };
-//             }
-
-//             totals[typeName].maxDays = item.Max_Days;
-
-//             if (item.Status === "Approved") {
-//                 totals[typeName].totalDays += item.daysBetween;
-//             }
-//         });
-//     }
-
-//     return totals;
-// });
-
 const resetForm = () => {
     Object.keys(form.value).forEach((key) => {
         if (typeof form.value[key] === "string") {

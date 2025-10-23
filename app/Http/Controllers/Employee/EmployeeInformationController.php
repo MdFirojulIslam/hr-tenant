@@ -66,9 +66,9 @@ class EmployeeInformationController extends Controller
         $userId = Auth::user()->EID;
         if ($userId) {
             $leave = leave::select('leaves.id', 'leaves.Status', 'leaves.Notification', 'employees.Full_Name', 'leave_types.Name as leave_type')
-                ->join('employees', 'employees.id', '=', 'leaves.EID')
-                ->join('leave_types', 'leave_types.id', '=', 'leaves.Leave_Type_Id')
-                ->where('EID', $userId)
+                ->join('employees', 'employees.id', '=', 'leaves.employee_id')
+                ->join('leave_types', 'leave_types.id', '=', 'leaves.leave_type_id')
+                ->where('employee_id', $userId)
                 ->get();
 
             return response()->json($leave);

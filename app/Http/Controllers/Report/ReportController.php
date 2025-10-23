@@ -34,20 +34,20 @@ class ReportController extends Controller
             'employees.id as EID',
             'employees.Full_Name',
             'employees.Employee_Id',
-            'leaves.From_Date',
-            'leaves.To_Date',
-            'leaves.Status',
-            'leaves.Purpose',
-            'leaves.Notification',
-            'leave_types.Name as Leave_Type',
+            'leaves.from_date',
+            'leaves.to_date',
+            'leaves.status',
+            'leaves.purpose',
+            'leaves.notification',
+            'leave_types.leave_name as Leave_Type',
             'leave_types.id as leave_id',
             'designations.Name as designation',
             'departments.Name as department',
             'officials.Supervisor_Id',
-            DB::raw('DATEDIFF(leaves.To_Date, leaves.From_Date) + 1 as Total_Days')
+            DB::raw('DATEDIFF(leaves.to_date, leaves.from_date) + 1 as Total_Days')
         )
-            ->join('employees', 'leaves.EID', '=', 'employees.id')
-            ->join('leave_types', 'leaves.Leave_Type_Id', '=', 'leave_types.id')
+            ->join('employees', 'leaves.employee_id', '=', 'employees.id')
+            ->join('leave_types', 'leaves.leave_type_id', '=', 'leave_types.id')
             ->join('officials', 'officials.EID', '=', 'employees.id')
             ->join('departments', 'officials.Department_Id', '=', 'departments.id')
             ->join('designations', 'officials.Designation_Id', '=', 'designations.id');
@@ -58,15 +58,15 @@ class ReportController extends Controller
         }
 
         if (!empty($employeeId)) {
-            $leavesQuery->where('leaves.EID', '=', $employeeId);
+            $leavesQuery->where('leaves.employee_id', '=', $employeeId);
         }
 
         if (!empty($fromDate) && !empty($toDate)) {
-            $leavesQuery->whereBetween('leaves.From_Date', [$fromDate, $toDate]);
+            $leavesQuery->whereBetween('leaves.from_date', [$fromDate, $toDate]);
         }
 
         // Fetch the leaves
-        $leaves = $leavesQuery->orderby('leaves.From_Date', 'asc')->get();
+        $leaves = $leavesQuery->orderby('leaves.from_date', 'asc')->get();
 
         // Calculate the subtotal
         $subtotal = $leaves->sum('Total_Days');
@@ -260,33 +260,33 @@ class ReportController extends Controller
      | 4.  Approved leave window (unchanged)
      |-------------------------------------------------------------------- */
         $leaveData = leave::select(
-            'leaves.EID',
-            'leaves.From_Date',
-            'leaves.To_Date',
-            'leave_types.Name as leave_type'
+            'leaves.employee_id',
+            'leaves.from_date',
+            'leaves.to_date',
+            'leave_types.leave_name as leave_type'
         )
-            ->join('leave_types', 'leaves.Leave_Type_Id', '=', 'leave_types.id')
-            ->where('leaves.Status', 'Approved')
-            ->whereIn('leaves.EID', $visibleEids)     // keep same visibility
-            ->when($employeeId, fn($q) => $q->where('leaves.EID', $employeeId))
+            ->join('leave_types', 'leaves.leave_type_id', '=', 'leave_types.id')
+            ->where('leaves.status', 'Approved')
+            ->whereIn('leaves.employee_id', $visibleEids)     // keep same visibility
+            ->when($employeeId, fn($q) => $q->where('leaves.employee_id', $employeeId))
             ->when(
                 $fromDate && $toDate,
                 fn($q) =>
-                $q->whereDate('leaves.To_Date', '>=', $fromDate)
-                    ->whereDate('leaves.From_Date', '<=', $toDate)
+                $q->whereDate('leaves.to_date', '>=', $fromDate)
+                    ->whereDate('leaves.from_date', '<=', $toDate)
             )
             ->get()
-            ->groupBy('EID');
+            ->groupBy('employee_id');
 
         /* ---------------------------------------------------------------------
      | 5.  Fetch, flag leave days, render
      |-------------------------------------------------------------------- */
         $attendanceRecords = $attendanceQuery->orderBy('date', 'asc')->get()
             ->map(function ($row) use ($leaveData) {
-                $lv = $leaveData[$row->EID] ?? collect();
+                $lv = $leaveData[$row->employee_id] ?? collect();
                 $hit = $lv->first(
                     fn($l) =>
-                    $row->date >= $l->From_Date && $row->date <= $l->To_Date
+                    $row->date >= $l->from_date && $row->date <= $l->to_date
                 );
                 if ($hit) {
                     $row->time_in  = $hit->leave_type;
@@ -340,18 +340,18 @@ class ReportController extends Controller
         $toDate = $queryParams['to_date'] ?? null;
 
         $attendanceQuery = app_attendance::selectRaw(
-            'employees.id as EID, 
-         employees.Full_Name, 
-         employees.Employee_Id, 
-         departments.Name as department, 
+            'employees.id as EID,
+         employees.Full_Name,
+         employees.Employee_Id,
+         departments.Name as department,
          designations.Name as designation,
-         DATE(app_attendances.updated_at) as date, 
+         DATE(app_attendances.updated_at) as date,
          DAYNAME(app_attendances.updated_at) as weekday,
-         MIN(CASE WHEN app_attendances.status = "in" THEN TIME(app_attendances.updated_at) END) as time_in, 
-         MAX(CASE WHEN app_attendances.status = "out" THEN TIME(app_attendances.updated_at) END) as time_out, 
-         MIN(CASE WHEN app_attendances.status = "in" THEN app_attendances.village END) as in_location, 
-         MAX(CASE WHEN app_attendances.status = "out" THEN app_attendances.village END) as out_location, 
-         MIN(CASE WHEN app_attendances.status = "in" THEN app_attendances.image_path END) as in_image, 
+         MIN(CASE WHEN app_attendances.status = "in" THEN TIME(app_attendances.updated_at) END) as time_in,
+         MAX(CASE WHEN app_attendances.status = "out" THEN TIME(app_attendances.updated_at) END) as time_out,
+         MIN(CASE WHEN app_attendances.status = "in" THEN app_attendances.village END) as in_location,
+         MAX(CASE WHEN app_attendances.status = "out" THEN app_attendances.village END) as out_location,
+         MIN(CASE WHEN app_attendances.status = "in" THEN app_attendances.image_path END) as in_image,
          MAX(CASE WHEN app_attendances.status = "out" THEN app_attendances.image_path END) as out_image'
         )
             ->join('employees', 'app_attendances.EID', '=', 'employees.id')
@@ -497,12 +497,12 @@ class ReportController extends Controller
     public function holidayReport(Request $request)
     {
         $year = $request->query('year');
-        $holiday = holiday::whereYear('From_date', $year)
-            ->orderBy('From_Date', 'asc')
+        $holiday = holiday::whereYear('from_date', $year)
+            ->orderBy('from_date', 'asc')
             ->get()
             ->map(function ($item) {
-                $fromDate = \Carbon\Carbon::parse($item->From_Date);
-                $toDate = \Carbon\Carbon::parse($item->To_Date);
+                $fromDate = \Carbon\Carbon::parse($item->from_date);
+                $toDate = \Carbon\Carbon::parse($item->to_date);
 
                 // Generate date range and calculate weekdays
                 $dateRange = [];
@@ -533,8 +533,8 @@ class ReportController extends Controller
 
     public function downloadAttendanceExcel(Request $request)
     {
-        $month = $request->month; 
-        $year  = $request->year;  
+        $month = $request->month;
+        $year  = $request->year;
 
         return Excel::download(new AttendanceReportExport(8, 2025), 'attendance-report.xlsx');
     }

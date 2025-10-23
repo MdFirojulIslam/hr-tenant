@@ -36,6 +36,7 @@ Route::get('/certificate-of-income/{id}', [CertificateController::class, 'getCer
 
 
 //Leave
+// Route::get('/leave-report/{id}', [ReportController::class, 'leaveReport']);
 Route::get('/leave-report/{id}', [ReportController::class, 'leaveReport']);
 Route::get('/app-attendance-report/{id}', [ReportController::class, 'appAttendanceReport']);
 Route::get('/attendance-report/{id}', [ReportController::class, 'attendanceReport']);
@@ -48,7 +49,7 @@ Route::get('/expense-report', [ReportController::class, "getExpenseReport"]);
 
 Route::get('/{any}', function () {
     return view('welcome');
-})->where('any','.*');
+})->where('any', '.*');
 
 
 Route::get('/clear-caches', function () {
@@ -57,6 +58,3 @@ Route::get('/clear-caches', function () {
 
     return 'Caches cleared.';
 });
-
-
- 

@@ -33,8 +33,8 @@ class FetchAttendanceJob implements ShouldQueue
     {
         // Fetch all holidays, leaves, and attendance records as before
         $holidays = holiday::all();
-        $leaves = leave::select('leaves.EID', 'leaves.From_Date', 'leaves.To_Date', 'leave_types.short_name')
-            ->join('leave_types', 'leaves.Leave_Type_Id', '=', 'leave_types.id')
+        $leaves = leave::select('leaves.employee_id', 'leaves.from_date', 'leaves.to_date', 'leave_types.short_leave_name')
+            ->join('leave_types', 'leaves.leave_type_id', '=', 'leave_types.id')
             ->where('leaves.Status', '=', 'Approved')
             ->get();
 
