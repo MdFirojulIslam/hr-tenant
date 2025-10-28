@@ -59,7 +59,7 @@
                         <li
                             class="dropdown-item"
                             v-if="item.status === 'Approved (SV)'"
-                            @click="router.push('/leave/hr-approval')"
+                            @click="goToHrApproval(item)"
                         >
                             {{ item.Full_Name }} leave has been accepted by his
                             Supervisor.
@@ -130,6 +130,20 @@ const goToSupervisorApproval = (item) => {
     });
 };
 
+const goToHrApproval = (item) => {
+    router.push({
+        path: "/leave/hr-approval",
+        query: {
+            full_name: item.Full_Name,
+            leave_type: item.Leave_Type,
+            department_name: item.department_name,
+            leave_id: item.leave_id,
+            purpose: item.purpose,
+            status: item.status,
+        },
+    });
+};
+
 // Compute the total number of notifications from both existing notifications and employee leaves
 const totalNotifications = computed(() => {
     const notificationCount = notification.value.length;
@@ -140,6 +154,7 @@ const getData = async () => {
     try {
         const responseNotification = await api.get("/get-notification");
         notification.value = responseNotification.data;
+        console.log("Notifications:", notification.value);
     } catch (err) {
         error.value = err.message || "Error fetching data";
     }

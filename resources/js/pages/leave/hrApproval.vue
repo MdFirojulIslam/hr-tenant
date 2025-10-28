@@ -1,35 +1,49 @@
 <script setup>
-import { ref, onMounted, computed, defineAsyncComponent } from "vue";
-import { Bootstrap4Pagination } from "laravel-vue-pagination";
+import { ref, onMounted, computed, watch, defineAsyncComponent } from "vue";
+import { useRoute, useRouter } from "vue-router";
 import Swal from "sweetalert2";
-import api from "../../api";
+import api from "@/api";
+import { useStore } from "vuex";
 
-const employee = ref([]);
-
-const department = ref([]);
-const error = ref([]);
-const leaveType = ref();
-const selectedType = ref("");
-const selectedStatus = ref("");
-const selectedDept = ref("");
-const allLeave = ref([]);
-const selectedStore = ref(null);
-
-const stausComponent = defineAsyncComponent(() =>
-    import("../leave/component/statusUpdateForm.vue")
+//----------------- Async Components -----------------
+const EditLeaveModal = defineAsyncComponent(() =>
+    import("@/pages/leave/component/statusUpdateForm.vue")
 );
 
-const statusId = ref();
-const statusModel = ref(false);
+const editModal = ref(false);
+const selectedLeave = ref(null);
 
-const statusOpen = () => {
-    statusModel.value = true;
-};
-const statusClose = () => {
-    statusModel.value = false;
-    getData();
+const editLeave = (leave) => {
+    selectedLeave.value = leave;
+    editModal.value = true;
 };
 
+// Close modal
+const closeEditModal = () => {
+    editModal.value = false;
+};
+// ----------------- Vuex & Router -----------------
+const store = useStore();
+const user = store.getters.getUser;
+const router = useRouter();
+const route = useRoute();
+
+// ----------------- Reactive State -----------------
+const department = ref([]);
+const leaveType = ref([]);
+const allLeave = ref([]);
+const employeesByDept = ref([]);
+const employee = ref([]);
+const earnedLeave = ref("");
+
+const selectedDept = ref("");
+const selectedEmp = ref("");
+const selectedType = ref("");
+const selectedStatus = ref("Pending");
+
+const error = ref(null);
+
+// ----------------- Helper Functions -----------------
 const formatDate = (dateStr) => {
     if (!dateStr) return "";
     const date = new Date(dateStr);
@@ -39,33 +53,35 @@ const formatDate = (dateStr) => {
     return `${day} ${month}, ${year}`;
 };
 
-const editLeaveStatus = async (id) => {
-    const leaveData = allLeave.value.find((leave) => leave.leave_id === id);
-    if (leaveData) {
-        selectedStore.value = leaveData;
-        statusId.value = id;
-        statusOpen();
-    } else {
-        Swal.fire({
-            icon: "error",
-            title: "Oops...",
-            text: "Unable to find leave data.",
-        });
-    }
-};
+const openAttachment = (url) => url && window.open(url, "_blank");
 
-const leaveApprove = async (id, status) => {
+const editLeaveStatus = async (id, status) => {
     try {
-        const { data } = await api.put("/hr-approved", { id, status });
+        const { data } = await api.put("/leave-approval", { id, status });
 
         if (data.success) {
             Swal.fire({
                 position: "center",
                 icon: "success",
-                title: data.message || "Leave Approved",
+                title: data.message || "Update sent to HR",
                 showConfirmButton: false,
                 timer: 1500,
             });
+            // Update locally
+            const leaveIndex = allLeave.value.findIndex((l) => l.id === id);
+            if (leaveIndex !== -1) {
+                allLeave.value[leaveIndex].status = status;
+                allLeave.value[leaveIndex].notification = 1;
+            }
+
+            selectedDept.value = "";
+            selectedEmp.value = "";
+            selectedType.value = "";
+            selectedStatus.value = "Pending";
+            employee.value = [];
+            employeesByDept.value = [];
+            earnedLeave.value = "";
+
             await api.get(`/hr-approval/${id}`);
             window.location.reload();
         }
@@ -74,94 +90,144 @@ const leaveApprove = async (id, status) => {
     }
 };
 
-const getData = async (page = 1) => {
+// ----------------- Data Fetching -----------------
+const getData = async () => {
     try {
-        const [responsedept, responsetype, response] = await axios.all([
+        const [deptRes, typeRes, leaveRes] = await Promise.all([
             api.get("/department"),
             api.get("/leave-type"),
-            api.get(`/all-leave?page=${page}`),
+            api.get("/all-leave?page=1"),
         ]);
-        department.value = responsedept.data;
-        leaveType.value = responsetype.data;
-        allLeave.value = response.data;
+        department.value = deptRes.data;
+        leaveType.value = typeRes.data;
+        allLeave.value = leaveRes.data;
     } catch (err) {
         error.value = err.message || "Error fetching data";
-    } finally {
     }
 };
 
-const filteredData = computed(() => {
-    return allLeave.value.filter((item) => {
-        return (
-            (selectedType.value === "" ||
-                item.leave_type_id === selectedType.value) &&
-            (selectedStatus.value === "" ||
-                item.status === selectedStatus.value) &&
-            (selectedDept.value === "" ||
-                item.department === selectedDept.value)
-        );
-    });
-});
-
-const getEmployee = async (id) => {
-    try {
-        const response = await api.get(`/leave/${id}`);
-        employee.value = response.data;
-    } catch (error) {
-        console.error("Error updating store:", error);
+const getEmployee = async (deptId) => {
+    if (!deptId) {
+        employeesByDept.value = [];
+        return;
     }
-};
-
-const deleteLeave = async (id) => {
     try {
-        const response = await api.delete(`/soft-delete-leave/${id}`);
-        if (response.data.success) {
-            Swal.fire({
-                position: "middle",
-                icon: "success",
-                title: "Information has been Deleted",
-                showConfirmButton: false,
-                timer: 1500,
-            });
-            await getData();
-        }
+        const res = await api.get(`/emp/${deptId}`);
+        employeesByDept.value = res.data;
     } catch (err) {
-        console.error("Error fetching store data for editing:", err);
+        console.error(err);
     }
 };
 
-const openAttachment = (url) => {
-    window.open(url, "_blank");
+const getLeaveInfo = async (id) => {
+    try {
+        const res = await api.get(`/leave/${id}`);
+        employee.value = res.data;
+
+        const earnedRes = await api.get(`/get-earned-leave/${id}`);
+        earnedLeave.value = earnedRes.data;
+    } catch (err) {
+        console.error(err);
+    }
 };
 
-onMounted(() => getData());
+// ----------------- Filtered Leaves -----------------
+const filteredData = computed(() =>
+    allLeave.value.filter((item) => {
+        const deptMatch =
+            !selectedDept.value || item.dept_id == selectedDept.value;
+        const empMatch = !selectedEmp.value || item.EID == selectedEmp.value;
+        const typeMatch =
+            !selectedType.value || item.leave_type_id == selectedType.value;
+        const statusMatch =
+            !selectedStatus.value || item.status == selectedStatus.value;
+        return deptMatch && empMatch && typeMatch && statusMatch;
+    })
+);
+
+// ----------------- Auto-select from query -----------------
+const setQuerySelection = async () => {
+    if (!department.value.length || !leaveType.value.length) return;
+
+    let needUpdate = false;
+
+    // Department
+    if (route.query.department_name) {
+        const dept = department.value.find(
+            (d) => d.Name === route.query.department_name
+        );
+        if (dept) {
+            selectedDept.value = dept.id;
+            await getEmployee(dept.id);
+            needUpdate = true;
+
+            // Employee
+            if (route.query.full_name) {
+                const emp = employeesByDept.value.find(
+                    (e) => e.Full_Name === route.query.full_name
+                );
+                if (emp) {
+                    selectedEmp.value = emp.id;
+                    await getLeaveInfo(emp.id);
+                }
+            }
+        }
+    }
+    if (route.query.status) {
+        selectedStatus.value = route.query.status;
+        needUpdate = true;
+    }
+    // Leave Type
+    // if (route.query.leave_type) {
+    //     const type = leaveType.value.find(
+    //         (t) => t.leave_name === route.query.leave_type
+    //     );
+    //     if (type) selectedType.value = type.id;
+    //     needUpdate = true;
+    // }
+
+    // Remove query parameters from URL after using them
+    if (needUpdate) {
+        router.replace({ path: route.path, query: {} });
+    }
+};
+
+// ----------------- Watch Query Changes -----------------
+watch(route, () => setQuerySelection(), { immediate: true });
+
+// ----------------- Lifecycle -----------------
+onMounted(async () => {
+    await getData();
+    await setQuerySelection();
+});
 </script>
 
 <template>
     <component
-        v-if="statusModel"
-        :is="stausComponent"
-        :isOpen="statusModel"
-        :editStore="selectedStore"
+        v-if="editModal"
+        :is="EditLeaveModal"
+        :isOpen="editModal"
+        :editStore="selectedLeave"
+        :stId="selectedLeave?.leave_id"
         :leave_type="leaveType"
-        :stId="statusId"
-        @modal-close="statusClose"
-        name="first-modal"
+        @modal-close="closeEditModal"
+        @submit="getData"
     />
+
     <div class="container-fluid px-3">
         <div class="col-lg-12 grid-margin stretch-card">
             <div class="container">
+                <!-- EMPLOYEE DETAILS -->
                 <div class="card">
                     <div class="card-body">
                         <div class="text-center">
-                            <h1 class="mb-4">HR Approval</h1>
+                            <h1 class="mb-4">Supervisor Approval</h1>
                         </div>
+
                         <div class="row">
+                            <!-- LEFT: Employee Info -->
                             <div class="col-lg-8 col-md-12 px-2 mb-4">
-                                <section
-                                    class="section about-section gray-bg"
-                                    id="about"
-                                >
+                                <section class="section about-section gray-bg">
                                     <div class="container">
                                         <div
                                             class="row align-items-center flex-row-reverse"
@@ -170,36 +236,22 @@ onMounted(() => getData());
                                                 class="col-lg-7 col-md-6 mb-4 mb-md-0"
                                             >
                                                 <div
-                                                    class="about-text go-to"
                                                     v-for="(
                                                         item, index
                                                     ) in employee"
                                                     :key="item.id"
                                                 >
-                                                    <h3
-                                                        class="dark-color"
-                                                        v-if="index === 0"
-                                                    >
-                                                        {{
-                                                            item.Full_Name || ""
-                                                        }}
+                                                    <h3 v-if="index === 0">
+                                                        {{ item.Full_Name }}
                                                     </h3>
-                                                    <h6
-                                                        class="theme-color lead"
-                                                        v-if="index === 0"
-                                                    >
+                                                    <h6 v-if="index === 0">
                                                         {{
-                                                            item.designation_name ||
-                                                            ""
+                                                            item.designation_name
                                                         }}
                                                     </h6>
-                                                    <h6
-                                                        class="theme-color lead"
-                                                        v-if="index === 0"
-                                                    >
+                                                    <h6 v-if="index === 0">
                                                         {{
-                                                            item.department_name ||
-                                                            ""
+                                                            item.department_name
                                                         }}
                                                     </h6>
                                                 </div>
@@ -212,15 +264,11 @@ onMounted(() => getData());
                                                 :key="item.id"
                                             >
                                                 <div
-                                                    class="about-avatar"
                                                     v-if="index === 0"
+                                                    class="about-avatar"
                                                 >
                                                     <img
-                                                        :src="
-                                                            item.img_url
-                                                                ? item.img_url
-                                                                : ''
-                                                        "
+                                                        :src="item.img_url"
                                                         class="img-fluid"
                                                         style="
                                                             max-height: 150px;
@@ -233,7 +281,7 @@ onMounted(() => getData());
                                     </div>
                                 </section>
                             </div>
-
+                            <!-- RIGHT: Leave Summary -->
                             <div class="col-lg-4 col-md-12 px-2 mb-4">
                                 <table class="leave-status">
                                     <thead class="table_head">
@@ -244,27 +292,19 @@ onMounted(() => getData());
                                             <th>Balance</th>
                                         </tr>
                                     </thead>
+
                                     <tbody>
                                         <tr
                                             v-for="(info, typeName) in employee"
                                             :key="typeName"
                                         >
                                             <th>{{ info.leave_name }}</th>
+                                            <td>{{ info.total_max_days }}</td>
+                                            <td>{{ info.used_leave }}</td>
                                             <td>
                                                 {{
-                                                    info.max_leave_days === 0
-                                                        ? info.earned_leave
-                                                        : info.max_leave_days
-                                                }}
-                                            </td>
-                                            <td>{{ info.leave_count }}</td>
-                                            <td>
-                                                {{
-                                                    info.max_leave_days === 0
-                                                        ? info.earned_leave -
-                                                          info.leave_count
-                                                        : info.max_leave_days -
-                                                          info.leave_count
+                                                    info.total_max_days -
+                                                    info.used_leave
                                                 }}
                                             </td>
                                         </tr>
@@ -275,32 +315,85 @@ onMounted(() => getData());
                     </div>
                 </div>
 
+                <!-- LEAVE TABLE -->
                 <div class="card mt-4">
                     <div class="card-body">
                         <div class="text-center">
                             <h1 class="mb-5">Leave Summary</h1>
                         </div>
 
-                        <div
-                            class="row d-flex justify-content-center justify-content-md-end mb-3"
-                        >
-                            <div class="col-lg-3 col-md-4 col-sm-6 mb-3">
+                        <!-- Filters -->
+                        <div class="row justify-content-end mb-3">
+                            <!-- Department Filter -->
+                            <div
+                                class="col-lg-3 col-md-4 col-sm-6 mb-3 position-relative"
+                            >
                                 <label>Department</label>
                                 <select
                                     v-model="selectedDept"
+                                    @change="
+                                        getEmployee(selectedDept);
+                                        selectedEmp = '';
+                                    "
                                     class="form-control"
                                 >
                                     <option value="">All Department</option>
                                     <option
                                         v-for="item in department"
                                         :key="item.id"
-                                        :value="item.Name"
+                                        :value="item.id"
                                     >
                                         {{ item.Name }}
                                     </option>
                                 </select>
+                                <button
+                                    v-if="selectedDept"
+                                    type="button"
+                                    class="btn btn-sm btn-link position-absolute top-50 end-0 me-4 p-0"
+                                    @click="
+                                        () => {
+                                            selectedDept = '';
+                                            selectedEmp = '';
+                                            employeesByDept = [];
+                                        }
+                                    "
+                                >
+                                    <i class="fa fa-times text-danger"></i>
+                                </button>
                             </div>
-                            <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+
+                            <!-- Employee Filter -->
+                            <div
+                                class="col-lg-3 col-md-4 col-sm-6 mb-3 position-relative"
+                            >
+                                <label>Employee Name</label>
+                                <select
+                                    v-model="selectedEmp"
+                                    class="form-control"
+                                >
+                                    <option value="">All Employee</option>
+                                    <option
+                                        v-for="emp in employeesByDept"
+                                        :key="emp.id"
+                                        :value="emp.id"
+                                    >
+                                        {{ emp.Full_Name }}
+                                    </option>
+                                </select>
+                                <button
+                                    v-if="selectedEmp"
+                                    type="button"
+                                    class="btn btn-sm btn-link position-absolute top-50 end-0 me-4 p-0"
+                                    @click="selectedEmp = ''"
+                                >
+                                    <i class="fa fa-times text-danger"></i>
+                                </button>
+                            </div>
+
+                            <!-- Leave Type Filter -->
+                            <div
+                                class="col-lg-2 col-md-4 col-sm-6 mb-3 position-relative"
+                            >
                                 <label>Leave Type</label>
                                 <select
                                     v-model="selectedType"
@@ -308,16 +401,28 @@ onMounted(() => getData());
                                 >
                                     <option value="">All Type</option>
                                     <option
-                                        v-for="item in leaveType"
-                                        :key="item.id"
-                                        :value="item.id"
+                                        v-for="type in leaveType"
+                                        :key="type.id"
+                                        :value="type.id"
                                     >
-                                        {{ item.leave_name }}
+                                        {{ type.leave_name }}
                                     </option>
                                 </select>
+                                <button
+                                    v-if="selectedType"
+                                    type="button"
+                                    class="btn btn-sm btn-link position-absolute top-50 end-0 me-4 p-0"
+                                    @click="selectedType = ''"
+                                >
+                                    <i class="fa fa-times text-danger"></i>
+                                </button>
                             </div>
-                            <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
-                                <label>Leave Status</label>
+
+                            <!-- Status Filter -->
+                            <div
+                                class="col-lg-2 col-md-4 col-sm-6 mb-3 position-relative"
+                            >
+                                <label>Status</label>
                                 <select
                                     v-model="selectedStatus"
                                     class="form-control"
@@ -325,26 +430,34 @@ onMounted(() => getData());
                                     <option value="">All Status</option>
                                     <option value="Pending">Pending</option>
                                     <option value="Approved">Approved</option>
+                                    <option value="Rejected">Rejected</option>
                                     <option value="Approved (SV)">
                                         Approved (SV)
                                     </option>
-                                    <option value="Rejected">Rejected</option>
                                 </select>
+                                <button
+                                    v-if="selectedStatus"
+                                    type="button"
+                                    class="btn btn-sm btn-link position-absolute top-50 end-0 me-4 p-0"
+                                    @click="selectedStatus = ''"
+                                >
+                                    <i class="fa fa-times text-danger"></i>
+                                </button>
                             </div>
                         </div>
-
+                        <!-- Table -->
                         <div class="table-responsive leave-table">
                             <table class="table table-bordered text-center">
                                 <thead>
                                     <tr class="text-nowrap">
                                         <th>S/N</th>
                                         <th>Employee Name</th>
-                                        <th>Department</th>
                                         <th>From Date</th>
                                         <th>To Date</th>
                                         <th>Total Days</th>
                                         <th>Leave Type</th>
                                         <th>Status</th>
+                                        <th>Purpose</th>
                                         <th>Documents</th>
                                         <th>Operation</th>
                                     </tr>
@@ -354,21 +467,25 @@ onMounted(() => getData());
                                         class="text-nowrap"
                                         v-for="(l, index) in filteredData"
                                         :key="l.id"
-                                        @click="getEmployee(l.EID)"
+                                        @click="getLeaveInfo(l.EID)"
                                     >
                                         <td>{{ index + 1 }}</td>
                                         <td>{{ l.Full_Name }}</td>
-                                        <td class="text-left text-nowrap">
-                                            {{ l.department }}
-                                        </td>
                                         <td>{{ formatDate(l.from_date) }}</td>
                                         <td>{{ formatDate(l.to_date) }}</td>
                                         <td>{{ l.daysBetween }}</td>
                                         <td>{{ l.leave_name }}</td>
                                         <td>{{ l.status }}</td>
-                                        <td v-if="l.attachment_url">
+                                        <td
+                                            class="text-truncate"
+                                            style="max-width: 200px"
+                                        >
+                                            {{ l.purpose }}
+                                        </td>
+                                        <td>
                                             <button
-                                                @click="
+                                                v-if="l.attachment_url"
+                                                @click.stop="
                                                     openAttachment(
                                                         l.attachment_url
                                                     )
@@ -379,14 +496,18 @@ onMounted(() => getData());
                                                     class="fa-solid fa-file-arrow-down"
                                                 ></i>
                                             </button>
+                                            <span v-else>-</span>
                                         </td>
-                                        <td v-else>-</td>
-                                        <td>
+                                        <td
+                                            v-if="
+                                                l.status == 'Approved (SV)' ||
+                                                l.status === 'Pending'
+                                            "
+                                        >
                                             <button
-                                                v-if="l.status != 'Approved'"
                                                 class="custom-btn btn-13 mx-1"
                                                 @click.stop="
-                                                    leaveApprove(
+                                                    editLeaveStatus(
                                                         l.leave_id,
                                                         'Approved'
                                                     )
@@ -397,23 +518,24 @@ onMounted(() => getData());
                                                 ></i>
                                             </button>
                                             <button
-                                                class="btn btn-warning btn-sm mx-1"
-                                                @click.stop="
-                                                    editLeaveStatus(l.leave_id)
-                                                "
+                                                class="custom-btn btn-15"
+                                                @click="editLeave(l)"
                                             >
                                                 <i
                                                     class="fa-regular fa-pen-to-square"
                                                 ></i>
                                             </button>
                                             <button
-                                                class="btn btn-danger btn-sm mx-1"
+                                                class="custom-btn btn-12 mx-1"
                                                 @click.stop="
-                                                    deleteLeave(l.leave_id)
+                                                    editLeaveStatus(
+                                                        l.leave_id,
+                                                        'Rejected'
+                                                    )
                                                 "
                                             >
                                                 <i
-                                                    class="fa-regular fa-trash-can"
+                                                    class="fa-solid fa-xmark"
                                                 ></i>
                                             </button>
                                         </td>
@@ -430,7 +552,7 @@ onMounted(() => getData());
 
 <style>
 .leave-table {
-    max-height: 400px;
+    max-height: 500px;
 }
 
 .leave-status th,
@@ -443,9 +565,6 @@ onMounted(() => getData());
 .table_head {
     color: #fff;
     font-weight: 700;
-    background: #2bc3b9;
-    background: -moz-linear-gradient(-45deg, #2bc3b9 0%, #036931 100%);
-    background: -webkit-linear-gradient(-45deg, #2bc3b9 0%, #036931 100%);
     background: linear-gradient(135deg, #2bc3b9 0%, #036931 100%);
     white-space: nowrap;
 }

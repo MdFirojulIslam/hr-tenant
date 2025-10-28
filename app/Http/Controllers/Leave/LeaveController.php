@@ -363,46 +363,65 @@ class LeaveController extends Controller
      */
     public function show($id)
     {
-        $currentYear = now()->year;
+        $currentYear = date('Y');
 
         $leavesWithEarned = DB::table('leaves as l')
             ->select(
-                'lt.id as leave_type_id',
+                'l.employee_id',
+                'e.Full_Name',
                 'lt.leave_name',
-                'lt.max_leave_days',
-                'departments.Name as department_name',
-                'designations.Name as designation_name',
-                'emp_imgs.img_url',
-                'employees.Full_Name',
-                DB::raw('SUM(DATEDIFF(l.to_date, l.from_date) + 1) as leave_count'),
-                DB::raw('(SELECT FLOOR(COUNT(DISTINCT a.Date)/18)
-            FROM attendences a
-            WHERE a.EID = ' . $id . '
-                AND a.Status IN ("P","L")
-                AND YEAR(a.Date) = ' . $currentYear . ') as earned_leave')
+                DB::raw('CASE WHEN lt.leave_name LIKE "%Earn%" THEN IFNULL(a.total_earn,0) ELSE lt.max_leave_days END as total_max_days'),
+                DB::raw('SUM(DATEDIFF(l.to_date, l.from_date) + 1) as used_leave'),
+                'd.Name as department_name',
+                'des.Name as designation_name',
+                'ei.img_url'
             )
             ->join('leave_types as lt', 'lt.id', '=', 'l.leave_type_id')
-            ->join('employees', 'l.employee_id', '=', 'employees.id')
-            ->leftjoin('emp_imgs', 'emp_imgs.EID', '=', 'employees.id')
-            ->join('officials', 'officials.EID', '=', 'employees.id')
-            ->join('departments', 'officials.Department_Id', '=', 'departments.id')
-            ->join('designations', 'officials.Designation_Id', '=', 'designations.id')
+            ->join('employees as e', 'e.id', '=', 'l.employee_id')
+            ->join('officials as o', 'o.EID', '=', 'e.id')
+            ->join('departments as d', 'd.id', '=', 'o.Department_Id')
+            ->join('designations as des', 'des.id', '=', 'o.Designation_Id')
+            ->leftJoin('emp_imgs as ei', function ($join) {
+                $join->on('ei.EID', '=', 'e.id')
+                    ->whereRaw('ei.id = (SELECT MAX(id) FROM emp_imgs WHERE EID = e.id)');
+            })
+            ->leftJoin(DB::raw("(
+            SELECT
+                EID,
+                FLOOR(COUNT(CASE WHEN STATUS IN ('P', 'L', 'in') THEN 1 END) / 18) AS total_earn
+            FROM (
+                SELECT EID, STATUS, DATE
+                FROM attendences
+                WHERE YEAR(DATE) = {$currentYear}
+
+                UNION ALL
+
+                SELECT EID, STATUS, DATE(created_at) AS DATE
+                FROM app_attendances
+                WHERE YEAR(created_at) = {$currentYear}
+            ) all_att
+            GROUP BY EID
+        ) a"), 'a.EID', '=', 'l.employee_id')
             ->where('l.employee_id', $id)
             ->whereYear('l.from_date', $currentYear)
+            ->where('l.status', 'Approved')
+            ->whereIn('l.leave_type_id', [1, 2, 3])
             ->groupBy(
-                'lt.id',
+                'l.employee_id',
+                'e.Full_Name',
                 'lt.leave_name',
                 'lt.max_leave_days',
-                'departments.Name',
-                'designations.Name',
-                'emp_imgs.img_url',
-                'employees.Full_Name'
+                'd.Name',
+                'des.Name',
+                'ei.img_url',
+                'a.total_earn'
             )
+            ->orderBy('lt.leave_name', 'ASC')
             ->get();
-
 
         return response()->json($leavesWithEarned);
     }
+
 
     /**
      * Show the form for editing the specified resource.
@@ -431,8 +450,11 @@ class LeaveController extends Controller
      */
     public function update(Request $request, $id)
     {
+        dd($request->all());
         $leave = leave::find($id);
         $userId = Auth::user()->EID;
+
+
         $leave->update([
             'leave_type_id' => $request->input('leave_type'),
             'status' => $request->input('status'),

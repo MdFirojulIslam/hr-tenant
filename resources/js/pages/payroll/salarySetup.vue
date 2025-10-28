@@ -3,11 +3,11 @@ import { ref, onMounted, defineAsyncComponent } from "vue";
 import { Bootstrap4Pagination } from "laravel-vue-pagination";
 import api from "@/api";
 import Swal from "sweetalert2";
-import { useRouter } from "vue-router";
-const router = useRouter();
+
+// import { useRouter } from "vue-router";
+// const router = useRouter();
 
 import { useStore } from "vuex";
-
 const store = useStore();
 const role_id = store.getters.getRoleId;
 
@@ -15,7 +15,7 @@ const salaryComponent = defineAsyncComponent(() =>
     import("./component/salarySetupForm.vue")
 );
 
-const currentYear = ref(new Date().getFullYear());
+// const currentYear = ref(new Date().getFullYear());
 
 const isLoading = ref(true);
 const error = ref(null);
@@ -41,18 +41,26 @@ const openSalaryDetails = (id) => {
     window.open(`/payroll/salary-details/${id}`, "_blank");
 };
 
+// get employees for department
+const getEmployee = async (deptID) => {
+    if (!deptID) {
+        employeeIDs.value = [];
+        return;
+    }
+    const empIDs = await api.get(`/emp/${deptID}`);
+    employeeIDs.value = empIDs.data;
+};
+
 const employeeName = ref("");
 const employeeID = ref("");
 const bank_account_no = ref("");
 
 const searchemp = async () => {
     // Check if any filter input has a value
-    if (employeeName.value || employeeID.value || bank_account_no.value) {
+    if (bank_account_no.value) {
         try {
             const response = await api.get("/employee-salary-search", {
                 params: {
-                    employeeName: employeeName.value,
-                    employeeID: employeeID.value,
                     bank_account_no: bank_account_no.value,
                 },
             });
@@ -148,23 +156,61 @@ onMounted(() => getData());
             <div class="p-3 mb-3">
                 <!-- Filters -->
                 <div class="row g-3 mb-3">
-                    <div class="col-lg-3">
-                        <input
-                            type="text"
-                            class="form-control form-control-sm"
-                            v-model="employeeName"
-                            placeholder="Type Employee Name"
-                            @input="searchemp"
-                        />
+                    <div class="col-lg-3 position-relative">
+                        <select
+                            class="form-control"
+                            v-model="searchDept"
+                            @change="getEmployee(searchDept)"
+                            style="font-weight: normal; background: transparent"
+                        >
+                            <option value="" disabled>Select Department</option>
+                            <option
+                                v-for="dept in formData"
+                                :key="dept.id"
+                                :value="dept.id"
+                            >
+                                {{ dept.Name }}
+                            </option>
+                        </select>
+                        <button
+                            v-if="searchDept"
+                            type="button"
+                            class="btn btn-sm btn-link position-absolute top-0 end-0 mt-1 me-1"
+                            @click="
+                                searchDept = '';
+                                employeeIDs = [];
+                            "
+                        >
+                            <i class="fa fa-times"></i>
+                        </button>
                     </div>
-                    <div class="col-lg-3">
-                        <input
-                            type="text"
-                            class="form-control form-control-sm"
-                            v-model="employeeID"
-                            placeholder="Type Employee ID"
-                            @input="searchemp"
-                        />
+
+                    <!-- Employee -->
+                    <div class="col-lg-3 position-relative">
+                        <select
+                            class="form-control"
+                            v-model="searchEmp"
+                            style="font-weight: normal; background: transparent"
+                        >
+                            <option value="" disabled>
+                                Select Employee Name
+                            </option>
+                            <option
+                                v-for="emp in employeeIDs"
+                                :key="emp.id"
+                                :value="emp.id"
+                            >
+                                {{ emp.Full_Name }}
+                            </option>
+                        </select>
+                        <button
+                            v-if="searchEmp"
+                            type="button"
+                            class="btn btn-sm btn-link position-absolute top-0 end-0 mt-1 me-1"
+                            @click="searchEmp = ''"
+                        >
+                            <i class="fa fa-times"></i>
+                        </button>
                     </div>
                     <div class="col-lg-3">
                         <input

@@ -190,17 +190,24 @@ class EmployeeInformationController extends Controller
         //         ->get();
         // }
 
-
-        $pending_leave = official::select('leaves.id as leave_id', 'employees.Full_Name', 'departments.Name as department_name', 'leaves.status', 'leaves.purpose', 'leave_types.leave_name as Leave_Type')
-            ->join('leaves', 'leaves.employee_id', '=', 'officials.EID')
-            ->join('employees', 'employees.id', '=', 'officials.EID')
-            ->join('leave_types', 'leaves.leave_type_id', '=', 'leave_types.id')
-            ->join('departments', 'departments.id', '=', 'officials.Department_Id')
-            ->where('officials.Supervisor_Id', '=', $user->EID)
-            ->where('leaves.status', '=', 'Pending')
-            ->get();
-
-
+        if ($user->EID == 13) {
+            $pending_leave = official::select('leaves.id as leave_id', 'employees.Full_Name', 'departments.Name as department_name', 'leaves.status', 'leaves.purpose', 'leave_types.leave_name as Leave_Type')
+                ->join('leaves', 'leaves.employee_id', '=', 'officials.EID')
+                ->join('employees', 'employees.id', '=', 'officials.EID')
+                ->join('leave_types', 'leaves.leave_type_id', '=', 'leave_types.id')
+                ->join('departments', 'departments.id', '=', 'officials.Department_Id')
+                ->where('leaves.status', '=', 'Approved (SV)')
+                ->get();
+        } else {
+            $pending_leave = official::select('leaves.id as leave_id', 'employees.Full_Name', 'departments.Name as department_name', 'leaves.status', 'leaves.purpose', 'leave_types.leave_name as Leave_Type')
+                ->join('leaves', 'leaves.employee_id', '=', 'officials.EID')
+                ->join('employees', 'employees.id', '=', 'officials.EID')
+                ->join('leave_types', 'leaves.leave_type_id', '=', 'leave_types.id')
+                ->join('departments', 'departments.id', '=', 'officials.Department_Id')
+                ->where('officials.Supervisor_Id', '=', $user->EID)
+                ->where('leaves.status', '=', 'Pending')
+                ->get();
+        }
         return response()->json($pending_leave);
     }
 

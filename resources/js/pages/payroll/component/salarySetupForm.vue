@@ -23,6 +23,8 @@ const employee = ref([]);
 const emp_img = ref([]);
 const selected_designation = ref("");
 
+const emp_info = ref([]);
+
 const error = ref([]);
 
 const form = ref({
@@ -120,15 +122,12 @@ const getEmployee = async (deptID) => {
     }
 };
 
-const getEmployeeImg = async (id) => {
+const getEmployeeInfo = async (id) => {
     try {
-        const response = await api.get(`/empimg/${id}`);
-        emp_img.value = response.data;
-
-        const selectedEmployee = employee.value.find((emp) => emp.eid === id);
-        selected_designation.value = selectedEmployee
-            ? selectedEmployee.Name
-            : "";
+        console.log("Fetching info for Employee ID:", id);
+        const response = await api.get(`/emp-info/${id}`);
+        emp_info.value = response.data;
+        console.log("Employee Info:", emp_info.value);
     } catch (error) {
         console.error("Error updating store:", error);
     }
@@ -308,7 +307,7 @@ onMounted(() => getData());
                                         <select
                                             class="form-control"
                                             v-model="form.eid"
-                                            @change="getEmployeeImg(form.eid)"
+                                            @change="getEmployeeInfo(form.eid)"
                                         >
                                             <option value="" disabled>
                                                 Select Employee

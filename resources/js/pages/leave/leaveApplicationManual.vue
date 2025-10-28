@@ -382,21 +382,12 @@ onMounted(() => getData());
                                             :key="typeName"
                                         >
                                             <th>{{ info.leave_name }}</th>
+                                            <td>{{ info.total_max_days }}</td>
+                                            <td>{{ info.used_leave }}</td>
                                             <td>
                                                 {{
-                                                    info.max_leave_days === 0
-                                                        ? info.earned_leave
-                                                        : info.max_leave_days
-                                                }}
-                                            </td>
-                                            <td>{{ info.leave_count }}</td>
-                                            <td>
-                                                {{
-                                                    info.max_leave_days === 0
-                                                        ? info.earned_leave -
-                                                          info.leave_count
-                                                        : info.max_leave_days -
-                                                          info.leave_count
+                                                    info.total_max_days -
+                                                    info.used_leave
                                                 }}
                                             </td>
                                         </tr>

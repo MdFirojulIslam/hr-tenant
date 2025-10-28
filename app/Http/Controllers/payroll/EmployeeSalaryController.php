@@ -4,6 +4,7 @@ namespace App\Http\Controllers\payroll;
 
 use App\Exports\SalarySheetExport;
 use App\Http\Controllers\Controller;
+use App\Models\designation;
 use App\Models\employee;
 use App\Models\employee_salary;
 use App\Models\employee_salary_sheet;
@@ -19,8 +20,8 @@ use Maatwebsite\Excel\Facades\Excel;
 
 class EmployeeSalaryController extends Controller
 {
-    public function index() 
-    {  
+    public function index()
+    {
         $salaries = DB::table('employee_salaries as es')
             ->leftJoin('officials', 'es.employee_id', '=', 'officials.EID')
             ->leftJoin('departments', 'officials.Department_Id', '=', 'departments.id')
@@ -30,7 +31,7 @@ class EmployeeSalaryController extends Controller
             ->select(
                 'emp.id as eid',
                 'departments.id as dept_id',
-                'emp.Employee_Id', 
+                'emp.Employee_Id',
                 'departments.Name as emp_dept',
                 'emp.Full_Name',
                 DB::raw('CAST(es.basic AS UNSIGNED) as basic'),
@@ -64,13 +65,13 @@ class EmployeeSalaryController extends Controller
                 DB::raw('CAST(((es.total_payment + COALESCE(SUM(se.amount), 0)) - COALESCE(SUM(sd.amount), 0)) AS UNSIGNED) as net_pay')
             )
             ->groupBy(
-                'emp.id', 
-                'emp.Employee_Id', 
-                'emp.Full_Name',  
+                'emp.id',
+                'emp.Employee_Id',
+                'emp.Full_Name',
                 'departments.id',
                 'departments.Name',
-                'es.basic', 
-                'es.total_payment', 
+                'es.basic',
+                'es.total_payment',
                 'es.bank_account_no',
                 'es.gross_salary',
                 'es.house_rent',
@@ -95,9 +96,9 @@ class EmployeeSalaryController extends Controller
                 'es.updated_by',
                 'es.created_at',
                 'es.updated_at'
-            )->paginate(12); 
+            )->paginate(12);
 
-    return response()->json($salaries); 
+        return response()->json($salaries);
 
 
         // $salaries = DB::table('employee_salaries as es')
@@ -106,7 +107,7 @@ class EmployeeSalaryController extends Controller
         //     ->leftJoin('salary_deductions as sd', 'es.employee_id', '=', 'sd.employee_id')
         //     ->select(
         //         'emp.id',
-        //         'emp.Employee_Id', 
+        //         'emp.Employee_Id',
         //         'emp.Full_Name',
         //         DB::raw('CAST(es.basic AS UNSIGNED) as basic'),
         //         DB::raw('CAST(es.total_payment AS UNSIGNED) as total_payment'),
@@ -116,7 +117,7 @@ class EmployeeSalaryController extends Controller
         //         DB::raw('CAST(((es.total_payment + COALESCE(SUM(se.amount), 0)) - COALESCE(SUM(sd.amount), 0)) AS UNSIGNED) as net_pay')
         //     )
         //     ->groupBy('emp.id', 'emp.Employee_Id', 'emp.Full_Name', 'es.basic', 'es.total_payment', 'es.bank_account_no')
-        //     ->paginate(12);  
+        //     ->paginate(12);
     }
 
 
@@ -267,7 +268,7 @@ class EmployeeSalaryController extends Controller
 
         $salaries = DB::table('employee_salaries as es')
             ->join('employees as emp', 'es.employee_id', '=', 'emp.id')
-            
+
             ->leftJoin('salary_earnings as se', 'es.employee_id', '=', 'se.employee_id')
             ->leftJoin('salary_deductions as sd', 'es.employee_id', '=', 'sd.employee_id')
             ->select(
@@ -381,7 +382,7 @@ class EmployeeSalaryController extends Controller
     //                     'Other_Deduction' => $salary->Other_Deduction,
     //                     'Advance' => $finalAdvance,
     //                     'Loan_Payable' => $loanPayable,
-    //                     'Other_Deduction' => $finalAdvance, 
+    //                     'Other_Deduction' => $finalAdvance,
     //                     'Total_Deduction' => $totalDeduction,
     //                     'Net_Pay' => $netPay,
     //                     'Bank_Account_No' => $salary->Bank_Account_No,
@@ -431,7 +432,7 @@ class EmployeeSalaryController extends Controller
         $monthString = $request->year . '-' . str_pad($request->month, 2, '0', STR_PAD_LEFT) . '-01';
         $employeeSalaries = employee_salary::all();
 
-        
+
 
         DB::commit();
 
@@ -591,11 +592,11 @@ class EmployeeSalaryController extends Controller
         // }
     }
 
-//compress 
+    //compress
 
     public function salarySheet(Request $request)
     {
-        
+
 
         // $salaries = employee_salary_sheet::with('employee')->whereYear('date', $year)->whereMonth('date', $month)->get();
 
@@ -603,12 +604,15 @@ class EmployeeSalaryController extends Controller
         $year = $request->year;
         $month = $request->month;
 
+
+
+
         $salaries = DB::table('employees')
             ->join('employee_salary_sheets', 'employees.id', '=', 'employee_salary_sheets.employee_id')
             ->leftJoin('salary_earnings', 'employees.id', '=', 'salary_earnings.employee_id')
             ->leftJoin('salary_deductions', 'employees.id', '=', 'salary_deductions.employee_id')
-            ->whereYear('employee_salary_sheets.date', $year)
-            ->whereMonth('employee_salary_sheets.date', $month)
+            ->whereYear('employee_salary_sheets.salary_date', $year)
+            ->whereMonth('employee_salary_sheets.salary_date', $month)
             ->select(
                 'employees.id',
                 'employees.Employee_Id',
@@ -629,8 +633,8 @@ class EmployeeSalaryController extends Controller
             )
             ->get();
 
+
         return response()->json($salaries);
-       
     }
 
 
@@ -647,7 +651,7 @@ class EmployeeSalaryController extends Controller
     {
 
         // $salaries = employee_salary::with([
-        //     'employee:id,Full_Name,Employee_Id',  
+        //     'employee:id,Full_Name,Employee_Id',
         //     'employee.official:id,EID,Department_Id',
         //     'employee.department:id,Name',
         //     'employee.department.designation:id,Department_Id,Name',
@@ -680,7 +684,7 @@ class EmployeeSalaryController extends Controller
                 DB::raw('CAST(COALESCE(SUM(sd.amount), 0) AS UNSIGNED) as deduction_amount'),
                 DB::raw('CAST(((es.total_payment + COALESCE(SUM(se.amount), 0)) - COALESCE(SUM(sd.amount), 0)) AS UNSIGNED) as net_pay')
             )
-            ->where('emp.id', $id) 
+            ->where('emp.id', $id)
             ->groupBy(
                 'emp.id',
                 'emp.Employee_Id',
@@ -692,10 +696,25 @@ class EmployeeSalaryController extends Controller
                 'departments.Name',
                 'designations.Name'
             )
-            ->first();  
+            ->first();
 
-       return response()->json($salaries);
+        return response()->json($salaries);
     }
 
+    public function getEmployeeInfo($id)
+    {
+        dd($id);
+        $employee = employee::select('employees.id', 'employees.Full_Name', 'emp_imgs.img_url', 'designations.Name')
+            ->leftJoin('emp_imgs as img_url', 'employees.id', '=', 'emp_imgs.EID')
+            ->leftJoin('officials', 'employees.id', '=', 'officials.EID')
+            ->leftJoin('designations', 'officials.Designation_Id', '=', 'designations.id')
+            ->where('id', $id)
+            ->first();
 
+        if ($employee) {
+            return response()->json($employee);
+        } else {
+            return response()->json(['message' => 'Employee not found'], 404);
+        }
+    }
 }

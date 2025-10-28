@@ -11,7 +11,7 @@ class employee_salary_sheet extends Model
 
     protected $fillable = [
         'employee_id',
-        'date',
+        'salary_date',
         'gross_salary',
         'basic',
         'house_rent',

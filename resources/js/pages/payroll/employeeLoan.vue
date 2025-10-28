@@ -126,29 +126,47 @@ onMounted(() => getData());
         <div class="col-lg-12 mt-3">
             <div class="p-3 mb-3">
                 <div class="row g-3 mv-3">
-                    <div class="col-lg-3 position-relative">
-                        <select
-                            v-model="deptName"
-                            class="form-control"
-                            @change="getEmployee(deptName)"
-                        >
-                            <option value="" disabled>Select Department</option>
-                            <option
-                                v-for="dept in searchDept"
-                                :key="dept.id"
-                                :value="dept.id"
+                    <div class="row mb-3">
+                        <div class="col-lg-3">Department Name</div>
+                        <div class="col-lg-1">:</div>
+                        <div class="col-lg-8">
+                            <select
+                                class="form-control"
+                                v-model="form.department"
+                                @change="getEmployee(form.department)"
                             >
-                                {{ dept.Name }}
-                            </option>
-                        </select>
-                        <button
-                            v-if="deptName"
-                            type="button"
-                            class="btn btn-sm btn-link position-absolute top-0 end-0 mt-1 me-1"
-                            @click="deptName = ''"
-                        >
-                            <i class="fa fa-times"></i>
-                        </button>
+                                <option
+                                    v-for="dept in department"
+                                    :key="dept.id"
+                                    :value="dept.id"
+                                >
+                                    {{ dept.Name }}
+                                </option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row mb-3">
+                        <div class="col-lg-3">Employee Name</div>
+                        <div class="col-lg-1">:</div>
+                        <div class="col-lg-8">
+                            <select
+                                class="form-control"
+                                v-model="form.eid"
+                                @change="getEmployeeInfo(form.eid)"
+                            >
+                                <option value="" disabled>
+                                    Select Employee
+                                </option>
+                                <option
+                                    v-for="emp in employee"
+                                    :key="emp.id"
+                                    :value="emp.id"
+                                >
+                                    {{ emp.Full_Name }}
+                                </option>
+                            </select>
+                        </div>
                     </div>
                     <div class="col-lg-3 position-relative">
                         <select v-model="empName" class="form-control">

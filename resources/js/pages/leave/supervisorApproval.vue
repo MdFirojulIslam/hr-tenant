@@ -250,7 +250,6 @@ onMounted(async () => {
                                     </div>
                                 </section>
                             </div>
-
                             <!-- RIGHT: Leave Summary -->
                             <div class="col-lg-4 col-md-12 px-2 mb-4">
                                 <table class="leave-status">
@@ -269,21 +268,12 @@ onMounted(async () => {
                                             :key="typeName"
                                         >
                                             <th>{{ info.leave_name }}</th>
+                                            <td>{{ info.total_max_days }}</td>
+                                            <td>{{ info.used_leave }}</td>
                                             <td>
                                                 {{
-                                                    info.max_leave_days === 0
-                                                        ? info.earned_leave
-                                                        : info.max_leave_days
-                                                }}
-                                            </td>
-                                            <td>{{ info.leave_count }}</td>
-                                            <td>
-                                                {{
-                                                    info.max_leave_days === 0
-                                                        ? info.earned_leave -
-                                                          info.leave_count
-                                                        : info.max_leave_days -
-                                                          info.leave_count
+                                                    info.total_max_days -
+                                                    info.used_leave
                                                 }}
                                             </td>
                                         </tr>
@@ -434,25 +424,42 @@ onMounted(async () => {
                                         <th>Total Days</th>
                                         <th>Leave Type</th>
                                         <th>Status</th>
+                                        <th>Purpose</th>
                                         <th>Documents</th>
                                         <th>Operation</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <tr
-                                        class="text-nowrap"
                                         v-for="(l, index) in filteredData"
                                         :key="l.id"
                                         @click="getLeaveInfo(l.EID)"
                                     >
-                                        <td>{{ index + 1 }}</td>
-                                        <td>{{ l.Full_Name }}</td>
-                                        <td>{{ formatDate(l.from_date) }}</td>
-                                        <td>{{ formatDate(l.to_date) }}</td>
-                                        <td>{{ l.daysBetween }}</td>
-                                        <td>{{ l.leave_name }}</td>
-                                        <td>{{ l.status }}</td>
-                                        <td>
+                                        <td class="text-nowrap">
+                                            {{ index + 1 }}
+                                        </td>
+                                        <td class="text-nowrap">
+                                            {{ l.Full_Name }}
+                                        </td>
+                                        <td class="text-nowrap">
+                                            {{ formatDate(l.from_date) }}
+                                        </td>
+                                        <td class="text-nowrap">
+                                            {{ formatDate(l.to_date) }}
+                                        </td>
+                                        <td class="text-nowrap">
+                                            {{ l.daysBetween }}
+                                        </td>
+                                        <td class="text-nowrap">
+                                            {{ l.leave_name }}
+                                        </td>
+                                        <td class="text-nowrap">
+                                            {{ l.status }}
+                                        </td>
+                                        <td style="width: 20%">
+                                            {{ l.purpose }}
+                                        </td>
+                                        <td class="text-nowrap">
                                             <button
                                                 v-if="l.attachment_url"
                                                 @click.stop="
@@ -469,8 +476,8 @@ onMounted(async () => {
                                             <span v-else>-</span>
                                         </td>
                                         <td
+                                            class="text-nowrap"
                                             v-if="
-                                                l.notification == 0 &&
                                                 l.status == 'Pending' &&
                                                 l.Supervisor_Id === user.id
                                             "
