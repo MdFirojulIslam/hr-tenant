@@ -53,10 +53,11 @@ class NavigationSeeder extends Seeder
             ['id' => '40', 'name' => 'Expense Permission', 'url' => '/expense/expense-permission', 'icon' => 'NULL', 'page' => 'ExpensePermission', 'path' => './pages/expense/expensePermission.vue', 'parent_id' => '27', 'active' => '1'],
             ['id' => '41', 'name' => 'Payroll', 'url' => '/payroll', 'icon' => 'fa-solid fa-money-check-dollar', 'page' => 'NULL', 'path' => 'NULL', 'parent_id' => '0', 'active' => '1'],
             ['id' => '42', 'name' => 'Salary Setup', 'url' => '/payroll/salary-setup', 'icon' => 'NULL', 'page' => 'SalarySetup', 'path' => './pages/payroll/salarySetup.vue', 'parent_id' => '41', 'active' => '1'],
-            ['id' => '43', 'name' => 'Salary Adjustment', 'url' => '/payroll/salary-adjustment', 'icon' => 'NULL', 'page' => 'SalaryAdjustment', 'path' => './pages/payroll/salaryAdjustment.vue', 'parent_id' => '41', 'active' => '1'],
-            ['id' => '44', 'name' => 'Employee Loan', 'url' => '/payroll/employee-loan', 'icon' => 'NULL', 'page' => 'EmployeeLoan', 'path' => './pages/payroll/employeeLoan.vue', 'parent_id' => '41', 'active' => '1'],
+            ['id' => '43', 'name' => 'Salary Adjustment List', 'url' => '/payroll/salary-adjustment', 'icon' => 'NULL', 'page' => 'SalaryAdjustment', 'path' => './pages/payroll/salaryAdjustment.vue', 'parent_id' => '41', 'active' => '1'],
+            ['id' => '44', 'name' => 'Employee Loan List', 'url' => '/payroll/employee-loan', 'icon' => 'NULL', 'page' => 'EmployeeLoan', 'path' => './pages/payroll/employeeLoan.vue', 'parent_id' => '41', 'active' => '1'],
             ['id' => '45', 'name' => 'Salary Sheet', 'url' => '/payroll/salary-sheet', 'icon' => 'NULL', 'page' => 'SalarySheet', 'path' => './pages/payroll/salarySheet.vue', 'parent_id' => '41', 'active' => '1'],
-         ];
+            ['id' => '46', 'name' => 'Loan Application', 'url' => '/payroll/loan-application', 'icon' => 'NULL', 'page' => 'LoanApplication', 'path' => './pages/payroll/loanApplication.vue', 'parent_id' => '41', 'active' => '1'],
+        ];
 
         foreach ($navigations as $item) {
             navigation::create($item);

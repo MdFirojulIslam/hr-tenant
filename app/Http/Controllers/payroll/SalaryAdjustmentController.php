@@ -13,36 +13,42 @@ use Illuminate\Support\Facades\DB;
 
 class SalaryAdjustmentController extends Controller
 {
-    
-   public function index()
+
+    public function index()
     {
         $earnings = DB::table('employees')
             ->join('officials', 'employees.id', '=', 'officials.EID')
             ->join('departments', 'officials.Department_Id', '=', 'departments.id')
             ->join('salary_earnings', 'employees.id', '=', 'salary_earnings.employee_id')
+            ->join('salary_adjustment_types', 'salary_earnings.adjustment_types_id', '=', 'salary_adjustment_types.id')
+            ->where('salary_adjustment_types.adjustment_type', 1)
             ->select(
                 'employees.id as eid',
                 'employees.Full_Name as emp_name',
                 'departments.id as dept_id',
                 'departments.Name as emp_dept',
-                'salary_earnings.adjustment_type as adjustment_type',
+                'salary_adjustment_types.id as adjustment_id',
+                'salary_adjustment_types.adjustment_name',
                 DB::raw('CAST(salary_earnings.amount AS UNSIGNED) as amount'),
                 'salary_earnings.date as date',
                 'salary_earnings.remarks as remarks',
                 DB::raw("'earning' as type")
-            ); 
+            );
 
         $deductions = DB::table('employees')
             ->join('officials', 'employees.id', '=', 'officials.EID')
             ->join('departments', 'officials.Department_Id', '=', 'departments.id')
             ->join('salary_deductions', 'employees.id', '=', 'salary_deductions.employee_id')
+            ->join('salary_adjustment_types', 'salary_deductions.adjustment_types_id', '=', 'salary_adjustment_types.id')
+            ->where('salary_adjustment_types.adjustment_type', 0)
             ->select(
                 'employees.id as eid',
                 'employees.Full_Name as emp_name',
                 'departments.id as dept_id',
                 'departments.Name as emp_dept',
-                'salary_deductions.adjustment_type as adjustment_type',
-                DB::raw('CAST(salary_deductions.amount AS UNSIGNED) as amount'), 
+                'salary_adjustment_types.id as adjustment_id',
+                'salary_adjustment_types.adjustment_name',
+                DB::raw('CAST(salary_deductions.amount AS UNSIGNED) as amount'),
                 'salary_deductions.date as date',
                 'salary_deductions.remarks as remarks',
                 DB::raw("'deduction' as type")
@@ -56,6 +62,16 @@ class SalaryAdjustmentController extends Controller
         return response()->json($data);
     }
 
+    public function getAdjustmentTypes()
+    {
+        $adjustmentTypes = DB::table('salary_adjustment_types')
+            ->select('id', 'adjustment_name', 'adjustment_type')
+            ->where('status', 1)
+            ->get();
+
+        return response()->json($adjustmentTypes);
+    }
+
     // public function index()
     // {
     //     $salary_adjustment = employee::with('salary_earning', 'salary_deduction')->get();
@@ -64,48 +80,51 @@ class SalaryAdjustmentController extends Controller
 
     public function create(Request $request)
     {
-        
+
         DB::beginTransaction();
-        $userId = Auth::user()->EID;       
-        
+        $userId = Auth::user()->EID;
 
-        if ($request->type == "deduction") {
-            $adjustment = salary_deduction::where('employee_id', $request->eid)
-                ->where('adjustment_type', $request->type)
-                ->exists();
-        } else if ($request->type == "earning") {
-            $adjustment = salary_earning::where('employee_id', $request->eid)
-                ->where('adjustment_type', $request->type)
-                ->exists();
-        }
 
-        $response = [
-            'flag'   =>  'add',
-            'message'   =>  'Adjustment already submitted.',
-        ];
+        // if ($request->adjustment_type == 1) {
+        //     $adjustment = salary_deduction::where('employee_id', $request->eid)
+        //         ->where('adjustment_type', $request->adjustment_type)
+        //         ->exists();
+        // } else if ($request->adjustment_type == 0) {
+        //     $adjustment = salary_earning::where('employee_id', $request->eid)
+        //         ->where('adjustment_type', $request->adjustment_type)
+        //         ->exists();
+        // }
 
-        if ($adjustment) {
-            return response()->json($response);
-        }
-        if($request->type == "deduction"){
+        // $response = [
+        //     'flag'   =>  'add',
+        //     'message'   =>  'Adjustment already submitted.',
+        // ];
+
+        // if ($adjustment) {
+        //     return response()->json($response);
+        // }
+        $adjustment_type = DB::table('salary_adjustment_types')
+            ->where('id', $request->input('adjustment_type'))
+            ->value('adjustment_type');
+
+        if ($adjustment_type == 0) {
             salary_deduction::create([
                 'employee_id' => $request->input('eid'),
-                'adjustment_type' => $request->input('adjustmentCategory'),
+                'adjustment_types_id' => $request->input('adjustment_type'),
                 'date' => $request->year . '-' . str_pad($request->month, 2, '0', STR_PAD_LEFT) . '-01',
                 'amount' => $request->input('amount'),
                 'remarks' => $request->input('remarks'),
                 'created_by' => $userId,
             ]);
-        } else if($request->type == "earning"){
+        } else if ($adjustment_type == 1) {
             salary_earning::create([
                 'employee_id' => $request->input('eid'),
-                'adjustment_type' => $request->input('adjustmentCategory'),
+                'adjustment_types_id' => $request->input('adjustment_type'),
                 'date' => $request->year . '-' . str_pad($request->month, 2, '0', STR_PAD_LEFT) . '-01',
                 'amount' => $request->input('amount'),
                 'remarks' => $request->input('remarks'),
                 'created_by' => $userId,
             ]);
-
         }
 
         $response = [
@@ -131,16 +150,20 @@ class SalaryAdjustmentController extends Controller
         DB::beginTransaction();
         $userId = Auth::user()->EID;
 
+        $adjustment_type = DB::table('salary_adjustment_types')
+            ->where('id', $request->input('adjustment_type'))
+            ->value('adjustment_type');
+
         try {
             $earning = null;
             $deduction = null;
-            if($request->type == "earning"){
+            if ($adjustment_type == 1) {
                 $earning = salary_earning::where('employee_id', $id)->first();
-            } else if($request->type == "deduction"){
+            } else if ($adjustment_type == 0) {
                 $deduction = salary_deduction::where('employee_id', $id)->first();
-            }        
+            }
 
-            
+
             if (!$earning && !$deduction) {
                 DB::rollBack();
                 return response()->json([
@@ -151,7 +174,7 @@ class SalaryAdjustmentController extends Controller
             if ($earning) {
                 $earning->update([
                     'employee_id' => $request->input('eid'),
-                    'adjustment_type' => $request->input('adjustmentCategory'),
+                    'adjustment_types_id' => $request->input('adjustment_type'),
                     'date' => $request->year . '-' . str_pad($request->month, 2, '0', STR_PAD_LEFT) . '-01',
                     'amount' => $request->input('amount'),
                     'remarks' => $request->input('remarks'),
@@ -160,11 +183,11 @@ class SalaryAdjustmentController extends Controller
             } else if ($deduction) {
                 $deduction->update([
                     'employee_id' => $request->input('eid'),
-                    'adjustment_type' => $request->input('adjustmentCategory'),
+                    'adjustment_types_id' => $request->input('adjustment_type'),
                     'date' => $request->year . '-' . str_pad($request->month, 2, '0', STR_PAD_LEFT) . '-01',
                     'amount' => $request->input('amount'),
                     'remarks' => $request->input('remarks'),
-                    'created_by' => $userId,                    
+                    'created_by' => $userId,
                 ]);
             }
 

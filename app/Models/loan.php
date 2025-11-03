@@ -8,12 +8,13 @@ use Illuminate\Database\Eloquent\Model;
 class loan extends Model
 {
     use HasFactory;
+
     protected $fillable = [
         'employee_id',
-        'principal',
+        'principal_amounts',
         'tenure_months',
-        'monthly_installment',
-        'first_due_on',
+        'monthly_installments',
+        'installment_dates',
         'status',
         'remarks',
         'created_by',
@@ -26,6 +27,6 @@ class loan extends Model
 
     public function repayments()
     {
-        return $this->hasMany(loan_repayment::class, 'Loan_Id', 'id');
+        return $this->hasMany(loan_repayment::class, 'loan_id', 'id');
     }
 }

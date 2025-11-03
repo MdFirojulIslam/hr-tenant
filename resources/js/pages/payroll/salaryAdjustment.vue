@@ -13,16 +13,30 @@ const salaryAdjustmentComponent = defineAsyncComponent(() =>
 const selectedMonth = ref(new Date().getMonth() + 1);
 const selectedYear = ref(new Date().getFullYear());
 
+const adjustments = ref([]);
+
 const searchYear = ref("");
 const searchMonth = ref("");
 const searchDept = ref("");
 const searchEmp = ref("");
 
-const formData = ref([]);
+const department = ref([]);
 const employeeIDs = ref([]);
 
 const salaries = ref({}); // pagination object
 const salaryRecords = ref([]); // actual rows
+
+// convert department full name to short name
+const getDeptShortName = (name) => {
+    const map = {
+        "General Trade": "GT",
+        "Information Technology & Communication": "ITC",
+        "Human Resources": "HR",
+        "Finance & Accounts": "FA",
+        Marketing: "MKT",
+    };
+    return map[name] || name; // fallback to full name if not found
+};
 
 const years = ref([
     "2022",
@@ -74,14 +88,15 @@ const error = ref(null);
 // fetch data with pagination
 const getData = async (page = 1) => {
     try {
-        const [formInfo, tableInfo] = await Promise.all([
+        const [deptRes, adjustmentTypeRes, adjustmentRes] = await Promise.all([
             api.get("/department"),
+            api.get("/salary-adjustment-type"),
             api.get(`/salary-adjustment?page=${page}`),
         ]);
-
-        formData.value = formInfo.data;
-        salaries.value = tableInfo.data; // full pagination object
-        salaryRecords.value = tableInfo.data.data; // rows
+        department.value = deptRes.data;
+        adjustments.value = adjustmentTypeRes.data;
+        salaries.value = adjustmentRes.data; // full pagination object
+        salaryRecords.value = adjustmentRes.data.data; // rows
     } catch (err) {
         error.value = err.message || "Error fetching data";
     } finally {
@@ -186,7 +201,7 @@ onMounted(() => getData());
                         >
                             <option value="" disabled>Select Department</option>
                             <option
-                                v-for="dept in formData"
+                                v-for="dept in department"
                                 :key="dept.id"
                                 :value="dept.id"
                             >
@@ -286,7 +301,6 @@ onMounted(() => getData());
                         </button>
                     </div>
                 </div>
-
                 <!-- Salary Table -->
                 <div class="border rounded mt-5">
                     <div
@@ -298,21 +312,22 @@ onMounted(() => getData());
                             >{{ salaries.total }}</span
                         >
                     </div>
-
                     <div class="table-responsive px-2 bg-light">
                         <table class="table table-hover table-sm">
                             <thead class="table-light">
-                                <tr class="text-nowrap">
-                                    <th>S/N</th>
-                                    <th>EMPLOYEE ID</th>
-                                    <th>EMPLOYEE NAME</th>
-                                    <th>DEPARTMENT</th>
-                                    <th>ADJUSTMENT TYPE</th>
-                                    <th>ADJUSTMENT NAME</th>
-                                    <th>DATE</th>
-                                    <th>AMOUNT</th>
-                                    <th>REMARKS</th>
-                                    <th>ACTION</th>
+                                <tr class="text-nowrap fw-bold">
+                                    <th style="width: 3%">S/N</th>
+                                    <th style="width: 8%">EMPLOYEE ID</th>
+                                    <th style="width: 16%">EMPLOYEE NAME</th>
+                                    <th style="width: 16%">DEPARTMENT</th>
+                                    <th style="width: 10%">ADJUSTMENT TYPE</th>
+                                    <th style="width: 14%">ADJUSTMENT NAME</th>
+                                    <th style="width: 10%">DATE</th>
+                                    <th style="width: 10%">AMOUNT</th>
+                                    <th style="width: 10%">REMARKS</th>
+                                    <th class="text-right" style="width: 3%">
+                                        ACTION
+                                    </th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -324,7 +339,9 @@ onMounted(() => getData());
                                     <td>{{ index + 1 }}</td>
                                     <td>ANBN-{{ item.eid }}</td>
                                     <td>{{ item.emp_name }}</td>
-                                    <td>{{ item.emp_dept }}</td>
+                                    <td>
+                                        {{ getDeptShortName(item.emp_dept) }}
+                                    </td>
                                     <td>
                                         {{
                                             item.type == "earning"
@@ -332,7 +349,7 @@ onMounted(() => getData());
                                                 : "Deduction"
                                         }}
                                     </td>
-                                    <td>{{ item.adjustment_type }}</td>
+                                    <td>{{ item.adjustment_name }}</td>
                                     <td>{{ formatMonthYear(item.date) }}</td>
                                     <td>{{ item.amount }}</td>
                                     <td>{{ item.remarks }}</td>
@@ -344,7 +361,7 @@ onMounted(() => getData());
                                                     item.date
                                                 )
                                             "
-                                            class="btn btn-sm btn-light border"
+                                            class="custom-btn btn-15"
                                         >
                                             <i
                                                 class="fa-regular fa-pen-to-square"

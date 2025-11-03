@@ -59,7 +59,7 @@ const routes = [
         meta: {
             requireAuth: true,
         },
-        children: [ 
+        children: [
             {
                 path: "/setup/employee/employee/:id?",
                 name: "Employee",
@@ -392,6 +392,15 @@ const routes = [
         },
     },
     //added by feroj
+    {
+        path: "/payroll/loan-application",
+        name: "LoanApplication",
+        component: () => import("./pages/payroll/loanApplication.vue"),
+        meta: {
+            requireAuth: true,
+            pageId: 46,
+        },
+    },
     {
         path: "/payroll/salary-details/:id?",
         name: "SalaryDetails",

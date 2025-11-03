@@ -55,6 +55,7 @@
                                     type="date"
                                     class="form-control"
                                     v-model="form.from_date"
+                                    readonly
                                 />
                             </div>
 
@@ -64,6 +65,7 @@
                                     type="date"
                                     class="form-control"
                                     v-model="form.to_date"
+                                    readonly
                                 />
                             </div>
 
@@ -87,7 +89,7 @@
                                     <option value="Approved (SV)">
                                         Approved (SV)
                                     </option>
-                                    <option value="Rejected">Rejected</option>
+                                    <option value="Approved">Approved</option>
                                 </select>
                             </div>
 
@@ -97,6 +99,7 @@
                                     class="form-control"
                                     v-model="form.purpose"
                                     rows="3"
+                                    readonly
                                 ></textarea>
                             </div>
                         </div>
@@ -180,38 +183,49 @@ const updateLeave = async () => {
         });
 
         if (!confirm.isConfirmed) return;
-        console.log("Updating leave with ID:", props.stId);
-        console.log("Form data:", form.value);
+
         if (!props.stId) {
             Swal.fire("Error!", "Leave ID not found.", "error");
             return;
         }
-        // await api.put(`/leave/${props.stId}`, form.value);
+
+        // ✅ Ask HR if they want to send approval mail
+        const hrApproval = await Swal.fire({
+            title: "Send HR Approval Mail?",
+            text: "Do you want to send an email for HR approval?",
+            icon: "info",
+            showCancelButton: true,
+            confirmButtonText: "Yes, Send Mail",
+            cancelButtonText: "No, Skip",
+        });
+
+        // ✅ Update leave first
         const response = await api.put(`/leave/${props.stId}`, form.value);
 
         if (response) {
+            // ✅ If HR chose "Yes", trigger the mail API
+            if (hrApproval.isConfirmed) {
+                await api.get(`/hr-approval/${props.stId}`);
+                Swal.fire(
+                    "Mail Sent!",
+                    "HR approval mail has been sent.",
+                    "success"
+                );
+            }
             Swal.fire("Success!", "Leave updated successfully.", "success");
             emit("submit");
             emit("modal-close");
         }
     } catch (error) {
         if (error.response) {
-            // Server responded with a status code outside 2xx
-            console.error("Response data:", error.response.data);
-            console.error("Response status:", error.response.status);
-            console.error("Response headers:", error.response.headers);
             Swal.fire(
                 "Error!",
                 error.response.data.message || "Failed to update leave.",
                 "error"
             );
         } else if (error.request) {
-            // Request made but no response received
-            console.error("No response received:", error.request);
             Swal.fire("Error!", "No response from server.", "error");
         } else {
-            // Something else went wrong
-            console.error("Error setting up request:", error.message);
             Swal.fire("Error!", error.message, "error");
         }
     }

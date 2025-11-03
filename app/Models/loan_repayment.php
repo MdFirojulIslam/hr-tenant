@@ -11,14 +11,15 @@ class loan_repayment extends Model
 
     protected $fillable = [
         'loan_id',
-        'due_on',
-        'amount',
-        'is_paid',
-        'paid_on',
+        'installment_dates',
+        'installment_amounts',
+        'paid_status',
+        'paid_on_dates',
+        'created_by',
     ];
 
     public function loan()
     {
-        return $this->belongsTo(loan::class, 'loan_id');
+        return $this->belongsTo(loan::class, 'loan_id', 'id');
     }
 }

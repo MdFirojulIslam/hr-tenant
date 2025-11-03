@@ -16,19 +16,23 @@ const emit = defineEmits(["modal-close", "refresh-list"]);
 
 // Form state
 const form = ref({
-    department: "",
-    employee: "",
-    principal: "",
-    tenure: "",
-    first_due_on: "",
+    department_id: "",
+    employee_id: "",
+    principal_amount: "",
+    tenure_month: "",
+    first_installment_date: "",
+    installment_amount: "",
     remarks: "",
 });
 
+// Department & Employee data
 const departmentInfo = ref([]);
 const employeeByDept = ref([]);
 const emp_img = ref(null);
 
+// -------------------------
 // 🔹 Fetch departments
+// -------------------------
 const getData = async () => {
     try {
         const res = await api.get("department");
@@ -38,7 +42,9 @@ const getData = async () => {
     }
 };
 
+// -------------------------
 // 🔹 Fetch employees by department
+// -------------------------
 const getEmployee = async (deptID) => {
     if (!deptID) {
         employeeByDept.value = [];
@@ -52,7 +58,25 @@ const getEmployee = async (deptID) => {
     }
 };
 
-// 🔹 Create
+// -------------------------
+// 🔹 Auto-calculate installment
+// -------------------------
+watch(
+    () => [form.value.principal_amount, form.value.tenure_month],
+    ([newPrincipal, newTenure]) => {
+        if (newPrincipal && newTenure) {
+            form.value.installment_amount = (newPrincipal / newTenure).toFixed(
+                2
+            );
+        } else {
+            form.value.installment_amount = "";
+        }
+    }
+);
+
+// -------------------------
+// 🔹 Create Loan
+// -------------------------
 const create = async () => {
     try {
         const response = await api.post(`/employee-loan`, form.value);
@@ -74,15 +98,19 @@ const create = async () => {
             });
         }
     } catch (err) {
-        console.error("Error creating adjustment:", err);
+        console.error("Error creating loan:", err);
     }
 };
 
-// 🔹 Update
+// -------------------------
+// 🔹 Update Loan
+// -------------------------
 const update = async () => {
     try {
-
-        const response = await api.put(`/employee-loan/${editStore.loanID}`, form.value);
+        const response = await api.put(
+            `/employee-loan/${editStore.loanID}`,
+            form.value
+        );
         if (response.data.success) {
             Swal.fire({
                 icon: "success",
@@ -101,41 +129,51 @@ const update = async () => {
             });
         }
     } catch (err) {
-        console.error("Error creating adjustment:", err);
+        console.error("Error updating loan:", err);
     }
 };
 
-// 🔹 Reset form
+// -------------------------
+// 🔹 Reset Form
+// -------------------------
 const resetForm = () => {
     form.value = {
-        department: "",
-        employee: "",
-        principal: "",
-        tenure: "",
-        first_due_on: "",
+        department_id: "",
+        employee_id: "",
+        principal_amount: "",
+        tenure_month: "",
+        first_installment_date: "",
+        installment_amount: "",
         remarks: "",
     };
     emp_img.value = null;
 };
 
-// 🔹 Close modal
+// -------------------------
+// 🔹 Close Modal
+// -------------------------
 const closeModal = () => {
     emit("modal-close");
 };
 
-// 🔹 Watch for editStore (prefill form on edit)
+// -------------------------
+// 🔹 Prefill form on edit
+// -------------------------
 watch(
     () => editStore,
     async (item) => {
         if (item) {
-            form.value.department = item.deptId || "";
-            await getEmployee(form.value.department);
-            form.value.employee = item.id || "";
+            form.value.department_id = item.deptId || "";
+            await getEmployee(form.value.department_id);
+            form.value.employee_id = item.id || "";
             emp_img.value =
-                employeeByDept.value.find((emp) => emp.id === form.value.employee) || null;
-            form.value.principal = item.principal || "";
-            form.value.tenure = item.tenure || "";
-            form.value.first_due_on = item.first_due_on || "";
+                employeeByDept.value.find(
+                    (emp) => emp.id === form.value.employee_id
+                ) || null;
+            form.value.principal_amount = item.principal || "";
+            form.value.tenure_month = item.tenure || "";
+            form.value.first_installment_date = item.first_due_on || "";
+            form.value.installment_amount = item.installment_amount || "";
             form.value.remarks = item.remarks || "";
         } else {
             resetForm();
@@ -144,6 +182,9 @@ watch(
     { immediate: true }
 );
 
+// -------------------------
+// 🔹 Submit handler
+// -------------------------
 const submit = () => {
     if (updateinfo === "Save") {
         create();
@@ -154,6 +195,9 @@ const submit = () => {
     }
 };
 
+// -------------------------
+// 🔹 On Mounted
+// -------------------------
 onMounted(() => getData());
 </script>
 
@@ -162,10 +206,16 @@ onMounted(() => getData());
         <div class="card modal-card">
             <div class="card-body">
                 <div class="card mb-2">
-                    <div v-if="updateinfo === 'Save'" class="card-header mb-1 bg-grey align-items-center">
+                    <div
+                        v-if="updateinfo === 'Save'"
+                        class="card-header mb-1 bg-grey align-items-center"
+                    >
                         <h5 class="mb-0">New Loan Setup</h5>
                     </div>
-                    <div v-else-if="updateinfo === 'Update'" class="card-header mb-1 bg-grey align-items-center">
+                    <div
+                        v-else-if="updateinfo === 'Update'"
+                        class="card-header mb-1 bg-grey align-items-center"
+                    >
                         <h5 class="mb-0">Update Loan Setup</h5>
                     </div>
 
@@ -177,10 +227,21 @@ onMounted(() => getData());
                                     <div class="col-lg-3">Department Name</div>
                                     <div class="col-lg-1">:</div>
                                     <div class="col-lg-8">
-                                        <select class="form-control" v-model="form.department"
-                                            @change="getEmployee(form.department)">
-                                            <option value="">Select Department</option>
-                                            <option v-for="dept in departmentInfo" :key="dept.id" :value="dept.id">
+                                        <select
+                                            class="form-control"
+                                            v-model="form.department_id"
+                                            @change="
+                                                getEmployee(form.department_id)
+                                            "
+                                        >
+                                            <option value="">
+                                                Select Department
+                                            </option>
+                                            <option
+                                                v-for="dept in departmentInfo"
+                                                :key="dept.id"
+                                                :value="dept.id"
+                                            >
                                                 {{ dept.Name }}
                                             </option>
                                         </select>
@@ -192,17 +253,32 @@ onMounted(() => getData());
                                     <div class="col-lg-3">Employee Name</div>
                                     <div class="col-lg-1">:</div>
                                     <div class="col-lg-8">
-                                        <select class="form-control" v-model="form.employee">
-                                            <option value="">Select Employee</option>
-                                            <option v-for="emp in employeeByDept" :key="emp.id" :value="emp.id">
+                                        <select
+                                            class="form-control"
+                                            v-model="form.employee_id"
+                                        >
+                                            <option value="">
+                                                Select Employee
+                                            </option>
+                                            <option
+                                                v-for="emp in employeeByDept"
+                                                :key="emp.id"
+                                                :value="emp.id"
+                                            >
                                                 {{ emp.Full_Name }}
                                             </option>
                                         </select>
                                     </div>
                                 </div>
                             </div>
+
                             <div class="col-lg-3">
-                                <img :src="emp_img?.img_url || ''" alt="" height="110px" width="110px" />
+                                <img
+                                    :src="emp_img?.img_url || ''"
+                                    alt=""
+                                    height="110px"
+                                    width="110px"
+                                />
                             </div>
                         </div>
                     </div>
@@ -214,36 +290,72 @@ onMounted(() => getData());
                         <div class="col-lg-6 mt-3">
                             <div class="form-group">
                                 <label>Principal Amount</label>
-                                <input type="number" class="form-control" v-model="form.principal" />
+                                <input
+                                    type="number"
+                                    class="form-control"
+                                    v-model="form.principal_amount"
+                                />
                             </div>
                         </div>
                         <div class="col-lg-6 mt-3">
                             <div class="form-group">
                                 <label>Tenure (Months)</label>
-                                <input type="number" class="form-control" v-model="form.tenure" />
+                                <input
+                                    type="number"
+                                    class="form-control"
+                                    v-model="form.tenure_month"
+                                />
                             </div>
                         </div>
                         <div class="col-lg-6 mt-3">
                             <div class="form-group">
-                                <label>First Due On (Date)</label>
-                                <input type="date" class="form-control" v-model="form.first_due_on" />
+                                <label>First Installment (Date)</label>
+                                <input
+                                    type="date"
+                                    class="form-control"
+                                    v-model="form.first_installment_date"
+                                />
+                            </div>
+                        </div>
+                        <div class="col-lg-6 mt-3">
+                            <div class="form-group">
+                                <label>Installment Amount</label>
+                                <input
+                                    type="number"
+                                    class="form-control"
+                                    v-model="form.installment_amount"
+                                    step="any"
+                                />
                             </div>
                         </div>
                         <div class="col-lg-6 mt-3">
                             <div class="form-group">
                                 <label>Remarks</label>
-                                <input type="text" class="form-control" v-model="form.remarks" />
+                                <input
+                                    type="text"
+                                    class="form-control"
+                                    v-model="form.remarks"
+                                />
                             </div>
                         </div>
                     </div>
+
                     <div class="d-flex justify-content-between mt-3">
                         <button type="submit" class="custom-btn btn-13 p-2">
                             <i class="fa-solid fa-check"></i> | {{ updateinfo }}
                         </button>
-                        <button type="button" class="custom-btn btn-15 p-2" @click.prevent="resetForm">
+                        <button
+                            type="button"
+                            class="custom-btn btn-15 p-2"
+                            @click.prevent="resetForm"
+                        >
                             <i class="fa-solid fa-power-off"></i> | Reset
                         </button>
-                        <button type="button" class="custom-btn btn-12 p-2" @click.stop="closeModal">
+                        <button
+                            type="button"
+                            class="custom-btn btn-12 p-2"
+                            @click.stop="closeModal"
+                        >
                             <i class="fa-solid fa-x"></i> | Cancel
                         </button>
                     </div>

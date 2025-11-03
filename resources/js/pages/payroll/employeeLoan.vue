@@ -1,36 +1,50 @@
 <script setup>
 import { ref, onMounted, computed, defineAsyncComponent } from "vue";
-import api from "@/api";
 import { Bootstrap4Pagination } from "laravel-vue-pagination";
-
+import api from "@/api";
 import { useStore } from "vuex";
 
+// ---------------- Vuex ----------------
 const store = useStore();
 const role_id = store.getters.getRoleId;
 
-const deptName = ref("");
-const empName = ref("");
+// ---------------- States ----------------
+const form = ref({ department: "", eid: "" });
+const department = ref([]);
 const employees = ref([]);
-const searchDept = ref([]);
 const tableInfo = ref([]);
 const paginationObject = ref({});
 const error = ref("");
 const isLoading = ref(true);
 
-//Model status
+// ---------------- Loan Setup Modal ----------------
 const heading = ref("");
 const loanSetupModel = ref(false);
 const selectedStore = ref(null);
 
+// ---------------- Loan Repayment Modal ----------------
+const repaymentHeading = ref("");
+const repaymentModal = ref(false);
+const selectedRepayment = ref(null);
+
+// ---------------- Async Components ----------------
+const loanSetupComponent = defineAsyncComponent(() =>
+    import("./component/loanSetupForm.vue")
+);
+const repaymentComponent = defineAsyncComponent(() =>
+    import("./component/loanRepayment.vue")
+);
+
+// ---------------- Fetch Data ----------------
 const getData = async (page = 1) => {
     try {
-        const [searchDeptResponse, tableInfoResponse] = await Promise.all([
+        const [deptRes, loanRes] = await Promise.all([
             api.get("department"),
             api.get(`/get-employee-loan?page=${page}`),
         ]);
-        searchDept.value = searchDeptResponse.data;
-        paginationObject.value = tableInfoResponse.data;
-        tableInfo.value = tableInfoResponse.data.data;
+        department.value = deptRes.data;
+        paginationObject.value = loanRes.data;
+        tableInfo.value = loanRes.data.data;
     } catch (err) {
         error.value = err.message || "Error fetching data";
     } finally {
@@ -38,36 +52,41 @@ const getData = async (page = 1) => {
     }
 };
 
+// ---------------- Fetch Employees ----------------
 const getEmployee = async (deptID) => {
     if (!deptID) {
         employees.value = [];
         return;
-    } else {
-        const employeesResponse = await api.get(`/emp/${deptID}`);
-        employees.value = employeesResponse.data;
+    }
+    try {
+        const res = await api.get(`/emp/${deptID}`);
+        employees.value = res.data;
+    } catch (err) {
+        console.error("Error loading employees:", err);
     }
 };
 
+// ---------------- Computed Filter ----------------
 const filteredData = computed(() => {
     return tableInfo.value.filter((item) => {
-        const matchDept = deptName.value ? item.deptID == deptName.value : true;
-        const matchEmp = empName.value ? item.eid == empName.value : true;
+        const matchDept = form.value.department
+            ? item.deptID == form.value.department
+            : true;
+        const matchEmp = form.value.eid ? item.eid == form.value.eid : true;
         return matchDept && matchEmp;
     });
 });
 
-const loanSetupComponent = defineAsyncComponent(() =>
-    import("./component/loanSetupForm.vue")
-);
-
+// ---------------- Loan Setup ----------------
 const loanSetupOpen = (title) => {
     heading.value = title;
-    selectedStore.value = null; // <-- reset selected loan info
+    selectedStore.value = null;
     loanSetupModel.value = true;
 };
 
 const loanAdjustment = (loanId) => {
     const loan = tableInfo.value.find((item) => item.loanID === loanId);
+    if (!loan) return;
 
     selectedStore.value = {
         loanID: loan.loanID,
@@ -77,7 +96,7 @@ const loanAdjustment = (loanId) => {
         deptName: loan.deptName,
         principal: loan.principal,
         tenure: loan.tenure_months,
-        monthlyInstallment: loan.monthly_installment,
+        monthlyInstallment: loan.monthly_installments,
         remarks: loan.remarks,
         first_due_on: loan.first_due_on,
     };
@@ -87,10 +106,23 @@ const loanAdjustment = (loanId) => {
 };
 
 const loanSetupClose = () => {
-    loanSetupModel.value = false; // this hides the modal
-    getData(); // optional: refresh the table
+    loanSetupModel.value = false;
+    getData();
 };
 
+// ---------------- Loan Repayment ----------------
+const repayment = (title, loanData = null) => {
+    repaymentHeading.value = title;
+    selectedRepayment.value = loanData;
+    repaymentModal.value = true;
+};
+
+const repaymentClose = () => {
+    repaymentModal.value = false;
+    getData();
+};
+
+// ---------------- Lifecycle ----------------
 onMounted(() => getData());
 </script>
 
@@ -100,18 +132,25 @@ onMounted(() => getData());
             class="d-flex justify-content-between align-items-center py-2 px-3"
         >
             <h2 class="m-0">Employee Loan List</h2>
-            <div>
+            <div class="d-flex flex-row gap-2">
                 <button
                     @click="loanSetupOpen('Save')"
                     type="button"
-                    class="btn btn-success d-flex align-items-center fw-medium shadow-sm"
+                    class="btn btn-success d-flex align-items-center fw-medium shadow-sm mb-2"
                 >
                     <i class="fa-solid fa-plus me-2"></i>New Loan Setup
+                </button>
+                <button
+                    @click="repayment('repayments')"
+                    type="button"
+                    class="btn btn-success d-flex align-items-center fw-medium shadow-sm mb-2"
+                >
+                    <i class="fa-solid fa-plus me-2"></i>Loan Repayment Setup
                 </button>
             </div>
         </div>
 
-        <!-- Loan Model -->
+        <!-- Loan Setup Modal -->
         <component
             v-if="loanSetupModel"
             :is="loanSetupComponent"
@@ -123,53 +162,56 @@ onMounted(() => getData());
             @refresh-list="getData"
         />
 
+        <!-- Loan Repayment Modal -->
+        <component
+            v-if="repaymentModal"
+            :is="repaymentComponent"
+            :isOpen="repaymentModal"
+            :updateinfo="repaymentHeading"
+            :editStore="selectedRepayment"
+            :roleId="role_id"
+            @modal-close="repaymentClose"
+            @refresh-list="getData"
+        />
+
+        <!-- Filter Section -->
         <div class="col-lg-12 mt-3">
             <div class="p-3 mb-3">
                 <div class="row g-3 mv-3">
-                    <div class="row mb-3">
-                        <div class="col-lg-3">Department Name</div>
-                        <div class="col-lg-1">:</div>
-                        <div class="col-lg-8">
-                            <select
-                                class="form-control"
-                                v-model="form.department"
-                                @change="getEmployee(form.department)"
+                    <div class="col-lg-3 position-relative">
+                        <select
+                            class="form-control"
+                            v-model="form.department"
+                            @change="getEmployee(form.department)"
+                        >
+                            <option value="" disabled>Select Department</option>
+                            <option
+                                v-for="dept in department"
+                                :key="dept.id"
+                                :value="dept.id"
                             >
-                                <option
-                                    v-for="dept in department"
-                                    :key="dept.id"
-                                    :value="dept.id"
-                                >
-                                    {{ dept.Name }}
-                                </option>
-                            </select>
-                        </div>
+                                {{ dept.Name }}
+                            </option>
+                        </select>
+                        <button
+                            v-if="form.department"
+                            type="button"
+                            class="btn btn-sm btn-link position-absolute top-0 end-0 mt-1 me-1"
+                            @click="
+                                form.department = '';
+                                employees = [];
+                            "
+                        >
+                            <i class="fa fa-times"></i>
+                        </button>
                     </div>
 
-                    <div class="row mb-3">
-                        <div class="col-lg-3">Employee Name</div>
-                        <div class="col-lg-1">:</div>
-                        <div class="col-lg-8">
-                            <select
-                                class="form-control"
-                                v-model="form.eid"
-                                @change="getEmployeeInfo(form.eid)"
-                            >
-                                <option value="" disabled>
-                                    Select Employee
-                                </option>
-                                <option
-                                    v-for="emp in employee"
-                                    :key="emp.id"
-                                    :value="emp.id"
-                                >
-                                    {{ emp.Full_Name }}
-                                </option>
-                            </select>
-                        </div>
-                    </div>
                     <div class="col-lg-3 position-relative">
-                        <select v-model="empName" class="form-control">
+                        <select
+                            class="form-control"
+                            v-model="form.eid"
+                            style="font-weight: normal; background: transparent"
+                        >
                             <option value="" disabled>
                                 Select Employee Name
                             </option>
@@ -182,19 +224,20 @@ onMounted(() => getData());
                             </option>
                         </select>
                         <button
-                            v-if="empName"
+                            v-if="form.eid"
                             type="button"
                             class="btn btn-sm btn-link position-absolute top-0 end-0 mt-1 me-1"
-                            @click="empName = ''"
+                            @click="form.eid = ''"
                         >
                             <i class="fa fa-times"></i>
                         </button>
                     </div>
                 </div>
 
+                <!-- Loan Table -->
                 <div class="rounded border mt-5">
                     <div
-                        class="d-flex align-items-center px-2 py-2 fw-semibold border-buttom bg-light"
+                        class="d-flex align-items-center px-2 py-2 fw-semibold border-bottom bg-light"
                     >
                         <span class="me-2">Total Employees:</span>
                         <span
@@ -202,20 +245,20 @@ onMounted(() => getData());
                             >{{ paginationObject.total }}</span
                         >
                     </div>
+
                     <div class="table-responsive px-2 bg-light">
                         <table class="table table-hover table-sm">
                             <thead class="table-light">
                                 <tr>
-                                    <th width="4%">S/N</th>
-                                    <th width="8%">EMPLOYEE ID</th>
+                                    <th width="3%">S/N</th>
                                     <th width="15%">EMPLOYEE NAME</th>
-                                    <th width="20%">DEPARTMENT</th>
-                                    <th width="12%">PRINCIPLE AMOUNT</th>
+                                    <th width="15%">DEPARTMENT</th>
+                                    <th width="12%">PRINCIPAL AMOUNT</th>
                                     <th width="8%">TENURE</th>
-                                    <th width="15%">MONTHLY INSTALLMENT</th>
-                                    <th width=" 5%">STATUS</th>
-                                    <th width=" 5%">REMARKS</th>
-                                    <th width="10%" class="text-center">
+                                    <th width="10%">MONTHLY INSTALLMENT</th>
+                                    <th width="5%">STATUS</th>
+                                    <th width="10%">REMARKS</th>
+                                    <th width="3%" class="text-right">
                                         ACTION
                                     </th>
                                 </tr>
@@ -226,12 +269,11 @@ onMounted(() => getData());
                                     :key="index"
                                 >
                                     <td>{{ index + 1 }}</td>
-                                    <td>ABNB-{{ item.eid }}</td>
-                                    <td>{{ item.empName }}</td>
+                                    <td>{{ item.employee_name }}</td>
                                     <td>{{ item.deptName }}</td>
-                                    <td>{{ item.principal }}</td>
+                                    <td>{{ item.principal_amounts }}</td>
                                     <td>{{ item.tenure_months }}</td>
-                                    <td>{{ item.monthly_installment }}</td>
+                                    <td>{{ item.monthly_installments }}</td>
                                     <td>{{ item.status }}</td>
                                     <td>{{ item.remarks }}</td>
                                     <td class="text-center text-nowrap">
@@ -258,6 +300,8 @@ onMounted(() => getData());
                         </table>
                     </div>
                 </div>
+
+                <!-- Pagination -->
                 <div class="d-flex justify-content-end mt-0">
                     <Bootstrap4Pagination
                         :data="paginationObject"

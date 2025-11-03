@@ -450,10 +450,12 @@ class LeaveController extends Controller
      */
     public function update(Request $request, $id)
     {
-        dd($request->all());
-        $leave = leave::find($id);
-        $userId = Auth::user()->EID;
+        $leave = Leave::find($id);
+        if (!$leave) {
+            return response()->json(['success' => false, 'message' => 'Leave not found'], 404);
+        }
 
+        $userId = Auth::user()->EID ?? null;
 
         $leave->update([
             'leave_type_id' => $request->input('leave_type'),
@@ -464,13 +466,12 @@ class LeaveController extends Controller
             'updated_by' => $userId,
             'Notification' => 0,
         ]);
-        $response = [
-            'success'   =>  true,
-            'message'   =>  'Successfully Updated',
-        ];
-        return response()->json($response);
-    }
 
+        return response()->json([
+            'success' => true,
+            'message' => 'Successfully Updated',
+        ]);
+    }
 
 
     public function supervisorApproval(Request $request)

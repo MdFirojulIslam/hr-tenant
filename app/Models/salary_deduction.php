@@ -9,12 +9,12 @@ class salary_deduction extends Model
 {
     use HasFactory;
     protected $fillable = [
-                'employee_id' ,
-                'adjustment_type' ,
-                'date',
-                'amount',
-                'remarks',
-                'created_by' 
+        'employee_id',
+        'adjustment_types_id',
+        'date',
+        'amount',
+        'remarks',
+        'created_by'
     ];
     public function employee()
     {

@@ -5,7 +5,7 @@ import { useStore } from "vuex";
 
 const error = ref([]);
 const nav_tree = ref([]);
-const dashboard = ref('');
+const dashboard = ref("");
 
 const store = useStore();
 const user = store.getters.getUser;
@@ -23,7 +23,7 @@ const getData = async () => {
     try {
         let { data } = await api.get("/navigation");
         if (data && data.tree) {
-            dashboard.value = data.dashboard
+            dashboard.value = data.dashboard;
             nav_tree.value = filterActiveNodes(data.tree);
         }
     } catch (err) {
@@ -45,7 +45,11 @@ onMounted(() => getData());
                 <!-- Nav Links -->
                 <div class="nav mt-4 flex-column">
                     <div v-if="dashboard">
-                        <Router-Link class="nav-link" :to="{ name: 'Dashboard' }" active-class="active">
+                        <Router-Link
+                            class="nav-link"
+                            :to="{ name: 'Dashboard' }"
+                            active-class="active"
+                        >
                             <div class="sb-nav-link-icon">
                                 <i class="fas fa-tachometer-alt"></i>
                             </div>
@@ -54,7 +58,11 @@ onMounted(() => getData());
                     </div>
 
                     <div>
-                        <Router-Link class="nav-link" :to="{ name: 'Profile' }" active-class="active">
+                        <Router-Link
+                            class="nav-link"
+                            :to="{ name: 'Profile' }"
+                            active-class="active"
+                        >
                             <div class="sb-nav-link-icon">
                                 <i class="fa-regular fa-user"></i>
                             </div>
@@ -63,22 +71,43 @@ onMounted(() => getData());
                     </div>
 
                     <div v-for="nav in nav_tree" :key="nav.id">
-                        <a class="nav-link collapsed" href="#" data-bs-toggle="collapse"
-                            :data-bs-target="'#' + nav.name" aria-expanded="false" :aria-controls="nav.name">
+                        <a
+                            class="nav-link collapsed"
+                            href="#"
+                            data-bs-toggle="collapse"
+                            :data-bs-target="'#' + nav.name"
+                            aria-expanded="false"
+                            :aria-controls="nav.name"
+                        >
                             <div class="sb-nav-link-icon">
                                 <i :class="nav.icon + ''"></i>
                             </div>
                             {{ nav.name }}
-                            <div class="sb-sidenav-collapse-arrow" v-if="nav.children">
+                            <div
+                                class="sb-sidenav-collapse-arrow"
+                                v-if="nav.children"
+                            >
                                 <i class="fas fa-angle-down"></i>
                             </div>
                         </a>
 
-                        <div class="collapse" :id="nav.name" aria-labelledby="headingOne"
-                            data-bs-parent="#sidenavAccordion" v-if="nav.children">
-                            <nav class="sb-sidenav-menu-nested nav flex-column" v-for="child in nav.children"
-                                :key="child.id">
-                                <Router-Link class="nav-link" active-class="active" :to="{ name: child.page }">
+                        <div
+                            class="collapse"
+                            :id="nav.name"
+                            aria-labelledby="headingOne"
+                            data-bs-parent="#sidenavAccordion"
+                            v-if="nav.children"
+                        >
+                            <nav
+                                class="sb-sidenav-menu-nested nav flex-column"
+                                v-for="child in nav.children"
+                                :key="child.id"
+                            >
+                                <Router-Link
+                                    class="nav-link"
+                                    active-class="active"
+                                    :to="{ name: child.page }"
+                                >
                                     {{ child.name }}
                                 </Router-Link>
                             </nav>

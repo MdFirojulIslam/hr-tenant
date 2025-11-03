@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('salary_deductions', function (Blueprint $table) {
             $table->id();
             $table->unsignedInteger('employee_id');
-            $table->enum('adjustment_type', ['advance', 'other_deductions']);
+            $table->unsignedInteger('adjustment_types_id');
             $table->decimal('amount', 10, 2);
             $table->date('date');
             $table->text('remarks')->nullable();
