@@ -12,7 +12,6 @@ const error = ref("");
 
 const allowFromData = ref(null);
 
-
 const allowanceComponent = defineAsyncComponent(() =>
     import("../expense/component/otherExpenseForm.vue")
 );
@@ -59,7 +58,9 @@ const allowanceClose = () => {
 };
 
 const editallowanceForm = async (id) => {
-    const allowanceData = expenses.value.allowance.find((allowance) => allowance.id === id);
+    const allowanceData = expenses.value.allowance.find(
+        (allowance) => allowance.id === id
+    );
     if (allowanceData) {
         allowFromData.value = allowanceData;
         allowanceId.value = id;
@@ -105,7 +106,6 @@ const edittravelForm = async (id) => {
     }
 };
 
-
 const trashComponent = defineAsyncComponent(() =>
     import("../expense/component/viewTrash.vue")
 );
@@ -124,14 +124,14 @@ const generateDays = () => {
     const year = selectedYear.value;
     const month = selectedMonth.value;
     getData();
-}
+};
 
 const getData = async () => {
     try {
         const response = await api.get("/tada-expense", {
             params: {
                 month: selectedMonth.value,
-                year: selectedYear.value
+                year: selectedYear.value,
             },
         });
         expenses.value = response.data;
@@ -139,7 +139,6 @@ const getData = async () => {
         error.value = err.message || "Error fetching data";
     }
 };
-
 
 const approveExpenses = async () => {
     try {
@@ -193,9 +192,8 @@ const viewReport = () => {
     const month = selectedMonth.value;
     const year = selectedYear.value;
 
-    window.open(`/expense-report?month=${month}&year=${year}`, '_blank');
+    window.open(`/expense-report?month=${month}&year=${year}`, "_blank");
 };
-
 
 const deleteExpense = async (id) => {
     try {
@@ -227,19 +225,40 @@ const deleteExpense = async (id) => {
     }
 };
 
-
 onMounted(() => getData());
 </script>
 
 <template>
-    <component v-if="allowanceModel" :is="allowanceComponent" :isOpen="allowanceModel" :allowanceData="allowFromData"
-        :allowId="allowanceId" @modal-close="allowanceClose" name="first-modal" />
+    <component
+        v-if="allowanceModel"
+        :is="allowanceComponent"
+        :isOpen="allowanceModel"
+        :allowanceData="allowFromData"
+        :allowId="allowanceId"
+        @modal-close="allowanceClose"
+        name="first-modal"
+    />
 
-    <component v-if="travelModel" :is="travelComponent" :isOpen="travelModel" :travelData="travelFromData"
-        :travelId="travelId" @modal-close="travelClose" name="first-modal" />
+    <component
+        v-if="travelModel"
+        :is="travelComponent"
+        :isOpen="travelModel"
+        :travelData="travelFromData"
+        :travelId="travelId"
+        @modal-close="travelClose"
+        name="first-modal"
+    />
 
-    <component v-if="trashModel" :is="trashComponent" :isOpen="trashModel" :month="selectedMonth" :year="selectedYear"
-        :userId="user.id" @modal-close="trashClose" name="first-modal" />
+    <component
+        v-if="trashModel"
+        :is="trashComponent"
+        :isOpen="trashModel"
+        :month="selectedMonth"
+        :year="selectedYear"
+        :userId="user.id"
+        @modal-close="trashClose"
+        name="first-modal"
+    />
 
     <div class="card mt-4">
         <div class="card-body">
@@ -251,16 +270,34 @@ onMounted(() => getData());
                     <div class="d-flex">
                         <div class="col-lg-2 mb-3">
                             <label for="">Select a Year</label>
-                            <select class="form-control" name="status" v-model="selectedYear" @change="generateDays">
-                                <option v-for="(year, index) in years" :key="year" :value="year">
+                            <select
+                                class="form-control"
+                                name="status"
+                                v-model="selectedYear"
+                                @change="generateDays"
+                            >
+                                <option
+                                    v-for="(year, index) in years"
+                                    :key="year"
+                                    :value="year"
+                                >
                                     {{ year }}
                                 </option>
                             </select>
                         </div>
                         <div class="col-lg-2 mb-3 mx-2">
                             <label for="">Select a Month</label>
-                            <select class="form-control" name="status" v-model="selectedMonth" @change="generateDays">
-                                <option v-for="(month, index) in months" :key="month" :value="index">
+                            <select
+                                class="form-control"
+                                name="status"
+                                v-model="selectedMonth"
+                                @change="generateDays"
+                            >
+                                <option
+                                    v-for="(month, index) in months"
+                                    :key="month"
+                                    :value="index"
+                                >
                                     {{ month }}
                                 </option>
                             </select>
@@ -268,7 +305,9 @@ onMounted(() => getData());
                     </div>
                 </div>
                 <div class="col-lg-1 mt-4">
-                    <button class="btn btn-danger" @click="trashOpen()"><i class="fa-solid fa-trash"></i></button>
+                    <button class="btn btn-danger" @click="trashOpen()">
+                        <i class="fa-solid fa-trash"></i>
+                    </button>
                 </div>
             </div>
 
@@ -290,30 +329,63 @@ onMounted(() => getData());
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        <tr class="ver-align" v-for="(item, index) in expenses.allowance"
-                                            :key="item.id">
+                                        <tr
+                                            class="ver-align"
+                                            v-for="(
+                                                item, index
+                                            ) in expenses.allowance"
+                                            :key="item.id"
+                                        >
                                             <td>{{ index + 1 }}</td>
                                             <td>{{ item.Date }}</td>
-                                            <td>{{ mapExpense(item.Tr_Type) }}</td>
+                                            <td>
+                                                {{ mapExpense(item.Tr_Type) }}
+                                            </td>
                                             <td>{{ item.Description }}</td>
                                             <td>{{ item.Amount }}</td>
-                                            <td class="d-flex justify-content-center">
+                                            <td
+                                                class="d-flex justify-content-center"
+                                            >
                                                 <div v-if="item.File_Path">
-                                                    <button @click="openAttachment(item.File_Path)"
-                                                        class="btn btn-info btn-sm mx-1">
-                                                        <i class="fa-solid fa-file-arrow-down"></i>
+                                                    <button
+                                                        @click="
+                                                            openAttachment(
+                                                                item.File_Path
+                                                            )
+                                                        "
+                                                        class="btn btn-info btn-sm mx-1"
+                                                    >
+                                                        <i
+                                                            class="fa-solid fa-file-arrow-down"
+                                                        ></i>
                                                     </button>
                                                 </div>
                                                 <div v-if="item.Status == 0">
-                                                    <button class="btn btn-warning btn-sm mx-1"
-                                                        @click="editallowanceForm(item.id)">
-                                                        <i class="fa-regular fa-pen-to-square"></i>
+                                                    <button
+                                                        class="btn btn-warning btn-sm mx-1"
+                                                        @click="
+                                                            editallowanceForm(
+                                                                item.id
+                                                            )
+                                                        "
+                                                    >
+                                                        <i
+                                                            class="fa-regular fa-pen-to-square"
+                                                        ></i>
                                                     </button>
                                                 </div>
                                                 <div v-if="item.Status === 0">
-                                                    <button class="custom-btn btn-12 mx-2"
-                                                        @click="deleteExpense(item.id)">
-                                                        <i class="fa-solid fa-trash"></i>
+                                                    <button
+                                                        class="custom-btn btn-12 mx-2"
+                                                        @click="
+                                                            deleteExpense(
+                                                                item.id
+                                                            )
+                                                        "
+                                                    >
+                                                        <i
+                                                            class="fa-solid fa-trash"
+                                                        ></i>
                                                     </button>
                                                 </div>
                                             </td>
@@ -342,30 +414,62 @@ onMounted(() => getData());
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        <tr class="ver-align" v-for="(item, index) in expenses.travel" :key="item.id">
+                                        <tr
+                                            class="ver-align"
+                                            v-for="(
+                                                item, index
+                                            ) in expenses.travel"
+                                            :key="item.id"
+                                        >
                                             <td>{{ index + 1 }}</td>
                                             <td>{{ item.Date }}</td>
                                             <td>{{ item.From }}</td>
                                             <td>{{ item.To }}</td>
                                             <td>{{ item.Vehicle }}</td>
                                             <td>{{ item.Amount }}</td>
-                                            <td class="d-flex justify-content-center">
+                                            <td
+                                                class="d-flex justify-content-center"
+                                            >
                                                 <div v-if="item.File_Path">
-                                                    <button @click="openAttachment(item.File_Path)"
-                                                        class="btn btn-info btn-sm mx-1">
-                                                        <i class="fa-solid fa-file-arrow-down"></i>
+                                                    <button
+                                                        @click="
+                                                            openAttachment(
+                                                                item.File_Path
+                                                            )
+                                                        "
+                                                        class="btn btn-info btn-sm mx-1"
+                                                    >
+                                                        <i
+                                                            class="fa-solid fa-file-arrow-down"
+                                                        ></i>
                                                     </button>
                                                 </div>
                                                 <div v-if="item.Status == 0">
-                                                    <button class="btn btn-warning btn-sm mx-1"
-                                                        @click="edittravelForm(item.id)">
-                                                        <i class="fa-regular fa-pen-to-square"></i>
+                                                    <button
+                                                        class="btn btn-warning btn-sm mx-1"
+                                                        @click="
+                                                            edittravelForm(
+                                                                item.id
+                                                            )
+                                                        "
+                                                    >
+                                                        <i
+                                                            class="fa-regular fa-pen-to-square"
+                                                        ></i>
                                                     </button>
                                                 </div>
                                                 <div v-if="item.Status === 0">
-                                                    <button class="custom-btn btn-12 mx-2"
-                                                        @click="deleteExpense(item.id)">
-                                                        <i class="fa-solid fa-trash"></i>
+                                                    <button
+                                                        class="custom-btn btn-12 mx-2"
+                                                        @click="
+                                                            deleteExpense(
+                                                                item.id
+                                                            )
+                                                        "
+                                                    >
+                                                        <i
+                                                            class="fa-solid fa-trash"
+                                                        ></i>
                                                     </button>
                                                 </div>
                                             </td>
@@ -378,9 +482,20 @@ onMounted(() => getData());
                 </div>
             </div>
             <div class="d-flex justify-content-between">
-                <button class="btn btn-primary" @click="viewReport()">View Report</button>
-                <button v-if="expenses.travel && expenses.travel.length > 0 && expenses.travel[0].Status == 0"
-                    class="btn btn-success mx-2" @click="approveExpenses()">Submit Expense</button>
+                <button class="btn btn-primary" @click="viewReport()">
+                    View Report
+                </button>
+                <button
+                    v-if="
+                        expenses.travel &&
+                        expenses.travel.length > 0 &&
+                        expenses.travel[0].Status == 0
+                    "
+                    class="btn btn-success mx-2"
+                    @click="approveExpenses()"
+                >
+                    Submit Expense
+                </button>
             </div>
         </div>
     </div>

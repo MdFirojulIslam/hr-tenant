@@ -55,7 +55,6 @@
                                     type="date"
                                     class="form-control"
                                     v-model="form.from_date"
-                                    readonly
                                 />
                             </div>
 
@@ -65,7 +64,6 @@
                                     type="date"
                                     class="form-control"
                                     v-model="form.to_date"
-                                    readonly
                                 />
                             </div>
 

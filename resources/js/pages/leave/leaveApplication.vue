@@ -70,6 +70,19 @@ const filteredData = computed(() => {
     });
 });
 
+const computedTotalDays = computed(() => {
+    if (!form.value.from_date || !form.value.to_date) return 0;
+
+    const startDate = new Date(form.value.from_date);
+    const endDate = new Date(form.value.to_date);
+
+    // +1 to include both start and end dates
+    const diffTime = endDate - startDate;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+
+    return diffDays > 0 ? diffDays : 0;
+});
+
 const resetForm = () => {
     Object.keys(form.value).forEach((key) => {
         if (typeof form.value[key] === "string") {
@@ -234,6 +247,17 @@ onMounted(() => getData());
                                                 />
                                             </div>
                                         </div>
+
+                                        <div
+                                            class="col-lg-6 col-md-6 col-sm-12 mb-3"
+                                        >
+                                            <div class="form-group">
+                                                <label>Total Days: </label>
+                                                <span class="fw-bold">{{
+                                                    computedTotalDays
+                                                }}</span>
+                                            </div>
+                                        </div>
                                     </div>
 
                                     <div class="row">
@@ -318,7 +342,7 @@ onMounted(() => getData());
 
                             <!-- Employee Image Section -->
                             <div
-                                class="col-lg-2 col-md-6 col-sm-12 d-flex justify-content-center align-items-center mb-4"
+                                class="col-lg-4 col-md-12 col-sm-12 d-flex justify-content-center align-items-start mb-4"
                             >
                                 <div class="img-container">
                                     <img

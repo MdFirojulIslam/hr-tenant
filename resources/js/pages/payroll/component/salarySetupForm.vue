@@ -11,11 +11,11 @@ import Swal from "sweetalert2";
 import api from "@/api";
 
 const { isOpen, editStore, updateinfo, EID, salId } = defineProps([
-    "isOpen",
-    "editStore",
-    "updateinfo",
     "EID",
+    "editStore",
+    "isOpen",
     "salId",
+    "updateinfo",
 ]);
 
 const department = ref([]);
@@ -30,28 +30,28 @@ const error = ref([]);
 const form = ref({
     department: "",
     eid: "",
-    gross_salary: 0,
-    basic: 0,
-    house_rent: 0,
-    conveyance: 0,
-    medical_allowance: 0,
-    consolidated: 0,
-    festival_bonus: 0,
-    travel_allowance: 0,
-    overtime: 0,
-    daily_allowance: 0,
-    mobile_bill: 0,
-    other_allowance: 0,
-    total_payment: 0,
-    provident_fund: 0,
-    income_tax: 0,
-    revenue_stamp: 0,
-    leave_without_pay: 0,
-    penalty_other_deduction: 0,
-    advance: 0,
+    gross_salary: "",
+    basic: "",
+    house_rent: "",
+    conveyance: "",
+    medical_allowance: "",
+    consolidated: "0",
+    festival_bonus: "0",
+    travel_allowance: "0",
+    overtime: "0",
+    daily_allowance: "0",
+    mobile_bill: "0",
+    other_allowance: "0",
+    total_payment: "",
+    provident_fund: "0",
+    income_tax: "0",
+    revenue_stamp: "0",
+    leave_without_pay: "0",
+    penalty_other_deduction: "0",
+    advance: "0",
     total_deduction: "",
     total_earning: "",
-    net_pay: 0,
+    net_pay: "",
     salary_type: "",
     bank_account_no: "",
 });
@@ -124,23 +124,27 @@ const getEmployee = async (deptID) => {
 
 const getEmployeeInfo = async (id) => {
     try {
-        console.log("Fetching info for Employee ID:", id);
         const response = await api.get(`/emp-info/${id}`);
         emp_info.value = response.data;
-        console.log("Employee Info:", emp_info.value);
     } catch (error) {
         console.error("Error updating store:", error);
     }
 };
 
 watch(
-    () => editStore,
+    () => editStore, // ✅ If editStore is a ref (ref())
     async (item) => {
         if (item) {
-            form.value.department = item.dept_id || "";
-            await getEmployee(item.dept_id);
-            form.value.eid = item.eid || "";
-            await getEmployeeImg(item.eid);
+            form.value.department = item.department_id || "";
+            await getEmployee(item.department_id);
+
+            form.value.eid = item.employee_id || "";
+            await getEmployeeImg(item.employee_id);
+
+            emp_info.value = {
+                ...emp_info.value,
+                designation_name: item.designation_name || "",
+            };
             form.value.gross_salary = item.gross_salary || "";
             form.value.house_rent = item.house_rent || "";
             form.value.conveyance = item.conveyance || "";
@@ -160,23 +164,52 @@ watch(
                 item.penalty_other_deduction || "";
             form.value.advance = item.advance || "";
             form.value.total_deduction = item.total_deduction || 0;
-            form.value.total_earning = item.earning_amount || 0;
-            form.value.net_pay = item.salary_net_pay || "";
+            form.value.total_earning = item.total_payment || 0;
+            form.value.net_pay = item.net_pay || "";
+            form.value.salary_type = item.salary_type || "";
+            form.value.bank_account_no = item.bank_account_no || "";
         }
     },
     { immediate: true }
 );
 
+const getEmployeeImg = async (id) => {
+    try {
+        const response = await api.get(`/emp-img/${id}`);
+        emp_img.value = response.data;
+    } catch (error) {
+        console.error("Error fetching employee image:", error);
+    }
+};
 const instance = getCurrentInstance();
 
 const resetForm = () => {
-    Object.keys(form.value).forEach((key) => {
-        if (typeof form.value[key] === "string") {
-            form.value[key] = "";
-        } else {
-            form.value[key] = 0;
-        }
-    });
+    form.value = {
+        department: "",
+        eid: "",
+        gross_salary: "",
+        basic: "",
+        house_rent: "",
+        conveyance: "",
+        medical_allowance: "",
+        consolidated: "0",
+        festival_bonus: "0",
+        travel_allowance: "0",
+        overtime: "0",
+        daily_allowance: "0",
+        mobile_bill: "0",
+        other_allowance: "0",
+        total_payment: "",
+        provident_fund: "0",
+        income_tax: "0",
+        revenue_stamp: "0",
+        leave_without_pay: "0",
+        penalty_other_deduction: "0",
+        advance: "0",
+        net_pay: "",
+        salary_type: "",
+        bank_account_no: "",
+    };
 };
 
 const closeModal = () => {
@@ -251,8 +284,65 @@ const submit = () => {
     }
 };
 
-onMounted(() => getData());
+const enableDrag = () => {
+    const dialog = document.querySelector(".modal-dialog");
+    const header = document.querySelector(".modal-header");
+
+    if (!dialog || !header) return;
+
+    let isDragging = false;
+    let offsetX = 0;
+    let offsetY = 0;
+    let originalWidth = 0;
+
+    header.style.cursor = "move";
+
+    header.addEventListener("mousedown", (e) => {
+        isDragging = true;
+
+        // lock width
+        originalWidth = dialog.offsetWidth;
+        dialog.style.width = originalWidth + "px";
+
+        const rect = dialog.getBoundingClientRect();
+
+        // SAVE CURRENT POSITION BEFORE REMOVING transform
+        const currentLeft = rect.left;
+        const currentTop = rect.top;
+
+        // remove bootstrap centering
+        dialog.style.transform = "none";
+        dialog.style.margin = 0;
+        dialog.style.position = "absolute";
+
+        // SET EXPLICIT LEFT + TOP so modal does NOT jump
+        dialog.style.left = currentLeft + "px";
+        dialog.style.top = currentTop + "px";
+
+        // mouse offsets
+        offsetX = e.clientX - currentLeft;
+        offsetY = e.clientY - currentTop;
+    });
+
+    document.addEventListener("mousemove", (e) => {
+        if (!isDragging) return;
+
+        dialog.style.left = e.clientX - offsetX + "px";
+        dialog.style.top = e.clientY - offsetY + "px";
+    });
+
+    document.addEventListener("mouseup", () => {
+        isDragging = false;
+    });
+};
+
+// Mounted
+onMounted(() => {
+    getData();
+    enableDrag();
+});
 </script>
+
 <template>
     <div
         v-if="isOpen"
@@ -263,13 +353,13 @@ onMounted(() => getData());
         <div class="modal-dialog modal-xl modal-dialog-centered">
             <div class="modal-content">
                 <!-- Modal Header -->
-                <div class="modal-header bg-primary text-white">
+                <div class="modal-header gradient text-white">
                     <h5 class="modal-title">
                         <i class="bi bi-cash-stack me-2"></i>
                         {{
                             updateinfo === "Save"
-                                ? "New Salary Setup"
-                                : "Salary Setup Update"
+                                ? "NEW SALARY SETUP"
+                                : "SALARY SETUP UPDATE"
                         }}
                     </h5>
                     <button
@@ -284,19 +374,22 @@ onMounted(() => getData());
                     <!-- Employee Section -->
                     <div class="card mb-3 shadow-sm">
                         <div class="card-header bg-light fw-bold">
-                            Employee Information
+                            EMPLOYEE INFORMATION
                         </div>
                         <div class="card-body">
                             <div class="row g-3">
                                 <div class="col-md-8">
                                     <!-- Department -->
                                     <div class="row mb-3 align-items-center">
-                                        <label class="col-4 col-form-label"
-                                            >Department</label
-                                        >
-                                        <div class="col-8">
+                                        <div class="col-3 d-flex">
+                                            <span class="flex-grow-1 me-2"
+                                                >Department Name</span
+                                            >
+                                            <span> :</span>
+                                        </div>
+                                        <div class="col-md-5">
                                             <select
-                                                class="form-select"
+                                                class="form-select border-color custom-input"
                                                 v-model="form.department"
                                                 @change="
                                                     getEmployee(form.department)
@@ -322,12 +415,15 @@ onMounted(() => getData());
 
                                     <!-- Employee Name -->
                                     <div class="row mb-3 align-items-center">
-                                        <label class="col-4 col-form-label"
-                                            >Employee Name</label
-                                        >
-                                        <div class="col-8">
+                                        <div class="col-3 d-flex">
+                                            <span class="flex-grow-1 me-2"
+                                                >Employee Name</span
+                                            >
+                                            <span>:</span>
+                                        </div>
+                                        <div class="col-md-5">
                                             <select
-                                                class="form-select"
+                                                class="form-select border-color custom-input"
                                                 v-model="form.eid"
                                                 @change="
                                                     getEmployeeInfo(form.eid)
@@ -349,14 +445,19 @@ onMounted(() => getData());
 
                                     <!-- Designation -->
                                     <div class="row mb-3 align-items-center">
-                                        <label class="col-4 col-form-label"
-                                            >Designation</label
-                                        >
-                                        <div class="col-8">
+                                        <div class="col-3 d-flex">
+                                            <span class="flex-grow-1 me-2"
+                                                >Designation</span
+                                            >
+                                            <span>:</span>
+                                        </div>
+                                        <div class="col-md-5">
                                             <input
                                                 type="text"
-                                                class="form-control"
-                                                :value="selected_designation"
+                                                class="form-control border-color custom-input"
+                                                :value="
+                                                    emp_info.designation_name
+                                                "
                                                 readonly
                                             />
                                         </div>
@@ -380,75 +481,114 @@ onMounted(() => getData());
                     <!-- Salary Breakdown Section -->
                     <div class="card mb-3 shadow-sm">
                         <div class="card-header bg-light fw-bold">
-                            Salary Details
+                            SALARY DETAILS
                         </div>
                         <div class="card-body">
                             <div class="row g-3">
-                                <div
-                                    class="col-md-3"
-                                    v-for="(label, field) in {
-                                        'Gross Salary': 'gross_salary',
-                                        'Basic Salary': 'basic',
-                                        'House Rent': 'house_rent',
-                                        Conveyance: 'conveyance',
-                                    }"
-                                    :key="field"
-                                >
-                                    <label class="form-label">{{
-                                        label
-                                    }}</label>
+                                <div class="col-md-3">
+                                    <label class="form-label"
+                                        >Gross Salary</label
+                                    >
                                     <input
                                         type="number"
-                                        class="form-control"
-                                        v-model="form[field]"
-                                        :readonly="field !== 'gross_salary'"
+                                        class="form-control border-color custom-input"
+                                        v-model="form.gross_salary"
+                                    />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label"
+                                        >Basic Salary</label
+                                    >
+                                    <input
+                                        type="number"
+                                        class="form-control border-color custom-input"
+                                        v-model="form.basic"
+                                    />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">House Rent</label>
+                                    <input
+                                        type="number"
+                                        class="form-control border-color custom-input"
+                                        v-model="form.house_rent"
+                                    />
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label">Conveyance</label>
+                                    <input
+                                        type="number"
+                                        class="form-control border-color custom-input"
+                                        v-model="form.conveyance"
                                     />
                                 </div>
                             </div>
 
                             <div class="row g-3 mt-2">
-                                <div
-                                    class="col-md-3"
-                                    v-for="(label, field) in {
-                                        'Medical Allowance':
-                                            'medical_allowance',
-                                        Consolidated: 'consolidated',
-                                        'Festival Bonus': 'festival_bonus',
-                                        'Travel Allowance': 'travel_allowance',
-                                    }"
-                                    :key="field"
-                                >
-                                    <label class="form-label">{{
-                                        label
-                                    }}</label>
+                                <div class="col-md-3">
+                                    <label class="form-label"
+                                        >Medical Allowance</label
+                                    >
                                     <input
                                         type="number"
-                                        class="form-control"
-                                        v-model="form[field]"
-                                        :readonly="
-                                            field === 'medical_allowance'
-                                        "
+                                        class="form-control border-color custom-input"
+                                        v-model="form.medical_allowance"
+                                    />
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="form-label">Consolidated</div>
+                                    <input
+                                        type="number"
+                                        class="form-control border-color custom-input"
+                                        v-model="form.consolidated"
+                                    />
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="form-label">Festival Bonus</div>
+                                    <input
+                                        type="number"
+                                        class="form-control border-color custom-input"
+                                        v-model="form.festival_bonus"
+                                    />
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="form-label">
+                                        Travel Allowance
+                                    </div>
+                                    <input
+                                        type="number"
+                                        class="form-control border-color custom-input"
+                                        v-model="form.travel_allowance"
                                     />
                                 </div>
                             </div>
 
                             <div class="row g-3 mt-2">
-                                <div
-                                    class="col-md-3"
-                                    v-for="(label, field) in {
-                                        'Daily Allowance': 'daily_allowance',
-                                        'Mobile Bill': 'mobile_bill',
-                                        'Other Allowance': 'other_allowance',
-                                    }"
-                                    :key="field"
-                                >
-                                    <label class="form-label">{{
-                                        label
-                                    }}</label>
+                                <div class="col-md-3">
+                                    <div class="form-label">
+                                        Daily Allowance
+                                    </div>
                                     <input
                                         type="number"
-                                        class="form-control"
-                                        v-model="form[field]"
+                                        class="form-control border-color custom-input"
+                                        v-model="form.daily_allowance"
+                                    />
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="form-label">Mobile Bill</div>
+                                    <input
+                                        type="number"
+                                        class="form-control border-color custom-input"
+                                        v-model="form.mobile_bill"
+                                    />
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="form-label">
+                                        Other Allowance
+                                    </div>
+                                    <input
+                                        type="number"
+                                        class="form-control border-color custom-input"
+                                        v-model="form.other_allowance"
                                     />
                                 </div>
                             </div>
@@ -460,28 +600,38 @@ onMounted(() => getData());
                         <div class="col-md-9">
                             <div class="card mb-3 shadow-sm">
                                 <div class="card-header bg-light fw-bold">
-                                    Deductions
+                                    DEDUCTIONS
                                 </div>
                                 <div class="card-body">
                                     <div class="row g-3">
-                                        <div
-                                            class="col-md-4"
-                                            v-for="(label, field) in {
-                                                'Provident Fund':
-                                                    'provident_fund',
-                                                'Income Tax': 'income_tax',
-                                                'Revenue Stamp':
-                                                    'revenue_stamp',
-                                            }"
-                                            :key="field"
-                                        >
-                                            <label class="form-label">{{
-                                                label
-                                            }}</label>
+                                        <div class="col-md-3">
+                                            <div class="form-label">
+                                                Provident Fund
+                                            </div>
                                             <input
                                                 type="number"
-                                                class="form-control"
-                                                v-model="form[field]"
+                                                class="form-control border-color custom-input"
+                                                v-model="form.provident_fund"
+                                            />
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="form-label">
+                                                Income Tax
+                                            </div>
+                                            <input
+                                                type="number"
+                                                class="form-control border-color custom-input"
+                                                v-model="form.income_tax"
+                                            />
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="form-label">
+                                                Revenue Stamp
+                                            </div>
+                                            <input
+                                                type="number"
+                                                class="form-control border-color custom-input"
+                                                v-model="form.revenue_stamp"
                                             />
                                         </div>
                                     </div>
@@ -493,10 +643,10 @@ onMounted(() => getData());
                         <div class="col-md-3">
                             <div class="card shadow-sm">
                                 <div class="card-body">
-                                    <label class="form-label">Net Pay</label>
+                                    <label class="form-label">NET PAY</label>
                                     <input
                                         type="number"
-                                        class="form-control fs-5 fw-bold text-success"
+                                        class="form-control border-color fs-5 fw-bold text-success"
                                         v-model="form.net_pay"
                                         readonly
                                     />
@@ -509,13 +659,13 @@ onMounted(() => getData());
                     <div class="card shadow-sm mt-3">
                         <div class="card-body">
                             <div class="row g-3">
-                                <div class="col-md-4">
+                                <div class="col-md-3">
                                     <label class="form-label"
                                         >Salary Type</label
                                     >
                                     <select
                                         v-model="form.salary_type"
-                                        class="form-select"
+                                        class="form-select border-color custom-input"
                                     >
                                         <option selected disabled>
                                             -Select-
@@ -526,7 +676,7 @@ onMounted(() => getData());
                                 </div>
 
                                 <div
-                                    class="col-md-4"
+                                    class="col-md-3"
                                     v-if="form.salary_type === 'bank'"
                                 >
                                     <label class="form-label"
@@ -561,6 +711,28 @@ onMounted(() => getData());
 </template>
 
 <style scoped>
+.custom-input {
+    background: linear-gradient(
+        to right,
+        white 85%,
+        #059223d5 85%,
+        #02861fd5 100%
+    );
+}
+
+.border-color {
+    border: 1.8px solid #059223d5;
+    border-radius: none;
+}
+.gradient {
+    background: #349c1a;
+    background: linear-gradient(
+        90deg,
+        rgb(28, 105, 9) 27%,
+        rgb(14, 119, 58) 100%,
+        rgb(7, 134, 24) 91%
+    );
+}
 .modal {
     background-color: rgba(0, 0, 0, 0.5);
 }

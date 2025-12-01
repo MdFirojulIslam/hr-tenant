@@ -102,12 +102,15 @@ class LoanController extends Controller
 
     public function createRepayment(Request $request)
     {
+        $data = $request->all();
         $userId = Auth::user()->EID;
 
-        $validator = Validator::make($request->all(), [
-            'loan_id'        => 'required|exists:loans,id',
-            'installment_dates'       => 'required|date',
-            'installment_amounts'       => 'required|numeric',
+        // Validation for array input
+        $validator = Validator::make($data, [
+            '*.employee_id'         => 'required|integer|exists:loans,employee_id',
+            '*.installment_date'    => 'required|date',
+            '*.installment_amount'  => 'required|numeric',
+            '*.installment_status'  => 'required|string',
         ]);
 
         if ($validator->fails()) {
@@ -117,25 +120,161 @@ class LoanController extends Controller
             ], 422);
         }
 
+        DB::beginTransaction();
+
         try {
-            loan_repayment::create([
-                'loan_id' => $request->loan_id,
-                'installment_dates'  => $request->installment_dates,
-                'installment_amounts'  => $request->installment_amounts,
-                'created_by' => $userId,
-            ]);
+            foreach ($data as $row) {
+                // Get active loan for employee
+                $getLoan = loan::where('employee_id', $row['employee_id'])
+                    ->where('status', 'active')
+                    ->first();
+
+                if (!$getLoan) continue;
+
+                // Update first unpaid repayment if exists
+                $unpaidRepayment = loan_repayment::where('loan_id', $getLoan->id)
+                    ->where('paid_status', 'unpaid')
+                    ->first();
+
+                if ($unpaidRepayment) {
+                    $unpaidRepayment->update([
+                        'installment_amounts' => $row['installment_amount'],
+                        'paid_status'         => $row['installment_status'],
+                        'paid_on_dates'       => $row['installment_date'],
+                        'created_by'          => $userId,
+                    ]);
+                }
+
+                // Sum total paid installments
+                $totalPaid = loan_repayment::where('loan_id', $getLoan->id)
+                    ->where('paid_status', 'paid')
+                    ->sum('installment_amounts');
+
+                // Close loan if fully paid
+                if ($totalPaid >= $getLoan->principal_amounts) {
+                    $getLoan->update(['status' => 'closed']);
+                }
+
+                // Create new repayment row if still unpaid installments remain
+                if ($totalPaid < $getLoan->principal_amounts) {
+                    loan_repayment::create([
+                        'loan_id'             => $getLoan->id,
+                        'installment_dates'   => $getLoan->installment_dates,
+                        'installment_amounts' => $getLoan->monthly_installments,
+                        'paid_status'         => 'unpaid',
+                        'created_by'          => $userId,
+                    ]);
+                }
+            }
+
+            DB::commit();
 
             return response()->json([
                 'success' => true,
-                'message' => 'Successfully inserted'
+                'message' => 'Installments successfully processed'
             ]);
         } catch (\Throwable $e) {
+            DB::rollBack();
             return response()->json([
                 'success' => false,
                 'message' => 'Error while inserting',
                 'error'   => $e->getMessage(),
             ], 500);
         }
+
+        // dd($request);
+        // $data = $request->all();
+
+        // $userId = Auth::user()->EID;
+
+        // $validator = Validator::make($data, [
+        //     // 'loan_id'        => 'required|exists:loans,id',
+        //     'installment_date'  => 'required|date',
+        //     'installment_amount' => 'required|numeric',
+        // ]);
+
+        // if ($validator->fails()) {
+        //     return response()->json([
+        //         'success' => false,
+        //         'message' => $validator->errors()
+        //     ], 422);
+        // }
+
+
+
+        // DB::beginTransaction();
+
+        // try {
+        //     foreach ($data as $row) {
+        //         $getLoanID = loan::where('employee_id', $request->employee_id)
+        //             ->where('status', 'active')
+        //             ->first();
+        //     }
+        //     //for all credentials from loan table like $getLoanID->id = loan_id
+
+
+
+        //     //for all credentials from loan repayment table like $loanRepaymentID->loan_id = loan_id
+        //     $loanRepaymentID = loan_repayment::where('loan_id', $getLoanID->id)
+        //         ->first();
+
+
+        //     //for collect uppaid installment to update installment_amount, paid_status and paid_on_date
+        //     //loan_repayment table id or loan_id
+        //     $updateConfirm = loan_repayment::where('loan_id', $loanRepaymentID->loan_id)
+        //         ->where('paid_status', 'unpaid')
+        //         ->first();
+        //     //get loan id from loan repayment table
+        //     if ($updateConfirm) {
+        //         $updateConfirm->update([
+        //             'installment_amounts' => $request->installment_amount,
+        //             'paid_status'         => $request->installment_status,
+        //             'paid_on_dates'       => $request->installment_date,
+        //             'created_by'          => $userId,
+        //         ]);
+        //     }
+        //     $checkStatus = DB::table('loan_repayments')
+        //         ->where('loan_id', $loanRepaymentID->loan_id)
+        //         ->where('paid_status', 'paid')
+        //         ->sum('installment_amounts');
+
+        //     //total installment amount from loan repayment table
+
+        //     if ($checkStatus && $checkStatus >= $getLoanID->principal_amounts) {
+        //         loan::where('id', $getLoanID->id)->update([
+        //             'status' => 'closed',
+        //         ]);
+        //     }
+
+        //     //newly created a repayment row if the paid installment is less than principal amount
+        //     if ($checkStatus && $checkStatus < $getLoanID->principal_amounts) {
+        //         if ($updateConfirm) {
+        //             loan_repayment::create([
+        //                 'loan_id' => $getLoanID->id,
+        //                 'installment_dates'  => $getLoanID->installment_dates,
+        //                 'installment_amounts'  => $getLoanID->monthly_installments,
+        //                 'created_by' => $userId,
+        //             ]);
+        //         }
+        //     } else {
+        //         DB::commit();
+        //         return response()->json([
+        //             'success' => true,
+        //             'message' => 'All installments are paid already.'
+        //         ]);
+        //     }
+        //     DB::commit();
+        //     return response()->json([
+        //         'success' => true,
+        //         'message' => 'Installment Successfully Inserted'
+        //     ]);
+        // } catch (\Throwable $e) {
+        //     return response()->json([
+        //         'success' => false,
+        //         'message' => 'Error while inserting',
+        //         'error'   => $e->getMessage(),
+        //     ], 500);
+        // }
     }
 
 
@@ -206,7 +345,7 @@ class LoanController extends Controller
                 'loans.id',
                 'loans.principal_amounts',
                 'loans.tenure_months',
-                DB::raw('COALESCE(SUM(loan_repayments.installment_amounts), 0) as total_installments')
+                DB::raw("COALESCE(SUM(CASE WHEN loan_repayments.paid_status = 'paid' THEN loan_repayments.installment_amounts ELSE 0 END), 0) AS total_installments")
             )
             ->groupBy('loans.id', 'loans.principal_amounts', 'loans.tenure_months')
             ->first();
@@ -229,5 +368,48 @@ class LoanController extends Controller
             'success' => false,
             'message' => 'No loan found for the given employee ID.',
         ], 404);
+    }
+
+    public function repaymentHistory($id)
+    {
+        $repayments = loan_repayment::where('loan_id', $id)->get();
+        return response()->json($repayments);
+    }
+
+    public function repaymentInfo()
+    {
+        $repayments = DB::table('loans')
+            ->join('employees', 'employees.id', '=', 'loans.employee_id')
+            ->join('officials', 'officials.EID', '=', 'loans.employee_id')
+            ->join('departments', 'departments.id', '=', 'officials.Department_Id')
+            ->join('loan_repayments', 'loan_repayments.loan_id', '=', 'loans.id')
+            ->select(
+                'employees.id as employee_id',
+                'employees.Employee_Id as official_id',
+                'employees.Full_Name as employee_name',
+                'departments.Name as department_name',
+                DB::raw('CAST(loans.principal_amounts AS UNSIGNED) as principal_amount'),
+                DB::raw('CAST(loans.tenure_months AS UNSIGNED) as tenure_months'),
+                DB::raw('CAST(loans.monthly_installments AS UNSIGNED) as monthly_installments'),
+                DB::raw("COALESCE(SUM(
+                CASE WHEN loan_repayments.paid_status = 'paid'
+                THEN loan_repayments.installment_amounts
+                ELSE 0 END
+            ), 0) AS paid_installments")
+            )
+            ->where('loans.status', 'active')
+            ->groupBy(
+                'employees.id',
+                'employees.Employee_Id',
+                'loans.id',
+                'employees.Full_Name',
+                'departments.Name',
+                'loans.principal_amounts',
+                'loans.tenure_months',
+                'loans.monthly_installments'
+            )
+            ->get();
+
+        return response()->json($repayments);
     }
 }

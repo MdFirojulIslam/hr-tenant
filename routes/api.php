@@ -8,8 +8,7 @@ use Illuminate\Support\Facades\Route;
 require_once __DIR__ . '/auth/auth.php';
 
 
-
-Route::group(['middleware' => ['auth:sanctum']], function() {
+Route::group(['middleware' => ['auth:sanctum']], function () {
 
     Route::get('jasper/report/{name}/{ext?}', [JasperController::class, 'report']);
 
@@ -20,6 +19,6 @@ Route::group(['middleware' => ['auth:sanctum']], function() {
     require_once __DIR__ . '/mail-pdf/mail-pdf.php';
     require_once __DIR__ . '/expense/expense.php';
     require_once __DIR__ . '/workspace/note.php';
+    require_once __DIR__ . '/workspace/itinerary.php';
     require_once __DIR__ . '/payroll/salary.php';
-
 });

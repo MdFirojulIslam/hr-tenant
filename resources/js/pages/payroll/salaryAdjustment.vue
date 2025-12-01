@@ -6,9 +6,12 @@ import Swal from "sweetalert2";
 
 // modal component
 const salaryAdjustmentComponent = defineAsyncComponent(() =>
-    import("@/pages/payroll/component/salaryAdjustmentForm.vue")
+    import("@/pages/payroll/component/salaryAdjustmentEdit.vue")
 );
 
+const salaryAdjustmentComponentNew = defineAsyncComponent(() =>
+    import("@/pages/payroll/component/salaryAdjustmentForm.vue")
+);
 // states
 const selectedMonth = ref(new Date().getMonth() + 1);
 const selectedYear = ref(new Date().getFullYear());
@@ -82,6 +85,8 @@ const selectedStore = ref(null);
 const salaryId = ref(null);
 const salaryAdjustmentModel = ref(false);
 
+const salaryAdjustmentModelNew = ref(false);
+
 const isLoading = ref(true);
 const error = ref(null);
 
@@ -138,16 +143,28 @@ const salaryAdjustmentOpen = (title) => {
     salaryAdjustmentModel.value = true;
 };
 
+const salaryAdjustmentNew = (title) => {
+    heading.value = title;
+    salaryAdjustmentModelNew.value = true;
+};
+
 const salaryAdjustmentClose = () => {
     salaryAdjustmentModel.value = false;
+    salaryAdjustmentModelNew.value = false;
     getData();
 };
 
-const editSalaryAdjustment = (eid, date) => {
-    selectedStore.value = salaryRecords.value.find(
-        (item) => item.eid === eid && item.date === date
-    );
-    salaryId.value = eid; // or any unique identifier you want to track
+// const editSalaryAdjustment = (eid, date) => {
+//     selectedStore.value = salaryRecords.value.find(
+//         (item) => item.eid === eid && item.date === date
+//     );
+//     salaryId.value = eid; // or any unique identifier you want to track
+//     salaryAdjustmentOpen("Update");
+// };
+
+const editSalaryAdjustment = (item, eid) => {
+    selectedStore.value = item; // direct reference
+    salaryId.value = eid;
     salaryAdjustmentOpen("Update");
 };
 
@@ -156,7 +173,9 @@ onMounted(() => getData());
 </script>
 
 <template>
-    <div class="container-fluid h-100 d-flex flex-column p-0 m-0">
+    <div
+        class="border rounded container-fluid h-100 d-flex flex-column p-0 m-0"
+    >
         <!-- Header -->
         <div
             class="d-flex justify-content-between align-items-center py-2 px-3"
@@ -164,7 +183,7 @@ onMounted(() => getData());
             <h2 class="m-0">Salary Adjustment List</h2>
             <div>
                 <button
-                    @click="salaryAdjustmentOpen('Save')"
+                    @click="salaryAdjustmentNew('Save')"
                     type="button"
                     class="btn btn-success d-flex align-items-center fw-medium shadow-sm"
                 >
@@ -186,6 +205,17 @@ onMounted(() => getData());
             name="first-modal"
         />
 
+        <component
+            v-if="salaryAdjustmentModelNew"
+            :is="salaryAdjustmentComponentNew"
+            :isOpen="salaryAdjustmentModelNew"
+            :updateinfo="heading"
+            :salId="salaryId"
+            @modal-close="salaryAdjustmentClose"
+            @submit="getData"
+            name="first-modal"
+        />
+
         <!-- Table & Filters -->
         <div class="col-lg-12 mt-3">
             <div class="p-3 mb-3">
@@ -194,7 +224,7 @@ onMounted(() => getData());
                     <!-- Department -->
                     <div class="col-lg-3 position-relative">
                         <select
-                            class="form-control"
+                            class="form-control border-color"
                             v-model="searchDept"
                             @change="getEmployee(searchDept)"
                             style="font-weight: normal; background: transparent"
@@ -224,7 +254,7 @@ onMounted(() => getData());
                     <!-- Employee -->
                     <div class="col-lg-3 position-relative">
                         <select
-                            class="form-control"
+                            class="form-control border-color"
                             v-model="searchEmp"
                             style="font-weight: normal; background: transparent"
                         >
@@ -252,7 +282,7 @@ onMounted(() => getData());
                     <!-- Year -->
                     <div class="col-lg-2 position-relative">
                         <select
-                            class="form-control"
+                            class="form-control border-color"
                             v-model="searchYear"
                             style="font-weight: normal; background: transparent"
                         >
@@ -278,7 +308,7 @@ onMounted(() => getData());
                     <!-- Month -->
                     <div class="col-lg-2 position-relative">
                         <select
-                            class="form-control"
+                            class="form-control border-color"
                             v-model="searchMonth"
                             style="font-weight: normal; background: transparent"
                         >
@@ -357,8 +387,8 @@ onMounted(() => getData());
                                         <button
                                             @click="
                                                 editSalaryAdjustment(
-                                                    item.eid,
-                                                    item.date
+                                                    item,
+                                                    item.eid
                                                 )
                                             "
                                             class="custom-btn btn-15"
@@ -386,3 +416,10 @@ onMounted(() => getData());
         </div>
     </div>
 </template>
+
+<style>
+.border-color {
+    border: 1.8px solid #059223d5;
+    border-radius: none;
+}
+</style>

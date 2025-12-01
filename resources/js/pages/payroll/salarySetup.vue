@@ -1,5 +1,6 @@
 <script setup>
-import { ref, onMounted, defineAsyncComponent } from "vue";
+import { ref, onMounted, computed, defineAsyncComponent } from "vue";
+
 import { Bootstrap4Pagination } from "laravel-vue-pagination";
 import api from "@/api";
 import Swal from "sweetalert2";
@@ -23,6 +24,11 @@ const selectedStore = ref(null);
 const heading = ref(null);
 const filter = ref("");
 
+const department = ref([]);
+const employeeIDs = ref([]);
+const searchDept = ref("");
+const searchEmp = ref("");
+
 const salaries = ref([]);
 
 const salaryId = ref();
@@ -30,8 +36,15 @@ const salaryModel = ref(false);
 
 const salaryOpen = (title) => {
     heading.value = title;
+
+    if (title === "Save") {
+        selectedStore.value = null; // reset previous edit data
+        salaryId.value = null; // reset salary id
+    }
+
     salaryModel.value = true;
 };
+
 const salaryClose = () => {
     salaryModel.value = false;
     getData();
@@ -52,31 +65,34 @@ const getEmployee = async (deptID) => {
 };
 
 const employeeName = ref("");
-const employeeID = ref("");
-const bank_account_no = ref("");
+const searchQuery = ref(""); // single input field for account_no or official_id
 
 const searchemp = async () => {
-    // Check if any filter input has a value
-    if (bank_account_no.value) {
+    // Only trigger search if something is typed
+    if (searchQuery.value) {
         try {
             const response = await api.get("/employee-salary-search", {
                 params: {
-                    bank_account_no: bank_account_no.value,
+                    query: searchQuery.value, // send the input as 'query'
                 },
             });
-            salaries.value = response.data;
+            salaries.value = response.data; // replace current salaries
         } catch (error) {
             console.error(error);
         }
     } else {
-        getData(); // fetch all if no filter
+        getData(); // fetch all if input is empty
     }
 };
 
 const getData = async (page = 1) => {
     try {
-        const response = await api.get(`/salary?page=${page}`);
-        salaries.value = response.data;
+        const [deptRes, salary] = await Promise.all([
+            api.get("/department"),
+            api.get(`/salary?page=${page}`),
+        ]);
+        department.value = deptRes.data;
+        salaries.value = salary.data;
     } catch (err) {
         error.value = err.message || "Error fetching data";
     } finally {
@@ -84,10 +100,26 @@ const getData = async (page = 1) => {
     }
 };
 
+const filteredData = computed(() => {
+    // check if salaries.value has 'data'
+    const salaryList = salaries.value.data || [];
+
+    return salaryList.filter((item) => {
+        const matchesDept = searchDept.value
+            ? item.department_id == searchDept.value
+            : true;
+        const matchesEmp = searchEmp.value
+            ? item.employee_id == searchEmp.value
+            : true;
+
+        return matchesDept && matchesEmp;
+    });
+});
+
 const editsalary = async (id) => {
     try {
         selectedStore.value = salaries.value.data.find(
-            (item) => item.eid === id
+            (item) => item.employee_id === id
         );
         salaryId.value = id;
         salaryOpen("Update");
@@ -121,7 +153,9 @@ onMounted(() => getData());
 </script>
 
 <template>
-    <div class="container-fluid h-100 d-flex flex-column p-0 m-0">
+    <div
+        class="border rounded container-fluid h-100 d-flex flex-column p-0 m-0"
+    >
         <!-- Header -->
         <div
             class="d-flex justify-content-between align-items-center py-2 px-3"
@@ -158,14 +192,14 @@ onMounted(() => getData());
                 <div class="row g-3 mb-3">
                     <div class="col-lg-3 position-relative">
                         <select
-                            class="form-control"
+                            class="form-control border-color"
                             v-model="searchDept"
                             @change="getEmployee(searchDept)"
                             style="font-weight: normal; background: transparent"
                         >
                             <option value="" disabled>Select Department</option>
                             <option
-                                v-for="dept in formData"
+                                v-for="dept in department"
                                 :key="dept.id"
                                 :value="dept.id"
                             >
@@ -188,7 +222,7 @@ onMounted(() => getData());
                     <!-- Employee -->
                     <div class="col-lg-3 position-relative">
                         <select
-                            class="form-control"
+                            class="form-control border-color"
                             v-model="searchEmp"
                             style="font-weight: normal; background: transparent"
                         >
@@ -212,12 +246,12 @@ onMounted(() => getData());
                             <i class="fa fa-times"></i>
                         </button>
                     </div>
-                    <div class="col-lg-3">
+                    <div class="col-lg-3 position-relative">
                         <input
                             type="text"
-                            class="form-control form-control-sm"
-                            v-model="bank_account_no"
-                            placeholder="Type Bank Account No"
+                            class="form-control border-color"
+                            v-model="searchQuery"
+                            placeholder="Search By Account No or Official ID"
                             @input="searchemp"
                         />
                     </div>
@@ -235,18 +269,19 @@ onMounted(() => getData());
                             >{{ salaries.total }}</span
                         >
                     </div>
+
                     <div class="table-responsive px-2 bg-light">
                         <table class="table table-hover table-sm">
                             <thead class="table-light">
                                 <tr>
                                     <th width="4%">S/N</th>
-                                    <th width="10%">EMPLOYEE ID</th>
-                                    <th width="20%">EMPLOYEE NAME</th>
-                                    <th width="8%">BASIC</th>
-                                    <th width="10%">TOTAL PAYMENT</th>
-                                    <th width="10%">TOTAL EARNING</th>
-                                    <th width="10%">TOTAL DEDUCTION</th>
-                                    <th width="8%">NET PAY</th>
+                                    <th width="7%">OFFICIAL ID</th>
+                                    <th width="8%">EMPLOYEE NAME</th>
+                                    <th width="15%">DEPARTMENT</th>
+                                    <th width="10%">GROSS SALARY</th>
+                                    <th width="10%">EARNING</th>
+                                    <th width="10%">DEDUCTION</th>
+                                    <th width="8%">TOTAL PAY</th>
                                     <th width="10%">BANK ACCOUNT</th>
                                     <th width="10%" class="text-center">
                                         ACTION
@@ -255,26 +290,26 @@ onMounted(() => getData());
                             </thead>
                             <tbody>
                                 <tr
-                                    v-for="(salary, index) in salaries.data"
+                                    v-for="(salary, index) in filteredData"
                                     :key="salary.id"
                                 >
                                     <td>{{ index + 1 }}</td>
-                                    <td>ABNB-{{ salary.Employee_Id }}</td>
-                                    <td>{{ salary.Full_Name }}</td>
-                                    <td>{{ salary.basic }}</td>
-                                    <td>{{ salary.total_payment }}</td>
+                                    <td>ABNB-{{ salary.official_id }}</td>
+                                    <td>{{ salary.full_name }}</td>
+                                    <td>{{ salary.department_name }}</td>
+                                    <td>{{ salary.gross_salary }}</td>
                                     <td>
                                         {{
-                                            salary.earning_amount == 0
+                                            salary.total_earning == 0
                                                 ? "-"
-                                                : salary.earning_amount
+                                                : salary.total_earning
                                         }}
                                     </td>
                                     <td>
                                         {{
-                                            salary.deduction_amount == 0
+                                            salary.total_deduction == 0
                                                 ? "-"
-                                                : salary.deduction_amount
+                                                : salary.total_deduction
                                         }}
                                     </td>
                                     <td>{{ salary.net_pay }}</td>
@@ -288,7 +323,9 @@ onMounted(() => getData());
                                             class="btn btn-sm btn-light border me-1"
                                             title="View"
                                             @click="
-                                                openSalaryDetails(salary.eid)
+                                                openSalaryDetails(
+                                                    salary.employee_id
+                                                )
                                             "
                                         >
                                             <i
@@ -298,7 +335,9 @@ onMounted(() => getData());
                                         <button
                                             class="btn btn-sm btn-light border me-1"
                                             title="Edit"
-                                            @click="editsalary(salary.eid)"
+                                            @click="
+                                                editsalary(salary.employee_id)
+                                            "
                                         >
                                             <i
                                                 class="fa-regular fa-pen-to-square text-warning"
@@ -307,7 +346,9 @@ onMounted(() => getData());
                                         <button
                                             class="btn btn-sm btn-light border"
                                             title="Delete"
-                                            @click="deletesalary(salary.eid)"
+                                            @click="
+                                                deletesalary(salary.employee_id)
+                                            "
                                         >
                                             <i
                                                 class="fa-solid fa-trash text-danger"
@@ -333,3 +374,10 @@ onMounted(() => getData());
         </div>
     </div>
 </template>
+
+<style>
+.border-color {
+    border: 1.8px solid #059223d5;
+    border-radius: none;
+}
+</style>

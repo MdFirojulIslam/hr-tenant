@@ -251,7 +251,11 @@ onMounted(() => getData());
                                                         >
                                                             {{
                                                                 device.Serial_Number
-                                                            }} - {{ device.Device_Name }}
+                                                            }}
+                                                            -
+                                                            {{
+                                                                device.Device_Name
+                                                            }}
                                                         </option>
                                                     </select>
                                                 </div>
@@ -285,11 +289,34 @@ onMounted(() => getData());
                                             <div class="col-lg-6">
                                                 <div class="form-group">
                                                     <label>Status</label>
-                                                    <select id="" class="form-control" v-model="form.status">
-                                                        <option value="Assigned">Assigned</option>
-                                                        <option value="Available">Available</option>
-                                                        <option value="Maintenance">Maintenance</option>
-                                                        <option value="Disposed">Disposed</option>
+                                                    <select
+                                                        id=""
+                                                        class="form-control"
+                                                        v-model="form.status"
+                                                    >
+                                                        <option
+                                                            value="Assigned"
+                                                        >
+                                                            Assigned
+                                                        </option>
+                                                        <option
+                                                            value="Available"
+                                                        >
+                                                            Available
+                                                        </option>
+                                                        <option
+                                                            value="Maintenance"
+                                                        >
+                                                            Maintenance
+                                                        </option>
+                                                        <option
+                                                            value="Disposed"
+                                                        >
+                                                            Disposed
+                                                        </option>
+                                                        <option value="Lost">
+                                                            Lost
+                                                        </option>
                                                     </select>
                                                 </div>
                                             </div>

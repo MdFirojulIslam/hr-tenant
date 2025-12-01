@@ -1,203 +1,9 @@
-<template>
-    <div v-if="isOpen" class="modal-mask">
-        <div class="card modal-card">
-            <div class="card-body">
-                <div class="card mb-2">
-                    <div class="card-header mb-1 bg-grey">
-                        <h5 class="mb-0">Loan Repayment Setup</h5>
-                    </div>
-
-                    <div class="card-body">
-                        <!-- Employee Info -->
-                        <div class="row mb-3">
-                            <div class="col-lg-9">
-                                <!-- Department -->
-                                <div class="row mb-3">
-                                    <div class="col-lg-3">Department Name</div>
-                                    <div class="col-lg-1">:</div>
-                                    <div class="col-lg-8">
-                                        <select
-                                            class="form-control"
-                                            v-model="form.department_id"
-                                            @change="
-                                                getEmployee(form.department_id)
-                                            "
-                                        >
-                                            <option value="">
-                                                Select Department
-                                            </option>
-                                            <option
-                                                v-for="dept in departmentInfo"
-                                                :key="dept.id"
-                                                :value="dept.id"
-                                            >
-                                                {{ dept.Name }}
-                                            </option>
-                                        </select>
-                                    </div>
-                                </div>
-
-                                <!-- Employee -->
-                                <div class="row mb-3">
-                                    <div class="col-lg-3">Employee Name</div>
-                                    <div class="col-lg-1">:</div>
-                                    <div class="col-lg-8">
-                                        <select
-                                            class="form-control"
-                                            v-model="form.employee_id"
-                                        >
-                                            <option value="">
-                                                Select Employee
-                                            </option>
-                                            <option
-                                                v-for="emp in employeeByDept"
-                                                :key="emp.id"
-                                                :value="emp.id"
-                                            >
-                                                {{ emp.Full_Name }}
-                                            </option>
-                                        </select>
-                                    </div>
-                                </div>
-
-                                <!-- Principal Amount / Tenure / Total Installment -->
-                                <div class="row mb-3">
-                                    <div class="col-lg-3">Principal Amount</div>
-                                    <div class="col-lg-1">:</div>
-                                    <div class="col-lg-3">
-                                        <input
-                                            class="form-control"
-                                            type="number"
-                                            v-model="form.principal_amount"
-                                            readonly
-                                        />
-                                    </div>
-                                    <div class="col-lg-3">Tenure (Months)</div>
-                                    <div class="col-lg-2">
-                                        <input
-                                            class="form-control"
-                                            type="number"
-                                            v-model="form.tenure_months"
-                                            readonly
-                                        />
-                                    </div>
-                                </div>
-
-                                <div class="row mb-3">
-                                    <div class="col-lg-3">
-                                        Total Installment Paid
-                                    </div>
-                                    <div class="col-lg-1">:</div>
-                                    <div class="col-lg-8">
-                                        <input
-                                            class="form-control"
-                                            type="number"
-                                            v-model="form.total_installment"
-                                            readonly
-                                        />
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Employee Image -->
-                            <div class="col-lg-3">
-                                <img
-                                    :src="emp_img?.img_url || ''"
-                                    alt="Employee Image"
-                                    height="110"
-                                    width="110"
-                                />
-                            </div>
-                        </div>
-
-                        <!-- Installments -->
-                        <form @submit.prevent="saveRepayment">
-                            <div class="row mt-3">
-                                <div class="col-lg-6">
-                                    <div class="form-group">
-                                        <label>Installment Date</label>
-                                        <input
-                                            type="date"
-                                            class="form-control"
-                                            v-model="form.installment_date"
-                                        />
-                                    </div>
-                                </div>
-
-                                <div class="col-lg-6">
-                                    <div class="form-group">
-                                        <label>Installment Amount</label>
-                                        <input
-                                            type="number"
-                                            class="form-control"
-                                            v-model="form.installment_amount"
-                                            readonly
-                                        />
-                                    </div>
-                                </div>
-
-                                <div class="col-lg-6">
-                                    <div class="form-group">
-                                        <label for="installment_status"
-                                            >Installment Status</label
-                                        >
-                                        <select
-                                            id="installment_status"
-                                            class="form-control"
-                                            v-model="form.installment_status"
-                                        >
-                                            <option value="Pending">
-                                                Pending
-                                            </option>
-                                            <option value="Paid">Paid</option>
-                                        </select>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Buttons -->
-                            <div class="d-flex justify-content-between mt-3">
-                                <button
-                                    type="submit"
-                                    class="custom-btn btn-13 p-2"
-                                >
-                                    <i class="fa-solid fa-check"></i> |
-                                    {{ updateinfo }}
-                                </button>
-                                <button
-                                    type="button"
-                                    class="custom-btn btn-15 p-2"
-                                    @click.prevent="resetForm"
-                                >
-                                    <i class="fa-solid fa-power-off"></i> |
-                                    Reset
-                                </button>
-                                <button
-                                    type="button"
-                                    class="custom-btn btn-12 p-2"
-                                    @click.stop="closeModal"
-                                >
-                                    <i class="fa-solid fa-x"></i> | Cancel
-                                </button>
-                            </div>
-
-                            <p v-if="error" class="text-danger mt-2">
-                                {{ error }}
-                            </p>
-                        </form>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</template>
-
 <script setup>
-import { ref, watch, onMounted } from "vue";
+import { ref, computed, onMounted } from "vue";
 import api from "@/api";
 import Swal from "sweetalert2";
 
-// Props and emits
+// Props & Emits
 const props = defineProps({
     isOpen: Boolean,
     editStore: Object,
@@ -206,141 +12,99 @@ const props = defineProps({
 });
 const emit = defineEmits(["modal-close", "refresh-list"]);
 
-// Form state
-const form = ref({
-    department_id: "",
-    employee_id: "",
-    principal_amount: "",
-    installment_date: "",
-    installment_amount: "",
-    tenure_months: "",
-    total_installment: "",
-    installment_status: "Pending",
-});
-
-// Other states
-const emp_img = ref(null);
+// States
+const repaymentsInfo = ref([]);
+const allChecked = ref(false);
 const error = ref("");
-const loading = ref(false);
-const departmentInfo = ref([]);
-const employeeByDept = ref([]);
-const loanAmount = ref(0);
 
-// Fetch department data
+const getCurrentMonthDate = () => {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    return `${year}-${month}-01`; // First day of current month
+};
+
+// Load API Data
 const getData = async () => {
     try {
-        const res = await api.get("/department");
-        departmentInfo.value = res.data;
+        const res = await api.get("/repayments-info");
+        repaymentsInfo.value = res.data.map((item) => {
+            const autoAmount =
+                Number(item.principal_amount) / Number(item.tenure_months);
+            return {
+                id: item.id,
+                official_id: item.official_id,
+                employee_id: item.employee_id,
+                employee_name: item.employee_name,
+                department_name: item.department_name,
+                principal_amount: item.principal_amount,
+                tenure_months: item.tenure_months,
+                paid_installments: item.paid_installments,
+
+                // Custom fields
+                installment_date:
+                    item.installment_date || getCurrentMonthDate(),
+
+                installment_amount: autoAmount.toFixed(2),
+                checked: false,
+            };
+        });
     } catch (err) {
-        console.error("Error fetching departments:", err);
+        console.error(err);
     }
 };
 
-// Fetch employees based on department
-const getEmployee = async (deptID) => {
-    if (!deptID) {
-        employeeByDept.value = [];
-        return;
-    }
-    try {
-        const res = await api.get(`/emp/${deptID}`);
-        employeeByDept.value = res.data;
-    } catch (err) {
-        console.error("Error fetching employees:", err);
-    }
+// Computed — return data directly
+const filteredData = computed(() => repaymentsInfo.value);
+
+// Bulk Check
+const toggleAll = () => {
+    filteredData.value.forEach((row) => {
+        row.checked = allChecked.value;
+    });
 };
 
-// Fetch loan data for employee
-const getLoanAmount = async (empID) => {
-    if (!empID) {
-        form.value.principal_amount = "";
-        form.value.tenure_months = "";
-        form.value.total_installment = "";
-        form.value.installment_amount = "";
-        return;
-    }
-
-    try {
-        const res = await api.get(`/get-loan-amount/${empID}`);
-        const data = res.data;
-
-        if (data.success) {
-            form.value.principal_amount = data.principal_amount;
-            form.value.tenure_months = data.tenure_months;
-            form.value.total_installment = data.total_installments;
-
-            const remaining = data.principal_amount - data.total_installments;
-            form.value.installment_amount = data.tenure_months
-                ? (data.principal_amount / data.tenure_months).toFixed(2)
-                : 0;
-        }
-    } catch (err) {
-        console.error("Error fetching loan amount:", err);
-        form.value.principal_amount = "";
-        form.value.tenure_months = "";
-        form.value.total_installment = "";
-        form.value.installment_amount = "";
-    }
+// Individual Check Logic
+const checkIndividual = () => {
+    allChecked.value = filteredData.value.every((row) => row.checked);
 };
 
-// Watch employee selection
-watch(
-    () => form.value.employee_id,
-    (newEmpID) => {
-        getLoanAmount(newEmpID);
-    }
-);
-
-// Watch editStore for edit mode
-watch(
-    () => props.editStore,
-    (newVal) => {
-        if (newVal) {
-            form.value.department_id = newVal.department_id || "";
-            form.value.employee_id = newVal.employee_id || "";
-            form.value.principal_amount = newVal.principal_amount || "";
-            form.value.installment_date = newVal.installment_date || "";
-            form.value.installment_amount = newVal.installment_amount || "";
-            form.value.tenure_months = newVal.tenure_months || "";
-            form.value.total_installment = newVal.total_installment || "";
-            form.value.installment_status =
-                newVal.installment_status || "Pending";
-            emp_img.value = newVal.emp_img || null;
-        }
-    },
-    { immediate: true }
-);
-
-// Reset form
+// Reset Form
 const resetForm = () => {
-    form.value = {
-        department_id: "",
-        employee_id: "",
-        principal_amount: "",
-        installment_date: "",
-        installment_amount: "",
-        tenure_months: "",
-        total_installment: "",
-        installment_status: "Pending",
-    };
-    emp_img.value = null;
+    repaymentsInfo.value = [];
+    allChecked.value = false;
     error.value = "";
 };
 
-// Close modal
+// Close Modal
 const closeModal = () => emit("modal-close");
 
-// Save repayment
+// Save Data
 const saveRepayment = async () => {
-    if (!form.value.installment_date || !form.value.installment_amount) {
-        error.value = "Installment date and amount are required.";
+    const selectedRows = filteredData.value
+        .filter((r) => r.checked)
+        .map((r) => ({
+            employee_id: r.employee_id, // ✅ required for backend
+            installment_date: r.installment_date,
+            installment_amount: r.installment_amount,
+            installment_status: "Paid", // ✅ set status
+        }));
+
+    if (selectedRows.length === 0) {
+        error.value = "Please select at least one row.";
         return;
     }
 
-    try {
-        // const response = await api.post(`/employee-loan`, form.value);
-        const response = await api.post("/loan-repayment", form.value);
+    for (let row of selectedRows) {
+        if (!row.installment_date || !row.installment_amount) {
+            error.value = "Installment date & amount required.";
+            return;
+        }
+        row.installment_status = "Paid";
+    }
 
+    try {
+        const response = await api.post("/loan-repayment", selectedRows);
         if (response.data.success) {
             Swal.fire({
                 icon: "success",
@@ -352,38 +116,222 @@ const saveRepayment = async () => {
             emit("refresh-list");
             closeModal();
         } else {
-            Swal.fire({
-                icon: "error",
-                title: response.data.message,
-                showConfirmButton: true,
-            });
+            Swal.fire({ icon: "error", title: response.data.message });
         }
-        closeModal();
     } catch (err) {
         error.value = err.response?.data?.message || err.message;
     }
 };
 
+const enableDrag = () => {
+    const dialog = document.querySelector(".modal-dialog");
+    const header = document.querySelector(".modal-header");
+
+    if (!dialog || !header) return;
+
+    let isDragging = false;
+    let offsetX = 0;
+    let offsetY = 0;
+    let originalWidth = 0;
+
+    header.style.cursor = "move";
+
+    header.addEventListener("mousedown", (e) => {
+        isDragging = true;
+
+        // lock width
+        originalWidth = dialog.offsetWidth;
+        dialog.style.width = originalWidth + "px";
+
+        const rect = dialog.getBoundingClientRect();
+
+        // SAVE CURRENT POSITION BEFORE REMOVING transform
+        const currentLeft = rect.left;
+        const currentTop = rect.top;
+
+        // remove bootstrap centering
+        dialog.style.transform = "none";
+        dialog.style.margin = 0;
+        dialog.style.position = "absolute";
+
+        // SET EXPLICIT LEFT + TOP so modal does NOT jump
+        dialog.style.left = currentLeft + "px";
+        dialog.style.top = currentTop + "px";
+
+        // mouse offsets
+        offsetX = e.clientX - currentLeft;
+        offsetY = e.clientY - currentTop;
+    });
+
+    document.addEventListener("mousemove", (e) => {
+        if (!isDragging) return;
+
+        dialog.style.left = e.clientX - offsetX + "px";
+        dialog.style.top = e.clientY - offsetY + "px";
+    });
+
+    document.addEventListener("mouseup", () => {
+        isDragging = false;
+    });
+};
+
 // Mounted
-onMounted(() => getData());
+onMounted(() => {
+    getData();
+    enableDrag();
+});
 </script>
 
+<template>
+    <div v-if="isOpen" class="modal fade show d-block" tabindex="-1">
+        <div class="modal-dialog modal-xl modal-dialog-centered">
+            <div class="modal-content shadow-lg">
+                <!-- Header -->
+                <div class="modal-header gradient text-white">
+                    <h5 class="modal-title">
+                        <i class="bi bi-cash-coin me-2"></i> Loan Repayment
+                        Setup
+                    </h5>
+                    <button
+                        type="button"
+                        class="btn-close btn-close-white"
+                        @click="closeModal"
+                    ></button>
+                </div>
+
+                <!-- Body -->
+                <div class="modal-body overflow-auto" style="max-height: 80vh">
+                    <form @submit.prevent="saveRepayment">
+                        <div class="card mb-3 shadow-sm">
+                            <table
+                                class="table table-hover table-sm table-bordered"
+                            >
+                                <thead class="table-light">
+                                    <tr class="text-nowrap">
+                                        <th>SL</th>
+                                        <th>Official ID</th>
+                                        <th>Name</th>
+                                        <th>Department</th>
+                                        <th>Principal</th>
+                                        <th>Tenure</th>
+                                        <th>Total Paid</th>
+                                        <th>Installment Date</th>
+                                        <th>Amount</th>
+                                        <th>Status</th>
+                                        <th>
+                                            <input
+                                                type="checkbox"
+                                                v-model="allChecked"
+                                                @change="toggleAll"
+                                            />
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr
+                                        v-for="(item, index) in filteredData"
+                                        :key="index"
+                                    >
+                                        <td>{{ index + 1 }}</td>
+                                        <td>ABNB-{{ item.official_id }}</td>
+                                        <td>{{ item.employee_name }}</td>
+                                        <td>{{ item.department_name }}</td>
+                                        <td>{{ item.principal_amount }}</td>
+                                        <td>{{ item.tenure_months }}</td>
+                                        <td>{{ item.paid_installments }}</td>
+
+                                        <td>
+                                            <input
+                                                type="date"
+                                                class="form-control border-color"
+                                                v-model="item.installment_date"
+                                            />
+                                        </td>
+
+                                        <td>
+                                            <input
+                                                type="decimal"
+                                                class="form-control border-color"
+                                                v-model="
+                                                    item.installment_amount
+                                                "
+                                            />
+                                        </td>
+
+                                        <td class="text-center">
+                                            <span
+                                                class="badge bg-success text-white px-3 py-1 paid-badge"
+                                                >Paid</span
+                                            >
+                                        </td>
+
+                                        <td>
+                                            <input
+                                                type="checkbox"
+                                                v-model="item.checked"
+                                                @change="checkIndividual"
+                                            />
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Footer Buttons -->
+                        <div class="d-flex justify-content-end mt-4 gap-2">
+                            <button
+                                type="submit"
+                                class="btn btn-success px-4 py-2"
+                            >
+                                <i class="bi bi-check-circle me-1"></i>
+                                {{ updateinfo }}
+                            </button>
+
+                            <button
+                                type="button"
+                                class="btn btn-warning px-4 py-2"
+                                @click="resetForm"
+                            >
+                                <i class="bi bi-arrow-clockwise me-1"></i> Reset
+                            </button>
+
+                            <button
+                                type="button"
+                                class="btn btn-secondary px-4 py-2"
+                                @click="closeModal"
+                            >
+                                <i class="bi bi-x-circle me-1"></i> Cancel
+                            </button>
+                        </div>
+
+                        <p v-if="error" class="text-danger mt-3 text-center">
+                            {{ error }}
+                        </p>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>
+
 <style scoped>
-.modal-mask {
-    position: fixed;
-    z-index: 2000;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.5);
-    display: flex;
-    justify-content: center;
-    align-items: center;
+.border-color {
+    border: 1.8px solid #059223d5;
+    border-radius: 4px;
 }
-.modal-card {
-    width: 90%;
-    max-width: 900px;
-    padding: 20px;
+.gradient {
+    background: linear-gradient(
+        90deg,
+        rgb(28, 105, 9) 27%,
+        rgb(14, 119, 58) 100%
+    );
+    color: #fff;
+}
+.modal {
+    background-color: rgba(0, 0, 0, 0.5);
+}
+.paid-badge {
+    font-size: 12px;
+    font-weight: 300;
 }
 </style>

@@ -4,11 +4,11 @@ import { Bootstrap4Pagination } from "laravel-vue-pagination";
 import api from "@/api";
 import { useStore } from "vuex";
 
-// ---------------- Vuex ----------------
 const store = useStore();
 const role_id = store.getters.getRoleId;
 
 // ---------------- States ----------------
+const expandedRow = ref(null);
 const form = ref({ department: "", eid: "" });
 const department = ref([]);
 const employees = ref([]);
@@ -16,6 +16,7 @@ const tableInfo = ref([]);
 const paginationObject = ref({});
 const error = ref("");
 const isLoading = ref(true);
+const installments = ref({}); // key = loan_id, value = installment array
 
 // ---------------- Loan Setup Modal ----------------
 const heading = ref("");
@@ -27,6 +28,11 @@ const repaymentHeading = ref("");
 const repaymentModal = ref(false);
 const selectedRepayment = ref(null);
 
+// ---------------- Single Installment Modal ----------------
+const singleLoanModal = ref(false);
+const singleLoanData = ref(null);
+const singleLoanTitle = ref("");
+
 // ---------------- Async Components ----------------
 const loanSetupComponent = defineAsyncComponent(() =>
     import("./component/loanSetupForm.vue")
@@ -34,8 +40,11 @@ const loanSetupComponent = defineAsyncComponent(() =>
 const repaymentComponent = defineAsyncComponent(() =>
     import("./component/loanRepayment.vue")
 );
+const singleLoanComponent = defineAsyncComponent(() =>
+    import("./component/installmentForm.vue")
+);
 
-// ---------------- Fetch Data ----------------
+// ---------------- Fetch Table Data ----------------
 const getData = async (page = 1) => {
     try {
         const [deptRes, loanRes] = await Promise.all([
@@ -77,48 +86,65 @@ const filteredData = computed(() => {
     });
 });
 
+// ---------------- Expandable Row ----------------
+const toggleRow = async (loanId) => {
+    loanId = Number(loanId); // <--- FIXED
+
+    if (expandedRow.value === loanId) {
+        expandedRow.value = null;
+    } else {
+        expandedRow.value = loanId;
+
+        if (!installments.value[loanId]) {
+            await getInstallments(loanId);
+        }
+    }
+};
+
+const getInstallments = async (loanId) => {
+    try {
+        const res = await api.get(`/loan-installments/${loanId}`);
+        installments.value[loanId] = res.data;
+    } catch (err) {
+        console.error("Error fetching installments:", err);
+    }
+};
+
 // ---------------- Loan Setup ----------------
 const loanSetupOpen = (title) => {
     heading.value = title;
     selectedStore.value = null;
     loanSetupModel.value = true;
 };
-
-const loanAdjustment = (loanId) => {
-    const loan = tableInfo.value.find((item) => item.loanID === loanId);
-    if (!loan) return;
-
-    selectedStore.value = {
-        loanID: loan.loanID,
-        id: loan.eid,
-        empName: loan.empName,
-        deptId: loan.deptID,
-        deptName: loan.deptName,
-        principal: loan.principal,
-        tenure: loan.tenure_months,
-        monthlyInstallment: loan.monthly_installments,
-        remarks: loan.remarks,
-        first_due_on: loan.first_due_on,
-    };
-
-    heading.value = "Update";
+const loanAdjustment = (item) => {
+    selectedStore.value = item;
+    heading.value = "Update Loan";
     loanSetupModel.value = true;
 };
-
 const loanSetupClose = () => {
     loanSetupModel.value = false;
     getData();
 };
 
 // ---------------- Loan Repayment ----------------
-const repayment = (title, loanData = null) => {
+const repaymentOpen = (title, loanData = null) => {
     repaymentHeading.value = title;
     selectedRepayment.value = loanData;
     repaymentModal.value = true;
 };
-
 const repaymentClose = () => {
     repaymentModal.value = false;
+    getData();
+};
+
+// ---------------- Single Loan Installment ----------------
+const singleLoanOpen = (item, installment) => {
+    singleLoanData.value = { item, installment };
+    singleLoanTitle.value = "Update Loan Repayment";
+    singleLoanModal.value = true;
+};
+const singleLoanClose = () => {
+    singleLoanModal.value = false;
     getData();
 };
 
@@ -127,7 +153,9 @@ onMounted(() => getData());
 </script>
 
 <template>
-    <div class="container-fluid h-100 d-flex flex-column p-0 m-0">
+    <div
+        class="border rounded container-fluid h-100 d-flex flex-column p-0 m-0"
+    >
         <div
             class="d-flex justify-content-between align-items-center py-2 px-3"
         >
@@ -141,7 +169,7 @@ onMounted(() => getData());
                     <i class="fa-solid fa-plus me-2"></i>New Loan Setup
                 </button>
                 <button
-                    @click="repayment('repayments')"
+                    @click="repaymentOpen('Loan Repayment')"
                     type="button"
                     class="btn btn-success d-flex align-items-center fw-medium shadow-sm mb-2"
                 >
@@ -150,7 +178,7 @@ onMounted(() => getData());
             </div>
         </div>
 
-        <!-- Loan Setup Modal -->
+        <!-- Modals -->
         <component
             v-if="loanSetupModel"
             :is="loanSetupComponent"
@@ -162,7 +190,6 @@ onMounted(() => getData());
             @refresh-list="getData"
         />
 
-        <!-- Loan Repayment Modal -->
         <component
             v-if="repaymentModal"
             :is="repaymentComponent"
@@ -174,13 +201,24 @@ onMounted(() => getData());
             @refresh-list="getData"
         />
 
+        <component
+            v-if="singleLoanModal"
+            :is="singleLoanComponent"
+            :isOpen="singleLoanModal"
+            :updateinfo="singleLoanTitle"
+            :editStore="singleLoanData"
+            :roleId="role_id"
+            @modal-close="singleLoanClose"
+            @refresh-list="getData"
+        />
+
         <!-- Filter Section -->
         <div class="col-lg-12 mt-3">
             <div class="p-3 mb-3">
                 <div class="row g-3 mv-3">
                     <div class="col-lg-3 position-relative">
                         <select
-                            class="form-control"
+                            class="border-color form-control"
                             v-model="form.department"
                             @change="getEmployee(form.department)"
                         >
@@ -208,7 +246,7 @@ onMounted(() => getData());
 
                     <div class="col-lg-3 position-relative">
                         <select
-                            class="form-control"
+                            class="form-control border-color"
                             v-model="form.eid"
                             style="font-weight: normal; background: transparent"
                         >
@@ -250,66 +288,175 @@ onMounted(() => getData());
                         <table class="table table-hover table-sm">
                             <thead class="table-light">
                                 <tr>
-                                    <th width="3%">S/N</th>
-                                    <th width="15%">EMPLOYEE NAME</th>
+                                    <th width="3%"></th>
+                                    <th width="5%">S/N</th>
+                                    <th width="13%">EMPLOYEE NAME</th>
                                     <th width="15%">DEPARTMENT</th>
                                     <th width="12%">PRINCIPAL AMOUNT</th>
                                     <th width="8%">TENURE</th>
                                     <th width="10%">MONTHLY INSTALLMENT</th>
                                     <th width="5%">STATUS</th>
                                     <th width="10%">REMARKS</th>
-                                    <th width="3%" class="text-right">
-                                        ACTION
-                                    </th>
+                                    <th width="3%">ACTION</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr
+                                <template
                                     v-for="(item, index) in filteredData"
-                                    :key="index"
+                                    :key="item.loan_id"
                                 >
-                                    <td>{{ index + 1 }}</td>
-                                    <td>{{ item.employee_name }}</td>
-                                    <td>{{ item.deptName }}</td>
-                                    <td>{{ item.principal_amounts }}</td>
-                                    <td>{{ item.tenure_months }}</td>
-                                    <td>{{ item.monthly_installments }}</td>
-                                    <td>{{ item.status }}</td>
-                                    <td>{{ item.remarks }}</td>
-                                    <td class="text-center text-nowrap">
-                                        <button
-                                            class="btn btn-sm btn-light border me-1"
-                                            title="Edit"
-                                            @click="loanAdjustment(item.loanID)"
-                                        >
-                                            <i
-                                                class="fa-regular fa-pen-to-square text-warning"
-                                            ></i>
-                                        </button>
-                                        <button
-                                            class="btn btn-sm btn-light border"
-                                            title="Delete"
-                                        >
-                                            <i
-                                                class="fa-solid fa-trash text-danger"
-                                            ></i>
-                                        </button>
-                                    </td>
-                                </tr>
+                                    <tr>
+                                        <td>
+                                            <button
+                                                class="btn btn-sm btn-light border me-1"
+                                                @click="toggleRow(item.loan_id)"
+                                            >
+                                                <i
+                                                    class="fa-solid"
+                                                    :class="
+                                                        expandedRow ===
+                                                        Number(item.loan_id)
+                                                            ? 'fa-minus text-primary'
+                                                            : 'fa-plus text-primary'
+                                                    "
+                                                ></i>
+                                            </button>
+                                        </td>
+                                        <td>{{ index + 1 }}</td>
+                                        <td>{{ item.employee_name }}</td>
+                                        <td>{{ item.deptName }}</td>
+                                        <td>{{ item.principal_amounts }}</td>
+                                        <td>{{ item.tenure_months }}</td>
+                                        <td>{{ item.monthly_installments }}</td>
+                                        <td>{{ item.status }}</td>
+                                        <td>{{ item.remarks }}</td>
+                                        <td class="text-center text-nowrap">
+                                            <button
+                                                class="btn btn-sm btn-light border me-1"
+                                                title="Edit"
+                                                @click="loanAdjustment(item)"
+                                            >
+                                                <i
+                                                    class="fa-regular fa-pen-to-square text-warning"
+                                                ></i>
+                                            </button>
+                                            <button
+                                                class="btn btn-sm btn-light border"
+                                                title="Delete"
+                                            >
+                                                <i
+                                                    class="fa-solid fa-trash text-danger"
+                                                ></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+
+                                    <!-- Expandable Installments -->
+                                    <tr
+                                        v-if="
+                                            expandedRow === Number(item.loan_id)
+                                        "
+                                    >
+                                        <td colspan="10" class="bg-light">
+                                            <div
+                                                class="ms-5 p-1"
+                                                style="width: 50%"
+                                            >
+                                                <table
+                                                    class="table table-bordered table-sm mb-0"
+                                                >
+                                                    <thead>
+                                                        <tr>
+                                                            <th>
+                                                                Installment No
+                                                            </th>
+                                                            <th>Paid Amount</th>
+                                                            <th>Status</th>
+                                                            <th>Paid Date</th>
+                                                            <th>Edit</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        <tr
+                                                            v-for="(
+                                                                ins, i
+                                                            ) in installments[
+                                                                item.loan_id
+                                                            ] || []"
+                                                            :key="i"
+                                                        >
+                                                            <td>{{ i + 1 }}</td>
+                                                            <td>
+                                                                {{
+                                                                    ins.installment_amounts
+                                                                }}
+                                                            </td>
+                                                            <td>
+                                                                {{
+                                                                    ins.paid_status
+                                                                }}
+                                                            </td>
+                                                            <td>
+                                                                {{
+                                                                    ins.paid_on_dates
+                                                                }}
+                                                            </td>
+                                                            <td>
+                                                                <button
+                                                                    class="btn btn-sm btn-light border"
+                                                                    @click="
+                                                                        singleLoanOpen(
+                                                                            item,
+                                                                            ins
+                                                                        )
+                                                                    "
+                                                                >
+                                                                    <i
+                                                                        class="fa-solid fa-pen text-success"
+                                                                    ></i>
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+                                                        <tr
+                                                            v-if="
+                                                                !installments[
+                                                                    item.loan_id
+                                                                ]?.length
+                                                            "
+                                                        >
+                                                            <td
+                                                                colspan="5"
+                                                                class="text-center text-muted"
+                                                            >
+                                                                No installment
+                                                                data found.
+                                                            </td>
+                                                        </tr>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </template>
                             </tbody>
                         </table>
                     </div>
-                </div>
-
-                <!-- Pagination -->
-                <div class="d-flex justify-content-end mt-0">
-                    <Bootstrap4Pagination
-                        :data="paginationObject"
-                        :limit="2"
-                        @pagination-change-page="getData"
-                    />
+                    <div class="d-flex justify-content-end mt-0">
+                        <Bootstrap4Pagination
+                            :data="paginationObject"
+                            :limit="2"
+                            @pagination-change-page="getData"
+                        />
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 </template>
+
+<style>
+.border-color {
+    border: 1.8px solid #059223d5;
+    border-radius: none;
+}
+</style>

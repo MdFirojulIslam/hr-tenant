@@ -148,7 +148,6 @@ const goToHrApproval = (item) => {
 const totalNotifications = computed(() => {
     const notificationCount = notification.value.length;
 
-    console.log("Total Notifications:", notificationCount);
     return notificationCount;
 });
 
@@ -156,8 +155,6 @@ const getData = async () => {
     try {
         const responseNotification = await api.get("/get-notification");
         notification.value = responseNotification.data;
-
-        console.log("Notifications:", notification.value);
     } catch (err) {
         error.value = err.message || "Error fetching data";
     }

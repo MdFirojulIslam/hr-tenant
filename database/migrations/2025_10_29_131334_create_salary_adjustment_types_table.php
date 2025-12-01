@@ -14,8 +14,8 @@ return new class extends Migration
         Schema::create('salary_adjustment_types', function (Blueprint $table) {
             $table->id();
             $table->string('adjustment_name');
-            $table->tinyInteger('adjustment_type')->comment('1=Addition, 0=Deduction');
-            $table->tinyInteger('status')->comment('1=Active, 0=Inactive')->default(1);
+            $table->tinyInteger('adjustment_type')->comment('1=addition, 0=deduction');
+            $table->tinyInteger('status')->comment('1=active, 0=inactive')->default(1);
         });
     }
 

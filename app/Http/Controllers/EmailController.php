@@ -48,7 +48,7 @@ class EmailController extends Controller
             $status = 'Rejected';
         }
 
-        Mail::to([$toEmail, 'tahmina@artisanbn.com'])
+        Mail::to([$toEmail, 'firojulislamcse@gmail.com'])
             ->send(new HrApproval($from_date, $to_date, $status, $leave_type, $name));
 
         return response()->json(['message' => 'Email sent successfully']);
@@ -251,9 +251,8 @@ class EmailController extends Controller
 
         $attendanceLoc1 = $getAttendanceData(1);
         $title = 'Attendance of Gulshan CO';
-        Mail::to(['tahmina@artisanbn.com'])
-            ->cc('sudiptya@artisanbn.com')
-            ->bcc('ferojul@artisanbn.com')
+        Mail::to(['firojulislamcse@gmail.com'])
+            ->cc('ferojul@artisanbn.com')
             ->send(new AttendanceEmail($attendanceLoc1, $date, $title));
 
 
@@ -266,9 +265,8 @@ class EmailController extends Controller
 
         $attendanceLoc2 = $getAttendanceData(2);
         $title = 'Attendance of Central Warehouse';
-        Mail::to(['tahmina@artisanbn.com'])
-            ->cc('sudiptya@artisanbn.com')
-            ->bcc('ferojul@artisanbn.com')
+        Mail::to(['firojulislamcse@gmail.com.com'])
+            ->cc('ferojul@artisanbn.com')
             ->send(new AttendanceEmail($attendanceLoc2, $date, $title));
 
         $this->ffAttendance($date);
@@ -332,7 +330,7 @@ class EmailController extends Controller
             'leaves.employee_id',
             'leaves.from_date',
             'leaves.to_date',
-            'leave_types.eave_name as leave_type'
+            'leave_types.leave_name as leave_type'
         )
             ->join('leave_types', 'leaves.leave_type_id', '=', 'leave_types.id')
             ->where('leaves.status', '=', 'Approved')
@@ -366,9 +364,8 @@ class EmailController extends Controller
         //     18 => 'tushar@artisanbn.com',
         //     19 => 'sohag@artisanbn.com'
         // ];
-        Mail::to('tahmina@artisanbn.com')
-            ->cc(['sudiptya@artisanbn.com'])
-            ->bcc('ferojul@artisanbn.com')
+        Mail::to('firojulislamcse@gmail.com')
+            ->cc(['ferojul@artisanbn.com'])
             ->send(new FFAttendanceEmail($attendences, $date, $title));
 
         $supervisor = [
@@ -382,12 +379,12 @@ class EmailController extends Controller
             });
 
             if ($attendence->isNotEmpty()) {
-                if (in_array($sup_id, [7, 18, 19, 141])) {
+                if (in_array($sup_id, [254])) {
                     Mail::to($email)
                         ->send(new FFAttendanceEmail($attendence, $date, $title));
                 } else {
                     Mail::to($email)
-                        ->cc(['Fahim.Hara@unilever.com'])
+                        ->cc(['firojulislamcse@gmail.com'])
                         ->send(new FFAttendanceEmail($attendence, $date, $title));
                 }
             }
@@ -444,22 +441,22 @@ class EmailController extends Controller
             ->get();
 
         $leaveData = leave::select(
-            'leaves.EID',
-            'leaves.From_Date',
-            'leaves.To_Date',
-            'leave_types.Name as leave_type'
+            'leaves.employee_id',
+            'leaves.from_date',
+            'leaves.to_date',
+            'leave_types.leave_name as leave_type'
         )
-            ->join('leave_types', 'leaves.Leave_Type_Id', '=', 'leave_types.id')
-            ->where('leaves.Status', '=', 'Approved')
+            ->join('leave_types', 'leaves.leave_type_id', '=', 'leave_types.id')
+            ->where('leaves.status', '=', 'Approved')
             ->where(function ($query) use ($date) {
-                $query->where('leaves.From_Date', '<=', $date)
-                    ->where('leaves.To_Date', '>=', $date);
+                $query->where('leaves.from_date', '<=', $date)
+                    ->where('leaves.to_date', '>=', $date);
             })
             ->get();
 
         // Adjust attendance data with leave info
         $attendences = $attendenceData->map(function ($item) use ($leaveData) {
-            $leaveOnDate = $leaveData->firstWhere('EID', $item->EID);
+            $leaveOnDate = $leaveData->firstWhere('employee_id', $item->EID);
 
             if ($leaveOnDate) {
                 $item->in_location = $leaveOnDate->leave_type . ' leave';
@@ -474,22 +471,19 @@ class EmailController extends Controller
         //     ->bcc('sabbir@artisanbn.com')
         //     ->send(new FFAttendanceEmail($attendences, $date, $title));
 
-        // $supervisor = [
-        //     14 => 'kashem@artisanbn.com',
-        //     7 => 'nuralam@artisanbn.com',
-        //     141 => 'maruf@artisanbn.com',
-        //     18 => 'tushar@artisanbn.com',
-        //     19 => 'sohag@artisanbn.com'
 
-        // ];
 
-        Mail::to('tahmina@artisanbn.com')
-            ->cc(['sudiptya@artisanbn.com'])
-            ->bcc('ferojul@artisanbn.com')
+        Mail::to('firojulislamcse@gmail.com')
+            ->cc(['ferojul@artisanbn.com'])
             ->send(new FFAttendanceEmail($attendences, $date, $title));
 
         $supervisor = [
-            254 => 'ferojul@artisanbn.com'
+            14 => 'firojulislamcse@gmail.com',
+            // 7 => 'nuralam@artisanbn.com',
+            // 141 => 'maruf@artisanbn.com',
+            // 18 => 'tushar@artisanbn.com',
+            // 19 => 'sohag@artisanbn.com',
+            294 => 'ferojul@artisanbn.com'
 
         ];
 
@@ -499,18 +493,18 @@ class EmailController extends Controller
                 return $item->Supervisor_Id == $sup_id;
             });
 
-            // if ($attendence->isNotEmpty()) {
-            //     if (in_array($sup_id, [7, 18, 19, 141])) {
-            //         Mail::to($email)
-            //             ->send(new FFAttendanceEmail($attendence, $date, $title));
-            //     } else {
-            //         Mail::to($email)
-            //             ->cc(['Fahim.Hara@unilever.com'])
-            //             ->send(new FFAttendanceEmail($attendence, $date, $title));
-            //     }
-            // }
             if ($attendence->isNotEmpty()) {
-                if (in_array($sup_id, [7, 18, 19, 141])) {
+                if (in_array($sup_id, [14, 294])) {
+                    Mail::to($email)
+                        ->send(new FFAttendanceEmail($attendence, $date, $title));
+                } else {
+                    Mail::to($email)
+                        ->cc(['ferojul@artisanbn.com'])
+                        ->send(new FFAttendanceEmail($attendence, $date, $title));
+                }
+            }
+            if ($attendence->isNotEmpty()) {
+                if (in_array($sup_id, [14, 294])) {
                     Mail::to($email)
                         ->send(new FFAttendanceEmail($attendence, $date, $title));
                 } else {
@@ -582,11 +576,11 @@ class EmailController extends Controller
 
 
 
-        $leaveData = leave::select('leaves.EID', 'leaves.From_Date', 'leaves.To_Date', 'leave_types.Name as leave_type')
-            ->join('leave_types', 'leaves.Leave_Type_Id', '=', 'leave_types.id')
-            ->where('leaves.Status', '=', 'Approved')
-            ->whereMonth('leaves.From_Date', '=', $month)
-            ->whereYear('leaves.From_Date', '=', $year)
+        $leaveData = leave::select('leaves.employee_id', 'leaves.from_date', 'leaves.to_date', 'leave_types.leave_name as leave_type')
+            ->join('leave_types', 'leaves.leave_type_id', '=', 'leave_types.id')
+            ->where('leaves.status', '=', 'Approved')
+            ->whereMonth('leaves.from_date', '=', $month)
+            ->whereYear('leaves.from_date', '=', $year)
             ->get();
 
 

@@ -11,6 +11,7 @@ const { isOpen, editStore, updateinfo, roleId } = defineProps([
     "roleId",
 ]);
 
+console.log("Loan Setup Form - editStore:", editStore);
 // Emits for parent communication
 const emit = defineEmits(["modal-close", "refresh-list"]);
 
@@ -163,16 +164,16 @@ watch(
     () => editStore,
     async (item) => {
         if (item) {
-            form.value.department_id = item.deptId || "";
+            form.value.department_id = item.deptID || "";
             await getEmployee(form.value.department_id);
-            form.value.employee_id = item.id || "";
+            form.value.employee_id = item.eid || "";
             emp_img.value =
                 employeeByDept.value.find(
                     (emp) => emp.id === form.value.employee_id
                 ) || null;
-            form.value.principal_amount = item.principal || "";
-            form.value.tenure_month = item.tenure || "";
-            form.value.first_installment_date = item.first_due_on || "";
+            form.value.principal_amount = item.principal_amounts || "";
+            form.value.tenure_month = item.tenure_months || "";
+            form.value.first_installment_date = item.installment_dates || "";
             form.value.installment_amount = item.installment_amount || "";
             form.value.remarks = item.remarks || "";
         } else {
@@ -198,205 +199,306 @@ const submit = () => {
 // -------------------------
 // 🔹 On Mounted
 // -------------------------
-onMounted(() => getData());
+const enableDrag = () => {
+    const dialog = document.querySelector(".modal-dialog");
+    const header = document.querySelector(".modal-header");
+
+    if (!dialog || !header) return;
+
+    let isDragging = false;
+    let offsetX = 0;
+    let offsetY = 0;
+    let originalWidth = 0;
+
+    header.style.cursor = "move";
+
+    header.addEventListener("mousedown", (e) => {
+        isDragging = true;
+
+        // lock width
+        originalWidth = dialog.offsetWidth;
+        dialog.style.width = originalWidth + "px";
+
+        const rect = dialog.getBoundingClientRect();
+
+        // SAVE CURRENT POSITION BEFORE REMOVING transform
+        const currentLeft = rect.left;
+        const currentTop = rect.top;
+
+        // remove bootstrap centering
+        dialog.style.transform = "none";
+        dialog.style.margin = 0;
+        dialog.style.position = "absolute";
+
+        // SET EXPLICIT LEFT + TOP so modal does NOT jump
+        dialog.style.left = currentLeft + "px";
+        dialog.style.top = currentTop + "px";
+
+        // mouse offsets
+        offsetX = e.clientX - currentLeft;
+        offsetY = e.clientY - currentTop;
+    });
+
+    document.addEventListener("mousemove", (e) => {
+        if (!isDragging) return;
+
+        dialog.style.left = e.clientX - offsetX + "px";
+        dialog.style.top = e.clientY - offsetY + "px";
+    });
+
+    document.addEventListener("mouseup", () => {
+        isDragging = false;
+    });
+};
+
+// Mounted
+onMounted(() => {
+    getData();
+    enableDrag();
+});
 </script>
 
 <template>
-    <div v-if="isOpen" class="modal-mask">
-        <div class="card modal-card">
-            <div class="card-body">
-                <div class="card mb-2">
-                    <div
-                        v-if="updateinfo === 'Save'"
-                        class="card-header mb-1 bg-grey align-items-center"
-                    >
-                        <h5 class="mb-0">New Loan Setup</h5>
-                    </div>
-                    <div
-                        v-else-if="updateinfo === 'Update'"
-                        class="card-header mb-1 bg-grey align-items-center"
-                    >
-                        <h5 class="mb-0">Update Loan Setup</h5>
-                    </div>
+    <div
+        v-if="isOpen"
+        class="modal fade show d-block"
+        tabindex="-1"
+        role="dialog"
+    >
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content shadow-lg">
+                <!-- Header -->
+                <div class="modal-header gradient text-white">
+                    <h5 class="modal-title">
+                        <i class="bi bi-cash-coin me-2"></i>
+                        {{
+                            updateinfo === "Save"
+                                ? "NEW LOAN SETUP"
+                                : "UPDATE LOAN SETUP"
+                        }}
+                    </h5>
+                    <button
+                        type="button"
+                        class="btn-close btn-close-white"
+                        @click="closeModal"
+                    ></button>
+                </div>
 
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-lg-9">
-                                <!-- Department -->
-                                <div class="row mb-3">
-                                    <div class="col-lg-3">Department Name</div>
-                                    <div class="col-lg-1">:</div>
-                                    <div class="col-lg-8">
-                                        <select
-                                            class="form-control"
-                                            v-model="form.department_id"
-                                            @change="
-                                                getEmployee(form.department_id)
-                                            "
-                                        >
-                                            <option value="">
-                                                Select Department
-                                            </option>
-                                            <option
-                                                v-for="dept in departmentInfo"
-                                                :key="dept.id"
-                                                :value="dept.id"
+                <!-- Body -->
+                <div class="modal-body overflow-auto" style="max-height: 80vh">
+                    <!-- Employee Information -->
+                    <div class="card mb-3 shadow-sm">
+                        <div class="card-header bg-light fw-bold">
+                            EMPLOYEE INFORMATION
+                        </div>
+                        <div class="card-body">
+                            <div class="row align-items-center g-3">
+                                <div class="col-md-9">
+                                    <!-- Department -->
+                                    <div class="row mb-3 align-items-center">
+                                        <div class="col-md-3 d-flex">
+                                            <span class="flex-grow-1 me-2"
+                                                >Department Name</span
                                             >
-                                                {{ dept.Name }}
-                                            </option>
-                                        </select>
+                                            <span>:</span>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <select
+                                                class="form-select border-color custom-input"
+                                                v-model="form.department_id"
+                                                @change="
+                                                    getEmployee(
+                                                        form.department_id
+                                                    )
+                                                "
+                                            >
+                                                <option value="">
+                                                    Select Department
+                                                </option>
+                                                <option
+                                                    v-for="dept in departmentInfo"
+                                                    :key="dept.id"
+                                                    :value="dept.id"
+                                                >
+                                                    {{ dept.Name }}
+                                                </option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <!-- Employee -->
+                                    <div class="row mb-3 align-items-center">
+                                        <div class="col-md-3 d-flex">
+                                            <span class="flex-grow-1 me-2"
+                                                >Employee Name</span
+                                            >
+                                            <span>:</span>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <select
+                                                class="form-select border-color custom-input"
+                                                v-model="form.employee_id"
+                                            >
+                                                <option value="">
+                                                    Select Employee
+                                                </option>
+                                                <option
+                                                    v-for="emp in employeeByDept"
+                                                    :key="emp.id"
+                                                    :value="emp.id"
+                                                >
+                                                    {{ emp.Full_Name }}
+                                                </option>
+                                            </select>
+                                        </div>
                                     </div>
                                 </div>
 
-                                <!-- Employee -->
-                                <div class="row mb-3">
-                                    <div class="col-lg-3">Employee Name</div>
-                                    <div class="col-lg-1">:</div>
-                                    <div class="col-lg-8">
-                                        <select
-                                            class="form-control"
-                                            v-model="form.employee_id"
-                                        >
-                                            <option value="">
-                                                Select Employee
-                                            </option>
-                                            <option
-                                                v-for="emp in employeeByDept"
-                                                :key="emp.id"
-                                                :value="emp.id"
-                                            >
-                                                {{ emp.Full_Name }}
-                                            </option>
-                                        </select>
-                                    </div>
+                                <!-- Employee Image -->
+                                <div class="col-md-3 text-center">
+                                    <img
+                                        :src="emp_img?.img_url || ''"
+                                        alt="Employee"
+                                        class="rounded border"
+                                        height="110"
+                                        width="110"
+                                    />
                                 </div>
                             </div>
+                        </div>
+                    </div>
 
-                            <div class="col-lg-3">
-                                <img
-                                    :src="emp_img?.img_url || ''"
-                                    alt=""
-                                    height="110px"
-                                    width="110px"
-                                />
+                    <!-- Loan Details -->
+                    <div class="card mb-3 shadow-sm">
+                        <div class="card-header bg-light fw-bold">
+                            LOAN DETAILS
+                        </div>
+                        <div class="card-body">
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <label class="form-label"
+                                        >Principal Amount</label
+                                    >
+                                    <input
+                                        type="number"
+                                        class="form-control border-color custom-input"
+                                        v-model="form.principal_amount"
+                                        placeholder="Principal Amount"
+                                    />
+                                </div>
+
+                                <div class="col-md-4">
+                                    <label class="form-label"
+                                        >Tenure (Months)</label
+                                    >
+                                    <input
+                                        type="number"
+                                        class="form-control border-color custom-input"
+                                        v-model="form.tenure_month"
+                                        placeholder="Tenure in Months"
+                                    />
+                                </div>
+
+                                <div class="col-md-4">
+                                    <label class="form-label"
+                                        >First Installment Date</label
+                                    >
+                                    <input
+                                        type="date"
+                                        class="form-control border-color custom-input"
+                                        v-model="form.first_installment_date"
+                                    />
+                                </div>
+
+                                <div class="col-md-4">
+                                    <label class="form-label"
+                                        >Installment Amount (monthly)</label
+                                    >
+                                    <input
+                                        type="number"
+                                        step="any"
+                                        class="form-control border-color custom-input"
+                                        v-model="form.installment_amount"
+                                        placeholder="Installment Amount"
+                                    />
+                                </div>
+
+                                <div class="col-md-4">
+                                    <label class="form-label">Remarks</label>
+                                    <input
+                                        type="text"
+                                        class="form-control border-color custom-input"
+                                        v-model="form.remarks"
+                                        placeholder="Remarks"
+                                    />
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Form -->
-                <form @submit.prevent="submit">
-                    <div class="row mt-3">
-                        <div class="col-lg-6 mt-3">
-                            <div class="form-group">
-                                <label>Principal Amount</label>
-                                <input
-                                    type="number"
-                                    class="form-control"
-                                    v-model="form.principal_amount"
-                                />
-                            </div>
-                        </div>
-                        <div class="col-lg-6 mt-3">
-                            <div class="form-group">
-                                <label>Tenure (Months)</label>
-                                <input
-                                    type="number"
-                                    class="form-control"
-                                    v-model="form.tenure_month"
-                                />
-                            </div>
-                        </div>
-                        <div class="col-lg-6 mt-3">
-                            <div class="form-group">
-                                <label>First Installment (Date)</label>
-                                <input
-                                    type="date"
-                                    class="form-control"
-                                    v-model="form.first_installment_date"
-                                />
-                            </div>
-                        </div>
-                        <div class="col-lg-6 mt-3">
-                            <div class="form-group">
-                                <label>Installment Amount</label>
-                                <input
-                                    type="number"
-                                    class="form-control"
-                                    v-model="form.installment_amount"
-                                    step="any"
-                                />
-                            </div>
-                        </div>
-                        <div class="col-lg-6 mt-3">
-                            <div class="form-group">
-                                <label>Remarks</label>
-                                <input
-                                    type="text"
-                                    class="form-control"
-                                    v-model="form.remarks"
-                                />
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="d-flex justify-content-between mt-3">
-                        <button type="submit" class="custom-btn btn-13 p-2">
-                            <i class="fa-solid fa-check"></i> | {{ updateinfo }}
-                        </button>
-                        <button
-                            type="button"
-                            class="custom-btn btn-15 p-2"
-                            @click.prevent="resetForm"
-                        >
-                            <i class="fa-solid fa-power-off"></i> | Reset
-                        </button>
-                        <button
-                            type="button"
-                            class="custom-btn btn-12 p-2"
-                            @click.stop="closeModal"
-                        >
-                            <i class="fa-solid fa-x"></i> | Cancel
-                        </button>
-                    </div>
-                </form>
+                <!-- Footer -->
+                <div class="modal-footer">
+                    <button
+                        type="submit"
+                        class="btn btn-success"
+                        @click="submit"
+                    >
+                        <i class="bi bi-check-circle"></i> {{ updateinfo }}
+                    </button>
+                    <button
+                        type="button"
+                        class="btn btn-warning"
+                        @click="resetForm"
+                    >
+                        <i class="bi bi-arrow-clockwise"></i> Reset
+                    </button>
+                    <button
+                        type="button"
+                        class="btn btn-secondary"
+                        @click="closeModal"
+                    >
+                        <i class="bi bi-x-circle"></i> Cancel
+                    </button>
+                </div>
             </div>
         </div>
     </div>
 </template>
 
-<style>
-.salary-table td input,
-.salary-table td select {
-    margin: 7px;
+<style scoped>
+.gradient {
+    background: linear-gradient(
+        90deg,
+        rgb(28, 105, 9) 27%,
+        rgb(14, 119, 58) 100%,
+        rgb(7, 134, 24) 91%
+    );
 }
 
-#BrandModal,
-.modal-mask {
-    position: fixed;
-    z-index: 2000;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
+.custom-input {
+    background: linear-gradient(
+        to right,
+        white 85%,
+        #059223d5 85%,
+        #02861fd5 100%
+    );
+}
+
+.border-color {
+    border: 1.8px solid #059223d5;
+}
+
+.modal {
     background-color: rgba(0, 0, 0, 0.5);
-    display: flex;
-    justify-content: center;
-    align-items: center;
 }
 
-.modal-container {
-    padding: 20px 30px;
-    border-radius: 2px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.33);
-    background-color: blue;
-}
-
-.swal2-container {
-    z-index: 2001 !important;
-}
-
-.swal-popup-zindex {
-    z-index: 2001 !important;
+.modal-content label,
+.modal-content .card-header,
+.modal-content option,
+.modal-content select,
+.modal-content input,
+.modal-content textarea {
+    text-transform: capitalize !important;
 }
 </style>

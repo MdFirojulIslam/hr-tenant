@@ -409,6 +409,41 @@ const routes = [
             requireAuth: true,
         },
     },
+    {
+        path: "/workstation/itinerary",
+        name: "Itinerary",
+        component: () => import("./pages/workstation/itinerary.vue"),
+        meta: {
+            requireAuth: true,
+        },
+    },
+    {
+        path: "/workstation/itinerary/edit/:id",
+        name: "EditItinerary",
+        component: () =>
+            import("./pages/workstation/component/itineraryForm.vue"),
+        props: (route) => ({
+            itineraryId: Number(route.params.id),
+            viewMode: false,
+        }),
+    },
+    {
+        path: "/workstation/itinerary/view/:id",
+        name: "ViewItinerary",
+        component: () =>
+            import("./pages/workstation/component/itineraryForm.vue"),
+        props: (route) => ({
+            itineraryId: Number(route.params.id),
+            viewMode: true,
+        }),
+    },
+    {
+        path: "/workstation/itinerary/new",
+        name: "NewItinerary",
+        component: () =>
+            import("./pages/workstation/component/itineraryForm.vue"),
+        props: { viewMode: false },
+    },
 ];
 
 const router = createRouter({

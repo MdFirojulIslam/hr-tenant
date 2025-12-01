@@ -52,6 +52,7 @@ class ReportController extends Controller
             ->join('departments', 'officials.Department_Id', '=', 'departments.id')
             ->join('designations', 'officials.Designation_Id', '=', 'designations.id');
 
+
         // Apply filters
         if (!empty($department)) {
             $leavesQuery->where('departments.id', '=', $department);

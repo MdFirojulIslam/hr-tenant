@@ -20,7 +20,8 @@ Route::post('/salary-adjustment', [SalaryAdjustmentController::class, 'create'])
 Route::put('/salary-adjustment/{id}', [SalaryAdjustmentController::class, 'update']);
 
 //added by firoj
-Route::get('/salary-adjustment-type', [SalaryAdjustmentController::class, 'getAdjustmentTypes']);
+Route::get('/salary-adjustment-type', [SalaryAdjustmentController::class, 'getAdjustmentToInsert']);
+Route::get('/salary-adjustment-types', [SalaryAdjustmentController::class, 'getAdjustmentToEdit']);
 
 //ended by firoj
 
@@ -32,7 +33,10 @@ Route::post('/update-repayment-dates', [LoanController::class, 'updateRepaymentD
 
 //added by firoj
 Route::get('/get-loan-amount/{id}', [LoanController::class, 'getLoanAmount']);
-Route::post('/loan-repayment', [LoanController::class, 'create']);
+Route::post('/loan-repayment', [LoanController::class, 'createRepayment']);
+Route::get('/loan-installments/{id}', [LoanController::class, 'repaymentHistory']);
+Route::get('/repayments-info', [LoanController::class, 'repaymentInfo']);
+
 
 //ended by firoj
 

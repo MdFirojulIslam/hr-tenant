@@ -46,6 +46,7 @@ class NavigationSeeder extends Seeder
             ['id' => '33', 'name' => 'Organizational Hierarchy', 'url' => '/setup/employee/organizational-hierarchy', 'icon' => 'NULL', 'page' => 'OrganizationalHierarchy', 'path' => './pages/setup/employee/hierarchy.vue', 'parent_id' => '6', 'active' => '1'],
             ['id' => '34', 'name' => 'Workstation', 'url' => '/workstation', 'icon' => 'fa-solid fa-briefcase', 'page' => 'NULL', 'path' => 'NULL', 'parent_id' => '0', 'active' => '1'],
             ['id' => '35', 'name' => 'Notes', 'url' => '/workstation/notes', 'icon' => 'NULL', 'page' => 'Notes', 'path' => './pages/workstation/notes.vue', 'parent_id' => '34', 'active' => '1'],
+            ['id' => '47', 'name' => 'Itinerary', 'url' => '/workstation/itinerary', 'icon' => 'NULL', 'page' => 'Itinerary', 'path' => './pages/workstation/itinerary.vue', 'parent_id' => '34', 'active' => '1'],
             ['id' => '36', 'name' => 'Vehicle', 'url' => '/vehicle', 'icon' => 'fa-solid fa-car', 'page' => 'NULL', 'path' => 'NULL', 'parent_id' => '0', 'active' => '1'],
             ['id' => '37', 'name' => 'Vehicle Setup', 'url' => '/setup/vehicle/vehicle-setup', 'icon' => 'NULL', 'page' => 'VehicleSetup', 'path' => './pages/setup/vehicle/vehicleSetup.vue', 'parent_id' => '6', 'active' => '1'],
             ['id' => '38', 'name' => 'Vehicle Requisition', 'url' => '/vehicle/vehicle-requisition', 'icon' => 'NULL', 'page' => 'VehicleRequisition', 'path' => './pages/vehicle/vehicleRequisition.vue', 'parent_id' => '36', 'active' => '1'],

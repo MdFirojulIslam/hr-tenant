@@ -191,12 +191,15 @@ class EmployeeInformationController extends Controller
         // }
 
         if ($user->EID == 13) {
+            $currentYear = now()->year;
             $pending_leave = official::select('leaves.id as leave_id', 'employees.Full_Name', 'departments.Name as department_name', 'leaves.status', 'leaves.purpose', 'leave_types.leave_name as Leave_Type')
                 ->join('leaves', 'leaves.employee_id', '=', 'officials.EID')
                 ->join('employees', 'employees.id', '=', 'officials.EID')
                 ->join('leave_types', 'leaves.leave_type_id', '=', 'leave_types.id')
                 ->join('departments', 'departments.id', '=', 'officials.Department_Id')
                 ->where('leaves.status', '=', 'Approved (SV)')
+                ->where('officials.Status', '=', 'N')
+                ->whereYear('leaves.from_date', '=', $currentYear)
                 ->get();
         } else {
             $pending_leave = official::select('leaves.id as leave_id', 'employees.Full_Name', 'departments.Name as department_name', 'leaves.status', 'leaves.purpose', 'leave_types.leave_name as Leave_Type')
