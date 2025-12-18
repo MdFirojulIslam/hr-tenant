@@ -11,7 +11,9 @@ class itineraries_update extends Model
     protected $table = 'itineraries_update';
     protected $fillable = [
         'itineraries_id',
+        'employee_id',
         'visit_date',
+        'status',
         'town_id',
         'visit_with',
         'location',
@@ -19,6 +21,7 @@ class itineraries_update extends Model
         'meeting_with',
         'visit_start_time',
         'visit_end_time',
+        'remarks',
         'created_by'
     ];
 

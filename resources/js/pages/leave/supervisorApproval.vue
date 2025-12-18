@@ -128,6 +128,37 @@ const filteredData = computed(() =>
     })
 );
 
+// const totalLeaveDays = computed(() => {
+//     const totals = {};
+
+//     if (Array.isArray(leaveType.value) && leaveType.value.length > 0) {
+//         leaveType.value.forEach((type) => {
+//             totals[type.Name] = {
+//                 totalDays: 0,
+//                 maxDays: type.Max_Days || 0,
+//             };
+//         });
+
+//         employee.value.forEach((item) => {
+//             const typeName = item.leave_type;
+//             if (!totals[typeName]) {
+//                 totals[typeName] = {
+//                     totalDays: 0,
+//                     maxDays: item.Max_Days,
+//                 };
+//             }
+
+//             totals[typeName].maxDays = item.Max_Days;
+
+//             if (item.Status === "Approved") {
+//                 totals[typeName].totalDays += item.daysBetween;
+//             }
+//         });
+//     }
+
+//     return totals;
+// });
+
 // ----------------- Auto-select from query -----------------
 const setQuerySelection = async () => {
     if (!department.value.length || !leaveType.value.length) return;
@@ -250,6 +281,7 @@ onMounted(async () => {
                                     </div>
                                 </section>
                             </div>
+
                             <!-- RIGHT: Leave Summary -->
                             <div class="col-lg-4 col-md-12 px-2 mb-4">
                                 <table class="leave-status">
@@ -411,7 +443,6 @@ onMounted(async () => {
                                 </button>
                             </div>
                         </div>
-
                         <!-- Table -->
                         <div class="table-responsive leave-table">
                             <table class="table table-bordered text-center">
@@ -435,31 +466,15 @@ onMounted(async () => {
                                         :key="l.id"
                                         @click="getLeaveInfo(l.EID)"
                                     >
-                                        <td class="text-nowrap">
-                                            {{ index + 1 }}
-                                        </td>
-                                        <td class="text-nowrap">
-                                            {{ l.Full_Name }}
-                                        </td>
-                                        <td class="text-nowrap">
-                                            {{ formatDate(l.from_date) }}
-                                        </td>
-                                        <td class="text-nowrap">
-                                            {{ formatDate(l.to_date) }}
-                                        </td>
-                                        <td class="text-nowrap">
-                                            {{ l.daysBetween }}
-                                        </td>
-                                        <td class="text-nowrap">
-                                            {{ l.leave_name }}
-                                        </td>
-                                        <td class="text-nowrap">
-                                            {{ l.status }}
-                                        </td>
-                                        <td style="width: 20%">
-                                            {{ l.purpose }}
-                                        </td>
-                                        <td class="text-nowrap">
+                                        <td>{{ index + 1 }}</td>
+                                        <td>{{ l.Full_Name }}</td>
+                                        <td>{{ formatDate(l.from_date) }}</td>
+                                        <td>{{ formatDate(l.to_date) }}</td>
+                                        <td>{{ l.daysBetween }}</td>
+                                        <td>{{ l.leave_name }}</td>
+                                        <td>{{ l.status }}</td>
+                                        <td>{{ l.purpose }}</td>
+                                        <td>
                                             <button
                                                 v-if="l.attachment_url"
                                                 @click.stop="
@@ -476,10 +491,14 @@ onMounted(async () => {
                                             <span v-else>-</span>
                                         </td>
                                         <td
-                                            class="text-nowrap"
                                             v-if="
-                                                l.status == 'Pending' &&
-                                                l.Supervisor_Id === user.id
+                                                (l.notification === 0 ||
+                                                    l.notification === null ||
+                                                    l.notification ===
+                                                        undefined) &&
+                                                (l.status === 'Pending' ||
+                                                    l.status === 'Rejected') &&
+                                                l.Supervisor_Id == user.id
                                             "
                                         >
                                             <button
@@ -497,7 +516,7 @@ onMounted(async () => {
                                             </button>
                                             <button
                                                 class="custom-btn btn-12 mx-1"
-                                                @click.stop="
+                                                @click="
                                                     editLeaveStatus(
                                                         l.leave_id,
                                                         'Rejected'

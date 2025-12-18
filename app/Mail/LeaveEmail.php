@@ -41,7 +41,7 @@ class LeaveEmail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Leave Request - '.$this->name,
+            subject: 'Leave Request - ' . $this->name,
         );
     }
 

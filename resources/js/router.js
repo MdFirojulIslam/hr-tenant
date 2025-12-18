@@ -444,6 +444,30 @@ const routes = [
             import("./pages/workstation/component/itineraryForm.vue"),
         props: { viewMode: false },
     },
+    {
+        path: "/workstation/daily-itinerary",
+        name: "DailyItinerary",
+        component: () => import("./pages/workstation/dailyItinerary.vue"),
+        meta: {
+            requireAuth: true,
+        },
+    },
+    {
+        path: "/workstation/daily-itinerary-list",
+        name: "DailyItineraryList",
+        component: () => import("./pages/workstation/dailyItineraryList.vue"),
+        meta: {
+            requireAuth: true,
+        },
+    },
+    {
+        path: "/workstation/admin-itinerary-list",
+        name: "AdminItineraryList",
+        component: () => import("./pages/workstation/adminItineraryList.vue"),
+        meta: {
+            requireAuth: true,
+        },
+    },
 ];
 
 const router = createRouter({

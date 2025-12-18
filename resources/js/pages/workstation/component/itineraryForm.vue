@@ -1,22 +1,17 @@
 <script setup>
-import { ref, onMounted, computed } from "vue";
+import { ref, onMounted, computed, nextTick } from "vue";
 import api from "@/api";
 import Swal from "sweetalert2";
-import { useRoute } from "vue-router";
+import { useStore } from "vuex";
+import { useRoute, useRouter } from "vue-router";
+import { status } from "nprogress";
 
-import { useRouter } from "vue-router";
-
+const store = useStore();
+const user = store.getters.getUser;
 const router = useRouter();
+const route = useRoute();
 
-// ----------------------
-// EMIT CLOSE EVENT
-// ----------------------
-// const emit = defineEmits(["close"]);
-
-// const closeForm = () => {
-//     emit("close");
-// };
-
+const log_status = ref(null);
 // ----------------------
 // RECEIVE PROPS
 // ----------------------
@@ -25,11 +20,10 @@ const props = defineProps({
     viewMode: { type: Boolean, default: false },
 });
 
-const route = useRoute();
 const itineraryId = ref(props.itineraryId || route.params.id || null);
 const viewMode = ref(props.viewMode);
 const mode = viewMode.value ? "view" : itineraryId.value ? "edit" : "new";
-
+const isNew = computed(() => mode === "new");
 const heading = ref(
     viewMode.value
         ? "View Itinerary"
@@ -41,6 +35,39 @@ const heading = ref(
 const saveButtonText = computed(() =>
     mode === "edit" ? "Save Changes" : "Save"
 );
+
+const years = ref([
+    "2022",
+    "2023",
+    "2024",
+    "2025",
+    "2026",
+    "2027",
+    "2028",
+    "2029",
+    "2030",
+    "2031",
+    "2032",
+    "2033",
+    "2034",
+    "2035",
+]);
+const months = ref([
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
+]);
+const selectedYear = ref(new Date().getFullYear());
+const selectedMonth = ref(new Date().getMonth() + 1);
 
 // ----------------------
 // FORM DATA
@@ -56,12 +83,16 @@ const forms = ref([
         meetingWith: "",
         startTime: "",
         endTime: "",
+        remarks: "",
         marked: false,
     },
 ]);
 
 const town_options = ref([]);
 const error = ref(null);
+const supervisorApproval = ref([]);
+const supervisorID = ref(null);
+const itinerary_logsID = ref(null);
 
 // ----------------------
 // API FUNCTIONS
@@ -80,27 +111,38 @@ const loadItinerary = async () => {
 
     try {
         const res = await api.get(`/itinerary/${itineraryId.value}`);
+        log_status.value = res.data[0]?.itinerary_status ?? null;
+        supervisorID.value = res.data[0]?.supervisor_id;
+        itinerary_logsID.value = res.data[0]?.itinerary_logs_id;
         forms.value = res.data.map((d) => ({
+            employee_id: d.created_by,
             itinerary_id: d.itinerary_id,
             itinerary_status: d.itinerary_status,
             itinerary_logs_id: d.itinerary_logs_id,
-            date: d.visit_date,
-            day: new Date(d.visit_date).toLocaleDateString("en-US", {
+            date: d.updated_visit_date ?? d.visit_date,
+            day: new Date(
+                d.updated_visit_date ?? d.visit_date
+            ).toLocaleDateString("en-US", {
                 weekday: "long",
             }),
-            town: d.town_id,
-            location: d.location,
-            visitWith: d.visit_with,
-            objective: d.visit_objective,
-            meetingWith: d.meeting_with,
-            startTime: d.visit_start_time,
-            endTime: d.visit_end_time,
+            town: d.updated_town_id ?? d.town_id,
+            location: d.updated_location ?? d.location,
+            visitWith: d.updated_visit_with ?? d.visit_with,
+            objective: d.updated_visit_objective ?? d.visit_objective,
+            meetingWith: d.updated_meeting_with ?? d.meeting_with,
+            startTime: d.updated_visit_start_time ?? d.visit_start_time,
+            endTime: d.updated_visit_end_time ?? d.visit_end_time,
+            remarks: d.supervisor_remarks,
+            log_status: d.itinerary_status,
             marked: false,
         }));
+        nextTick(() => resizeAllTextareas());
     } catch (err) {
         error.value = "Failed to load itinerary data.";
     }
 };
+
+console.log("itinerary status", log_status.value);
 
 // ----------------------
 // HELPER FUNCTIONS
@@ -111,9 +153,27 @@ const updateDay = (form) => {
         : "";
 };
 
+// Auto-resize function
+const autoResize = (el) => {
+    el.style.height = "auto";
+    el.style.height = el.scrollHeight + "px";
+};
+
+// Resize all textarea (for preserving height on new row add)
+const resizeAllTextareas = () => {
+    setTimeout(() => {
+        document.querySelectorAll("textarea").forEach((el) => {
+            autoResize(el);
+        });
+    }, 50);
+};
+
+// ----------------------
+// ADD / REMOVE ROW
+// ----------------------
 const addRow = (index) => {
     const parentLogId = forms.value[index].itinerary_logs_id || null;
-    forms.value.splice(index + 1, 0, {
+    const newRow = {
         date: "",
         day: "",
         town: "",
@@ -123,13 +183,17 @@ const addRow = (index) => {
         meetingWith: "",
         startTime: "",
         endTime: "",
+        remarks: "",
         marked: false,
         itinerary_logs_id: parentLogId,
-    });
+    };
+    forms.value.unshift(newRow);
+    nextTick(() => resizeAllTextareas());
 };
 
 const removeRow = (index) => {
     if (forms.value.length > 1) forms.value.splice(index, 1);
+    nextTick(() => resizeAllTextareas());
 };
 
 // ----------------------
@@ -141,7 +205,6 @@ const submitItinerary = async () => {
             const isNew = !row.itinerary_id;
             const isMarked = row.marked === true;
 
-            // completely empty row skip
             const isEmpty =
                 !row.date &&
                 !row.town &&
@@ -175,7 +238,11 @@ const submitItinerary = async () => {
                 showConfirmButton: false,
             });
         } else {
-            await api.post("/itinerary", { rows: filteredRows });
+            await api.post("/itinerary", {
+                year: selectedYear.value,
+                month: selectedMonth.value,
+                rows: filteredRows,
+            });
             Swal.fire({
                 icon: "success",
                 title: "Saved Successfully!",
@@ -190,9 +257,71 @@ const submitItinerary = async () => {
     }
 };
 
-// ----------------------
-// CLOSE BUTTON
-// ----------------------
+const acceptItems = async (id) => {
+    const confirm = await Swal.fire({
+        title: "Are you sure?",
+        text: "Do you want to Accept this Itinerary?",
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonText: "Yes, Accept",
+    });
+    if (!confirm.isConfirmed) return;
+
+    try {
+        await api.post(`/itinerary/accept/${id}`);
+        Swal.fire({
+            icon: "success",
+            title: "Accepted Successfully!",
+            timer: 1500,
+            showConfirmButton: false,
+        });
+        router.push("/workstation/itinerary");
+    } catch (err) {
+        Swal.fire({
+            icon: "error",
+            title: "Error",
+            text: err.message || "Something went wrong",
+        });
+    }
+};
+
+const recheckItems = async () => {
+    if (!itineraryId.value) return;
+
+    const filteredRows = forms.value.filter((row) => {
+        const isMarked = row.marked === true;
+        const hasRemarks = row.remarks && row.remarks.trim() !== "";
+        return isMarked || hasRemarks;
+    });
+
+    if (filteredRows.length === 0) {
+        Swal.fire({
+            icon: "warning",
+            title: "Nothing selected!",
+            text: "Please mark or add remarks to at least one row.",
+        });
+        return;
+    }
+
+    try {
+        await api.put(`/remarks-setup/${itineraryId.value}`, {
+            rows: filteredRows,
+        });
+        Swal.fire({
+            icon: "success",
+            title: "Recheck Marks Saved Successfully!",
+            timer: 1500,
+            showConfirmButton: false,
+        });
+        router.push("/workstation/itinerary");
+    } catch (err) {
+        Swal.fire({
+            icon: "error",
+            title: "Failed!",
+            text: err.message || "Something went wrong",
+        });
+    }
+};
 
 // ----------------------
 // ON MOUNT
@@ -206,6 +335,36 @@ onMounted(() => {
 <template>
     <div class="itinerary-form">
         <h3 class="mb-3">{{ heading }}</h3>
+        <div v-if="!itineraryId" class="row g-3 mb-3">
+            <div class="col-lg-1 position-relative">
+                <label> Select Year </label>
+                <select
+                    class="form-control border-color"
+                    v-model="selectedYear"
+                    @change="changeDate"
+                >
+                    <option v-for="year in years" :key="year" :value="year">
+                        {{ year }}
+                    </option>
+                </select>
+            </div>
+            <div class="col-lg-1">
+                <label>Select Month</label>
+                <select
+                    class="form-control border-color"
+                    v-model="selectedMonth"
+                    @change="changeDate"
+                >
+                    <option
+                        v-for="(month, index) in months"
+                        :key="month"
+                        :value="index + 1"
+                    >
+                        {{ month }}
+                    </option>
+                </select>
+            </div>
+        </div>
 
         <div class="card mb-3 shadow-sm">
             <table class="table table-hover table-sm table-bordered">
@@ -215,23 +374,38 @@ onMounted(() => {
                         <th style="width: 5%">DATE</th>
                         <th style="width: 5%">DAY</th>
                         <th style="width: 5%">TOWN/DISTRIBUTOR</th>
-                        <th style="width: 17%">LOCATION & MARKET</th>
-                        <th style="width: 10%">VISIT WITH SO/SSO</th>
-                        <th style="width: 16%">OBJECTIVE</th>
-                        <th style="width: 15%">MEETING WITH</th>
+                        <th style="width: 150px">LOCATION & MARKET</th>
+                        <th style="width: 150px">VISIT WITH SO/SSO</th>
+                        <th style="width: 150px">OBJECTIVE</th>
+                        <th style="width: 150px">MEETING WITH</th>
                         <th style="width: 5%">START TIME</th>
                         <th style="width: 5%">END TIME</th>
-                        <th style="width: 3%">MARK</th>
-                        <th style="width: 5%">ADD/REMOVE</th>
+                        <th class="text-center" v-if="!isNew" style="width: 3%">
+                            MARK
+                        </th>
+                        <th
+                            class="text-center"
+                            v-if="!isNew && log_status != 'SAVE'"
+                            style="width: 150px"
+                        >
+                            REMARKS
+                        </th>
+                        <th
+                            class="text-center"
+                            v-if="
+                                !viewMode &&
+                                log_status != 'RECHECK' &&
+                                log_status != 'REJECTED'
+                            "
+                            style="width: 5%"
+                        >
+                            ADD/REMOVE
+                        </th>
                     </tr>
                 </thead>
 
                 <tbody>
-                    <tr
-                        v-for="(form, index) in forms"
-                        :key="index"
-                        class="text-nowrap"
-                    >
+                    <tr v-for="(form, index) in forms" :key="index">
                         <td class="text-center">{{ index + 1 }}</td>
                         <td>
                             <input
@@ -266,38 +440,48 @@ onMounted(() => {
                                 </option>
                             </select>
                         </td>
+
                         <td>
-                            <input
-                                type="text"
+                            <textarea
                                 v-model="form.location"
                                 class="form-control"
+                                rows="1"
+                                @input="autoResize($event.target)"
+                                style="max-width: 150px; overflow: hidden"
                                 :disabled="viewMode"
-                            />
+                            ></textarea>
                         </td>
                         <td>
-                            <input
-                                type="text"
+                            <textarea
                                 v-model="form.visitWith"
                                 class="form-control"
+                                rows="1"
+                                @input="autoResize($event.target)"
+                                style="max-width: 150px; overflow: hidden"
                                 :disabled="viewMode"
-                            />
+                            ></textarea>
                         </td>
                         <td>
-                            <input
-                                type="text"
+                            <textarea
                                 v-model="form.objective"
                                 class="form-control"
+                                rows="1"
+                                @input="autoResize($event.target)"
+                                style="max-width: 150px; overflow: hidden"
                                 :disabled="viewMode"
-                            />
+                            ></textarea>
                         </td>
                         <td>
-                            <input
-                                type="text"
+                            <textarea
                                 v-model="form.meetingWith"
                                 class="form-control"
+                                rows="1"
+                                @input="autoResize($event.target)"
+                                style="max-width: 150px; overflow: hidden"
                                 :disabled="viewMode"
-                            />
+                            ></textarea>
                         </td>
+
                         <td>
                             <input
                                 type="time"
@@ -314,23 +498,45 @@ onMounted(() => {
                                 :disabled="viewMode"
                             />
                         </td>
-                        <td class="text-center align-middle">
+
+                        <td v-if="!isNew" class="text-center align-middle">
                             <input
                                 type="checkbox"
                                 v-model="form.marked"
-                                :disabled="viewMode"
+                                :disabled="viewMode && supervisorID != user.id"
                             />
                         </td>
-                        <td class="text-center align-middle">
+
+                        <td v-if="!isNew && log_status != 'SAVE'">
+                            <textarea
+                                v-model="form.remarks"
+                                class="form-control"
+                                rows="1"
+                                @input="autoResize($event.target)"
+                                style="max-width: 150px; overflow: hidden"
+                                :disabled="
+                                    !(viewMode && supervisorID == user.id)
+                                "
+                            ></textarea>
+                        </td>
+
+                        <td
+                            v-if="
+                                !viewMode &&
+                                log_status != 'RECHECK' &&
+                                log_status != 'REJECTED'
+                            "
+                            class="text-center align-middle"
+                        >
                             <button
-                                v-if="!viewMode && index === 0"
+                                v-if="index === 0"
                                 class="btn btn-sm btn-success"
                                 @click="addRow(index)"
                             >
                                 <i class="fa fa-plus"></i>
                             </button>
                             <button
-                                v-else-if="!viewMode"
+                                v-else
                                 class="btn btn-sm btn-danger"
                                 @click="removeRow(index)"
                             >
@@ -342,15 +548,28 @@ onMounted(() => {
             </table>
         </div>
 
-        <div class="d-flex justify-content-end">
+        <div class="d-flex justify-content-end gap-2 mt-3">
             <button
                 v-if="!viewMode"
-                class="btn btn-success me-3"
+                class="btn btn-success"
                 @click="submitItinerary"
             >
                 {{ saveButtonText }}
             </button>
-
+            <button
+                v-if="viewMode && supervisorID == user.id"
+                class="btn btn-success"
+                @click="acceptItems(itinerary_logsID)"
+            >
+                Accept
+            </button>
+            <button
+                v-if="viewMode && supervisorID == user.id"
+                class="btn btn-danger"
+                @click="recheckItems"
+            >
+                Recheck
+            </button>
             <button
                 class="btn btn-secondary"
                 @click="router.push('/workstation/itinerary')"
@@ -365,7 +584,10 @@ onMounted(() => {
 
 <style>
 .itinerary-form .table input,
-.itinerary-form .table select {
+.itinerary-form .table select,
+.itinerary-form .table textarea {
     min-width: 80px;
+    width: 100%;
+    box-sizing: border-box;
 }
 </style>

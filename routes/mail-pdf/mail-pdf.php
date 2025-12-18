@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Employee\EmployeeController;
 use App\Http\Controllers\Attendance\AttendenceController;
 use App\Http\Controllers\EmailController;
+use App\Http\Controllers\ItineraryEmailController;
 
 
 
@@ -16,3 +17,9 @@ Route::get('/hr-approval/{id}', [EmailController::class, "hrApprovalEmail"]);
 Route::post('/user-mail', [EmailController::class, "sendUserEmail"]);
 Route::get('/attendance-mail', [EmailController::class, "attendanceEmail"]);
 Route::get('/monthly-attendance', [EmailController::class, "monthlyAttendance"]);
+
+//itinerary mail
+Route::get('/itinerary-sender-mail/{id}', [ItineraryEmailController::class, "itinerarySenderEmail"]);
+Route::get('/itinerary-rejection-mail/{id}', [ItineraryEmailController::class, "itineraryRejectionEmail"]);
+Route::get('/itinerary-recheck-mail/{id}', [ItineraryEmailController::class, "itineraryRecheckEmail"]);
+Route::get('/itinerary-accept-mail/{id}', [ItineraryEmailController::class, "itineraryAcceptEmail"]);

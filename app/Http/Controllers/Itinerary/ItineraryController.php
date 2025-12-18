@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Itinerary;
 use App\Models\itinerary_logs;
 use App\Models\itineraries;
 use App\Http\Controllers\Controller;
+use App\Models\employee;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -14,12 +15,12 @@ class ItineraryController extends Controller
     public function store(Request $request)
     {
         $user_id = Auth::user()->EID;
-
+        $monthString = $request->year . '-' . str_pad($request->month, 2, '0', STR_PAD_LEFT) . '-01';
         DB::beginTransaction();
 
         try {
             $log = itinerary_logs::create([
-                'created_date'   => now(),
+                'created_date'   => $monthString,
                 'status'         => 'save',
                 'created_by'     => $user_id,
             ]);
@@ -76,6 +77,7 @@ class ItineraryController extends Controller
         // Get year and month from query string, default to current if not provided
         $year = $request->query('year', date('Y'));
         $month = $request->query('month', date('m'));
+        $employees = $request->query('employee_id', null);
 
         $response = DB::table('itinerary_logs')
             ->join('employees', 'employees.id', '=', 'itinerary_logs.created_by')
@@ -89,10 +91,16 @@ class ItineraryController extends Controller
                 'designations.Name as designation_name',
                 'itinerary_logs.created_date as submitted_date',
                 'itinerary_logs.status',
+                'itinerary_logs.supervisor_remarks',
                 'itinerary_logs.id as itinerary_logs_id',
             )
             ->whereYear('itinerary_logs.created_date', $year)
             ->whereMonth('itinerary_logs.created_date', $month)
+            ->where(function ($query) use ($employees) {
+                if (!is_null($employees)) {
+                    $query->where('itinerary_logs.created_by', $employees);
+                }
+            })
             ->get();
 
         return response()->json($response);
@@ -105,6 +113,7 @@ class ItineraryController extends Controller
             ->join('officials', 'officials.EID', '=', 'itinerary_logs.created_by')
             ->join('designations', 'designations.id', '=', 'officials.Designation_Id')
             ->join('itineraries', 'itineraries.itinerary_logs_id', '=', 'itinerary_logs.id')
+            ->leftJoin('itineraries_updates', 'itineraries_updates.itineraries_id', '=', 'itineraries.id')
             ->select(
                 'officials.Supervisor_Id as supervisor_id',
                 'employees.Full_Name as employee_name',
@@ -112,9 +121,20 @@ class ItineraryController extends Controller
                 'itineraries.id as itinerary_id',
                 'itinerary_logs.status as itinerary_status',
                 'itineraries.itinerary_logs_id as itinerary_logs_id',
+                'itineraries_updates.remarks as supervisor_remarks',
+                'itineraries_updates.id as itinerary_update_id',
+                'itineraries_updates.visit_date as updated_visit_date',
+                'itineraries_updates.town_id as updated_town_id',
+                'itineraries_updates.location as updated_location',
+                'itineraries_updates.visit_with as updated_visit_with',
+                'itineraries_updates.visit_objective as updated_visit_objective',
+                'itineraries_updates.meeting_with as updated_meeting_with',
+                'itineraries_updates.visit_start_time as updated_visit_start_time',
+                'itineraries_updates.visit_end_time as updated_visit_end_time',
                 'itineraries.*'
             )
             ->where('itinerary_logs.id', $id)
+            ->orderBy('itineraries.id', 'DESC')
             ->get();
 
         return response()->json($item);
@@ -189,6 +209,50 @@ class ItineraryController extends Controller
         return response()->json(['message' => 'Itinerary rejected']);
     }
 
+    public function supervisorRemarksSet(Request $request, $id)
+    {
+        $user_id = Auth::user()->EID;
+        $rows = $request->input('rows');
+        DB::table('itinerary_logs')
+            ->where('id', $id)
+            ->update([
+                'status' => 'RECHECK',
+                'updated_by' => $user_id,
+                'sup_update_date' => now(),
+                'common_updated_date' => now(),
+                'updated_at' => now(),
+            ]);
+
+        foreach ($rows as $row) {
+            $marked = !empty($row['marked']) && $row['marked'] == true;
+            if (!empty($row['remarks']) && $marked) {
+
+                DB::table('itineraries_updates')->updateOrInsert(
+                    [
+                        'itineraries_id' => $row['itinerary_id'] ?? null,
+                        'status'         => 'PLAN',
+                    ],
+                    [
+                        'employee_id' => $row['employee_id'] ?? null,
+                        'visit_date' => $row['date'] ?? null,
+                        'town_id' => $row['town'] ?? null,
+                        'location' => $row['location'] ?? null,
+                        'visit_with' => $row['visitWith'] ?? null,
+                        'visit_objective' => $row['objective'] ?? null,
+                        'meeting_with' => $row['meetingWith'] ?? null,
+                        'visit_start_time' => $row['startTime'] ?? null,
+                        'visit_end_time' => $row['endTime'] ?? null,
+                        'remarks' => $row['remarks'] ?? null,
+                        'supervisor_id' => $user_id,
+                        'updated_by' => $user_id,
+                        'updated_at' => now(),
+                    ]
+                );
+            }
+        }
+    }
+
+
     public function update(Request $request, $id)
     {
         $user_id = Auth::user()->EID;
@@ -200,7 +264,7 @@ class ItineraryController extends Controller
             $status = $row['itinerary_status'] ?? '';
             $marked = !empty($row['marked']) && $row['marked'] == true;
 
-            if (($status === 'rejected' || $status === 'save' || $status === 'pending') && $marked) {
+            if (($status === 'REJECTED' || $status === 'SAVE' || $status === 'PENDING') && $marked) {
                 DB::table('itineraries')
                     ->where('id', $row['itinerary_id']) // condition
                     ->update([
@@ -215,30 +279,64 @@ class ItineraryController extends Controller
                         'created_by' => $user_id,
                         'updated_at' => now(),
                     ]);
+                DB::table('itinerary_logs')
+                    ->where('id', $row['itinerary_logs_id']) // use the correct logs ID
+                    ->update([
+                        'status' => 'SAVE',  // or 'PENDING' if that’s what you want
+                        'updated_by' => $user_id,
+                        'common_updated_date' => now(),
+                        'updated_at' => now(),
+                    ]);
             }
 
 
             // Condition for approved AND marked → update itineraries_update
-            else if ($status === 'approved' && $marked) {
-                DB::table('itineraries_update')->updateOrInsert(
-                    ['itineraries_id' => $row['itinerary_id'] ?? null],
-                    [
-                        'itineraries_id' => $row['itinerary_id'] ?? null,
-                        'visit_date' => $row['date'] ?? null,
-                        'town_id' => $row['town'] ?? null,
-                        'location' => $row['location'] ?? null,
-                        'visit_with' => $row['visitWith'] ?? null,
-                        'visit_objective' => $row['objective'] ?? null,
-                        'meeting_with' => $row['meetingWith'] ?? null,
-                        'visit_start_time' => $row['startTime'] ?? null,
-                        'visit_end_time' => $row['endTime'] ?? null,
-                        'created_by' => $user_id,
+            else if ($status === 'RECHECK' && $marked) {
+
+                $current = DB::table('itineraries_updates')
+                    ->where('itineraries_id', $row['itinerary_id'])
+
+                    ->latest('id')
+                    ->first();
+
+                $data = [
+                    'employee_id'      => $user_id,
+                    'visit_date'       => $row['date'] ?? null,
+                    'town_id'          => $row['town'] ?? null,
+                    'location'         => $row['location'] ?? null,
+                    'visit_with'       => $row['visitWith'] ?? null,
+                    'visit_objective'  => $row['objective'] ?? null,
+                    'meeting_with'     => $row['meetingWith'] ?? null,
+                    'visit_start_time' => $row['startTime'] ?? null,
+                    'visit_end_time'   => $row['endTime'] ?? null,
+                    'updated_by'       => $user_id,
+                    'updated_at'       => now(),
+                ];
+
+                if ($current && $current->status === 'PLAN') {
+                    // Update PLAN
+                    DB::table('itineraries_updates')->where('id', $current->id)->update($data);
+                } else {
+                    // Create new PLAN
+                    DB::table('itineraries_updates')->insert(
+                        $data + [
+                            'itineraries_id' => $row['itinerary_id'],
+                            'status'         => 'PLAN',
+                            'created_by'     => $user_id,
+                            'created_at'     => now(),
+                        ]
+                    );
+                }
+
+                DB::table('itinerary_logs')
+                    ->where('id', $row['itinerary_logs_id'])
+                    ->update([
+                        'status' => 'PENDING',
+                        'updated_by' => $user_id,
+                        'common_updated_date' => now(),
                         'updated_at' => now(),
-                    ]
-                );
-            }
-            // Otherwise, insert new row into main table
-            else {
+                    ]);
+            } else {
                 DB::table('itineraries')->insert([
                     'visit_date' => $row['date'],
                     'itinerary_logs_id' => $row['itinerary_logs_id'],
@@ -254,5 +352,150 @@ class ItineraryController extends Controller
                 ]);
             }
         }
+    }
+    public function getSupervisorId(Request $request, $id)
+    {
+        $result = DB::table('itineraries_logs')
+            ->where('itineraries_logs.id', '=', $id)
+            ->get();
+        $supervisor = DB::table('officials')
+            ->join('itinerary_logs', 'itinerary_logs.created_by', '=', 'officials.EID')
+            ->select('officials.Supervisor_Id')
+            ->where('officials.EID', '=', $result->created_by)
+            ->get();
+        return response()->json($supervisor);
+    }
+
+    public function getAllEmployees()
+    {
+        $user_id = Auth::user()->EID;
+        $employees = DB::table('officials')
+            ->join('employees', 'employees.id', '=', 'officials.EID')
+            ->join('itinerary_logs', 'itinerary_logs.created_by', '=', 'officials.EID')
+            ->select(
+                'employees.id as employee_id',
+                'employees.Full_Name as employee_name'
+            )
+            ->where('officials.Supervisor_id', '=', $user_id)
+            ->where('itinerary_logs.status', '!=', 'SAVE')
+            ->get();
+
+        return response()->json($employees);
+    }
+
+    public function getAllSupervisors()
+    {
+        $user_id = Auth::user()->EID;
+        $supervisors = DB::table('officials')
+            ->join('itinerary_logs', 'itinerary_logs.created_by', '=', 'officials.EID')
+            ->select(
+                'officials.Supervisor_Id as supervisor_id'
+            )
+            ->where('officials.Supervisor_Id', '=', $user_id)
+            ->where('itinerary_logs.status', '!=', 'SAVE')
+            ->get();
+
+        return response()->json($supervisors);
+    }
+
+    public function getDailyItems()
+    {
+        $user_id = Auth::user()->EID;
+
+        $items = DB::table('itinerary_logs')
+            ->join('itineraries', 'itineraries.itinerary_logs_id', '=', 'itinerary_logs.id')
+            ->leftJoin('itineraries_updates', 'itineraries_updates.itineraries_id', '=', 'itineraries.id')
+            ->select(
+                'itineraries.id as itinerary_id',
+                'itineraries.visit_date',
+                'itineraries.town_id',
+                'itineraries.location',
+                'itineraries.visit_with',
+                'itineraries.visit_objective',
+                'itineraries.meeting_with',
+                'itineraries.visit_start_time',
+                'itineraries.visit_end_time',
+                'itinerary_logs.status as itinerary_status',
+                'itinerary_logs.id as itinerary_logs_id',
+                'itineraries_updates.visit_date as updated_visit_date',
+                'itineraries_updates.status as updated_visit_status',
+                'itineraries_updates.town_id as updated_town_id',
+                'itineraries_updates.location as updated_location',
+                'itineraries_updates.visit_with as updated_visit_with',
+                'itineraries_updates.visit_objective as updated_visit_objective',
+                'itineraries_updates.meeting_with as updated_meeting_with',
+                'itineraries_updates.visit_start_time as updated_visit_start_time',
+                'itineraries_updates.visit_end_time as updated_visit_end_time',
+            )
+            ->where('itinerary_logs.created_by', $user_id)
+            ->whereDate('itineraries.visit_date', now()->toDateString())
+            ->whereExists(function ($query) {
+                $query->select(DB::raw(1))
+                    ->from('itineraries_updates')
+                    ->whereColumn(
+                        'itineraries_updates.itineraries_id',
+                        'itineraries.id'
+                    )->where('itineraries_updates.status', 'ACTUAL');
+            })
+            ->get();
+
+        return response()->json($items); // <-- return JSON instead of dd()
+    }
+
+    public function dailyItineraryUpdate(Request $request)
+    {
+
+        $user_id = Auth::user()->EID;
+        $status = $request->input('status') ?? '';
+
+        if ($status === 'ACTUAL') {
+            DB::table('itineraries_updates')
+                ->where('status', 'ACTUAL')
+                ->where('itineraries_id', $request->input('itinerary_id'))
+                ->update([
+                    'town_id'           => $request->input('town') ?? null,
+                    'location'          => $request->input('location') ?? null,
+                    'visit_with'        => $request->input('visitWith') ?? null,
+                    'visit_objective'   => $request->input('objective') ?? null,
+                    'meeting_with'      => $request->input('meetingWith') ?? null,
+                    'visit_start_time'  => $request->input('startTime') ?? null,
+                    'visit_end_time'    => $request->input('endTime') ?? null,
+                    'created_at'        => now(),
+                    'updated_at'        => now(),
+                ]);
+        } else if ($status === 'APPROVED') {
+            DB::table('itineraries_updates')->insert([
+                'itineraries_id'   => $request->input('itinerary_id') ?? null,
+                'employee_id'      => $user_id,
+                'status'           => 'ACTUAL',
+                'visit_date'        => $request->input('date') ?? null,
+                'town_id'           => $request->input('town') ?? null,
+                'location'          => $request->input('location') ?? null,
+                'visit_with'        => $request->input('visitWith') ?? null,
+                'visit_objective'   => $request->input('objective') ?? null,
+                'meeting_with'      => $request->input('meetingWith') ?? null,
+                'visit_start_time'  => $request->input('startTime') ?? null,
+                'visit_end_time'    => $request->input('endTime') ?? null,
+                'created_at'        => now(),
+                'updated_at'        => now(),
+            ]);
+        }
+    }
+    public function getDailyAllItems(Request $request)
+    {
+        $date = $request->query('date', date('Y-m-d'));
+        $employees = $request->query('employee_id', null);
+
+        $items = DB::table('itinerary_logs')
+            ->join('itineraries', 'itinerary_logs.id', '=', 'itineraries.itinerary_logs_id')
+            ->join('employees', 'employees.id', '=', 'itinerary_logs.created_by')
+            ->select(
+                'employees.Full_Name as employee_name',
+                'itinerary_logs.id as itinerary_logs_id',
+                'itineraries.id as itinerary_id',
+            )->get();
+        dd($items);
+
+        return response()->json($items);
     }
 }
