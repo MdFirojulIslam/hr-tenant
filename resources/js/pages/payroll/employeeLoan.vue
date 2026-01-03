@@ -118,7 +118,7 @@ const loanSetupOpen = (title) => {
 };
 const loanAdjustment = (item) => {
     selectedStore.value = item;
-    heading.value = "Update Loan";
+    heading.value = "Update";
     loanSetupModel.value = true;
 };
 const loanSetupClose = () => {
@@ -146,6 +146,24 @@ const singleLoanOpen = (item, installment) => {
 const singleLoanClose = () => {
     singleLoanModal.value = false;
     getData();
+};
+
+const deleteLoan = async (loanId) => {
+    if (!confirm("Are you sure you want to delete this loan?")) {
+        return;
+    }
+    try {
+        const response = await api.get(`/delete-loan/${loanId}`);
+        if (response.data.success) {
+            alert("Loan deleted successfully.");
+            getData();
+        } else {
+            alert("Failed to delete loan.");
+        }
+    } catch (err) {
+        console.error("Error deleting loan:", err);
+        alert("An error occurred while deleting the loan.");
+    }
 };
 
 // ---------------- Lifecycle ----------------
@@ -217,12 +235,13 @@ onMounted(() => getData());
             <div class="p-3 mb-3">
                 <div class="row g-3 mv-3">
                     <div class="col-lg-3 position-relative">
+                        <label for="">Select Department</label>
                         <select
                             class="border-color form-control"
                             v-model="form.department"
                             @change="getEmployee(form.department)"
                         >
-                            <option value="" disabled>Select Department</option>
+                            <option value="" disabled>All Department</option>
                             <option
                                 v-for="dept in department"
                                 :key="dept.id"
@@ -234,7 +253,7 @@ onMounted(() => getData());
                         <button
                             v-if="form.department"
                             type="button"
-                            class="btn btn-sm btn-link position-absolute top-0 end-0 mt-1 me-1"
+                            class="btn btn-sm btn-link position-absolute top-0 end-0 mt-4 me-1"
                             @click="
                                 form.department = '';
                                 employees = [];
@@ -245,14 +264,13 @@ onMounted(() => getData());
                     </div>
 
                     <div class="col-lg-3 position-relative">
+                        <label for="">Select Employee Name</label>
                         <select
                             class="form-control border-color"
                             v-model="form.eid"
                             style="font-weight: normal; background: transparent"
                         >
-                            <option value="" disabled>
-                                Select Employee Name
-                            </option>
+                            <option value="" disabled>All Employee Name</option>
                             <option
                                 v-for="emp in employees"
                                 :key="emp.id"
@@ -264,7 +282,7 @@ onMounted(() => getData());
                         <button
                             v-if="form.eid"
                             type="button"
-                            class="btn btn-sm btn-link position-absolute top-0 end-0 mt-1 me-1"
+                            class="btn btn-sm btn-link position-absolute top-0 end-0 mt-4 me-1"
                             @click="form.eid = ''"
                         >
                             <i class="fa fa-times"></i>
@@ -273,7 +291,7 @@ onMounted(() => getData());
                 </div>
 
                 <!-- Loan Table -->
-                <div class="rounded border mt-5">
+                <div class="mt-5">
                     <div
                         class="d-flex align-items-center px-2 py-2 fw-semibold border-bottom bg-light"
                     >
@@ -284,17 +302,21 @@ onMounted(() => getData());
                         >
                     </div>
 
-                    <div class="table-responsive px-2 bg-light">
-                        <table class="table table-hover table-sm">
+                    <div class="table-responsive shadow-sm bg-light">
+                        <table
+                            class="table table-bordered table-hover table-sm"
+                        >
                             <thead class="table-light">
                                 <tr>
-                                    <th width="3%"></th>
-                                    <th width="5%">S/N</th>
-                                    <th width="13%">EMPLOYEE NAME</th>
+                                    <th width="2%"></th>
+                                    <th width="3%">S/N</th>
                                     <th width="15%">DEPARTMENT</th>
-                                    <th width="12%">PRINCIPAL AMOUNT</th>
+                                    <th width="12%">DESIGNATION</th>
+                                    <th width="12%">EMPLOYEE NAME</th>
+                                    <th width="8%">PRINCIPAL AMOUNT</th>
                                     <th width="8%">TENURE</th>
                                     <th width="10%">MONTHLY INSTALLMENT</th>
+                                    <th width="8%">TOTAL PAID</th>
                                     <th width="5%">STATUS</th>
                                     <th width="10%">REMARKS</th>
                                     <th width="3%">ACTION</th>
@@ -323,11 +345,13 @@ onMounted(() => getData());
                                             </button>
                                         </td>
                                         <td>{{ index + 1 }}</td>
-                                        <td>{{ item.employee_name }}</td>
                                         <td>{{ item.deptName }}</td>
+                                        <td>{{ item.designation_name }}</td>
+                                        <td>{{ item.employee_name }}</td>
                                         <td>{{ item.principal_amounts }}</td>
                                         <td>{{ item.tenure_months }}</td>
                                         <td>{{ item.monthly_installments }}</td>
+                                        <td>{{ item.total_paid }}</td>
                                         <td>{{ item.status }}</td>
                                         <td>{{ item.remarks }}</td>
                                         <td class="text-center text-nowrap">
@@ -343,6 +367,9 @@ onMounted(() => getData());
                                             <button
                                                 class="btn btn-sm btn-light border"
                                                 title="Delete"
+                                                @click="
+                                                    deleteLoan(item.loan_id)
+                                                "
                                             >
                                                 <i
                                                     class="fa-solid fa-trash text-danger"
@@ -357,7 +384,7 @@ onMounted(() => getData());
                                             expandedRow === Number(item.loan_id)
                                         "
                                     >
-                                        <td colspan="10" class="bg-light">
+                                        <td colspan="12" class="bg-light">
                                             <div
                                                 class="ms-5 p-1"
                                                 style="width: 50%"
@@ -373,7 +400,7 @@ onMounted(() => getData());
                                                             <th>Paid Amount</th>
                                                             <th>Status</th>
                                                             <th>Paid Date</th>
-                                                            <th>Edit</th>
+                                                            <!-- <th>Edit</th> -->
                                                         </tr>
                                                     </thead>
                                                     <tbody>
@@ -401,7 +428,7 @@ onMounted(() => getData());
                                                                     ins.paid_on_dates
                                                                 }}
                                                             </td>
-                                                            <td>
+                                                            <!-- <td>
                                                                 <button
                                                                     class="btn btn-sm btn-light border"
                                                                     @click="
@@ -415,7 +442,7 @@ onMounted(() => getData());
                                                                         class="fa-solid fa-pen text-success"
                                                                     ></i>
                                                                 </button>
-                                                            </td>
+                                                            </td> -->
                                                         </tr>
                                                         <tr
                                                             v-if="

@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, computed, watch } from "vue";
+import { ref, onMounted, computed, watch, defineAsyncComponent } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import Swal from "sweetalert2";
 import api from "@/api";
@@ -37,6 +37,22 @@ const formatDate = (dateStr) => {
 };
 
 const openAttachment = (url) => url && window.open(url, "_blank");
+
+const EditLeaveModal = defineAsyncComponent(() =>
+    import("@/pages/leave/component/statusUpdateForm.vue")
+);
+
+const closeEditModal = () => {
+    editModal.value = false;
+};
+
+const editModal = ref(false);
+const selectedLeave = ref(null);
+
+const editLeave = (leave) => {
+    selectedLeave.value = leave;
+    editModal.value = true;
+};
 
 const editLeaveStatus = async (id, status) => {
     try {
@@ -214,6 +230,16 @@ onMounted(async () => {
 </script>
 
 <template>
+    <component
+        v-if="editModal"
+        :is="EditLeaveModal"
+        :isOpen="editModal"
+        :editStore="selectedLeave"
+        :stId="selectedLeave?.leave_id"
+        :leave_type="leaveType"
+        @modal-close="closeEditModal"
+        @submit="getData"
+    />
     <div class="container-fluid px-3">
         <div class="col-lg-12 grid-margin stretch-card">
             <div class="container">
@@ -512,6 +538,14 @@ onMounted(async () => {
                                             >
                                                 <i
                                                     class="fa-solid fa-check"
+                                                ></i>
+                                            </button>
+                                            <button
+                                                class="custom-btn btn-15"
+                                                @click="editLeave(l)"
+                                            >
+                                                <i
+                                                    class="fa-regular fa-pen-to-square"
                                                 ></i>
                                             </button>
                                             <button

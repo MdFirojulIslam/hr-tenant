@@ -245,6 +245,7 @@ onMounted(() => getData());
                                 <th class="text-center">NET SALARY</th>
                             </tr>
                         </thead>
+                        <!-- <pre>{{ filteredSalaries }}</pre> -->
                         <tbody>
                             <tr
                                 class="ver-align"

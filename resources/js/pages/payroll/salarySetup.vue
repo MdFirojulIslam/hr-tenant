@@ -130,7 +130,7 @@ const editsalary = async (id) => {
 
 const deletesalary = async (id) => {
     try {
-        //const response = await api.delete(`/delete-holiday/${id}`);
+        const response = await api.get(`/delete-salary/${id}`);
         if (response.data.success) {
             Swal.fire({
                 position: "middle",
@@ -191,13 +191,14 @@ onMounted(() => getData());
                 <!-- Filters -->
                 <div class="row g-3 mb-3">
                     <div class="col-lg-3 position-relative">
+                        <label>Select Department</label>
                         <select
                             class="form-control border-color"
                             v-model="searchDept"
                             @change="getEmployee(searchDept)"
                             style="font-weight: normal; background: transparent"
                         >
-                            <option value="" disabled>Select Department</option>
+                            <option value="" disabled>All Department</option>
                             <option
                                 v-for="dept in department"
                                 :key="dept.id"
@@ -209,7 +210,7 @@ onMounted(() => getData());
                         <button
                             v-if="searchDept"
                             type="button"
-                            class="btn btn-sm btn-link position-absolute top-0 end-0 mt-1 me-1"
+                            class="btn btn-sm btn-link position-absolute top-0 end-0 mt-4 me-1"
                             @click="
                                 searchDept = '';
                                 employeeIDs = [];
@@ -221,14 +222,13 @@ onMounted(() => getData());
 
                     <!-- Employee -->
                     <div class="col-lg-3 position-relative">
+                        <label>Select Employee </label>
                         <select
                             class="form-control border-color"
                             v-model="searchEmp"
                             style="font-weight: normal; background: transparent"
                         >
-                            <option value="" disabled>
-                                Select Employee Name
-                            </option>
+                            <option value="" disabled>All Employee</option>
                             <option
                                 v-for="emp in employeeIDs"
                                 :key="emp.id"
@@ -240,13 +240,14 @@ onMounted(() => getData());
                         <button
                             v-if="searchEmp"
                             type="button"
-                            class="btn btn-sm btn-link position-absolute top-0 end-0 mt-1 me-1"
+                            class="btn btn-sm btn-link position-absolute top-0 end-0 mt-4 me-1"
                             @click="searchEmp = ''"
                         >
                             <i class="fa fa-times"></i>
                         </button>
                     </div>
                     <div class="col-lg-3 position-relative">
+                        <label>Search By Account/Official ID</label>
                         <input
                             type="text"
                             class="form-control border-color"
@@ -258,7 +259,7 @@ onMounted(() => getData());
                 </div>
 
                 <!-- Salary Table -->
-                <div class="border rounded mt-5">
+                <div class="mt-5">
                     <!-- Total Employees Row -->
                     <div
                         class="d-flex align-items-center px-2 py-2 fw-semibold border-bottom bg-light"
@@ -269,21 +270,23 @@ onMounted(() => getData());
                             >{{ salaries.total }}</span
                         >
                     </div>
-
-                    <div class="table-responsive px-2 bg-light">
-                        <table class="table table-hover table-sm">
+                    <div class="table-responsive shadow-sm bg-light">
+                        <table
+                            class="table table-bordered table-hover table-sm"
+                        >
                             <thead class="table-light">
                                 <tr>
-                                    <th width="4%">S/N</th>
-                                    <th width="7%">OFFICIAL ID</th>
-                                    <th width="8%">EMPLOYEE NAME</th>
+                                    <th width="2%">S/N</th>
+                                    <th width="8%">OFFICIAL ID</th>
                                     <th width="15%">DEPARTMENT</th>
-                                    <th width="10%">GROSS SALARY</th>
-                                    <th width="10%">EARNING</th>
+                                    <th width="18%">DESIGNATION NAME</th>
+                                    <th width="12%">EMPLOYEE NAME</th>
+                                    <th width="7%">GROSS SALARY</th>
+                                    <th width="7%">EARNING</th>
                                     <th width="10%">DEDUCTION</th>
-                                    <th width="8%">TOTAL PAY</th>
+                                    <th width="7%">TOTAL PAY</th>
                                     <th width="10%">BANK ACCOUNT</th>
-                                    <th width="10%" class="text-center">
+                                    <th width="8%" class="text-center">
                                         ACTION
                                     </th>
                                 </tr>
@@ -293,10 +296,11 @@ onMounted(() => getData());
                                     v-for="(salary, index) in filteredData"
                                     :key="salary.id"
                                 >
-                                    <td>{{ index + 1 }}</td>
+                                    <td>{{ salaries.from + index }}</td>
                                     <td>ABNB-{{ salary.official_id }}</td>
-                                    <td>{{ salary.full_name }}</td>
                                     <td>{{ salary.department_name }}</td>
+                                    <td>{{ salary.designation_name }}</td>
+                                    <td>{{ salary.full_name }}</td>
                                     <td>{{ salary.gross_salary }}</td>
                                     <td>
                                         {{

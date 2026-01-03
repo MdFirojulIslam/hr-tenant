@@ -20,20 +20,44 @@ class LoanController extends Controller
         $loans = DB::table('employees')
             ->join('officials', 'employees.id', '=', 'officials.EID')
             ->join('departments', 'officials.Department_Id', '=', 'departments.id')
+            ->join('designations', 'officials.Designation_Id', '=', 'designations.id')
             ->join('loans', 'employees.id', '=', 'loans.employee_id')
+            ->leftJoin('loan_repayments', 'loans.id', '=', 'loan_repayments.loan_id')
             ->select(
                 'loans.id as loan_id',
                 'employees.id as eid',
                 'employees.Full_Name as employee_name',
                 'departments.id as deptID',
                 'departments.Name as deptName',
+                'designations.Name as designation_name',
                 DB::raw('CAST(loans.principal_amounts AS UNSIGNED) as principal_amounts'),
                 DB::raw('CAST(loans.tenure_months AS UNSIGNED) as tenure_months'),
                 DB::raw('CAST(loans.monthly_installments AS UNSIGNED) as monthly_installments'),
+                DB::raw("COALESCE(SUM(
+            CASE WHEN loan_repayments.paid_status = 'paid'
+            THEN loan_repayments.installment_amounts
+            ELSE 0 END
+        ), 0) AS total_paid"),
                 'loans.status',
                 'loans.remarks',
-                'loans.installment_dates',
-            )->paginate(12);
+                'loans.installment_dates'
+            )
+            ->groupBy(
+                'loans.id',
+                'employees.id',
+                'employees.Full_Name',
+                'departments.id',
+                'departments.Name',
+                'designations.Name',
+                'loans.principal_amounts',
+                'loans.tenure_months',
+                'loans.monthly_installments',
+                'loans.status',
+                'loans.remarks',
+                'loans.installment_dates'
+            )
+            ->paginate(12);
+
         return response()->json($loans);
     }
 
@@ -281,41 +305,61 @@ class LoanController extends Controller
     public function update(Request $request, $id)
     {
         DB::beginTransaction();
-        $userId = Auth::user()->EID;
 
         try {
-            $loan = loan::where('id', $id)->first();
+            if (!Auth::check()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorized'
+                ], 401);
+            }
+
+            $userId = Auth::user()->EID;
+
+            $loan = loan::find($id);
+            $loan_repayments = loan_repayment::where('loan_id', $id)->first();
 
             if (!$loan) {
                 DB::rollBack();
                 return response()->json([
                     'success' => false,
-                    'message' => 'Salary adjustment record not found.',
+                    'message' => 'Loan record not found.',
                 ], 404);
             }
-
+            $remarks = $request->input('remarks');
+            $remarks = ($remarks === '0' || $remarks === 0 || $remarks === '') ? null : $remarks;
             $loan->update([
-                'employee_id' => $request->employee,
-                'principal' => $request->principal,
-                'tenure_months' => $request->tenure,
-                'first_due_on' => $request->first_due_on,
-                'remarks' => $request->remarks || '',
-                'created_by' => $userId,
+                'employee_id'           => $request->employee_id,
+                'principal_amounts'     => $request->principal_amount,
+                'tenure_months'         => $request->tenure_month,
+                'monthly_installments'  => $request->installment_amount,
+                'installment_dates'     => $request->first_installment_date,
+                'remarks'               => $remarks,
+                'updated_by'            => $userId,
             ]);
+            if ($loan_repayments) {
+                $loan_repayments->update([
+                    'installment_dates'    => $request->first_installment_date,
+                    'installment_amounts'  => $request->installment_amount,
+                    'updated_by'           => $userId,
+                ]);
+            }
 
             DB::commit();
+
             return response()->json([
                 'success' => true,
-                'message' => 'Successfully updated', // Changed message to reflect update
+                'message' => 'Successfully updated',
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
             return response()->json([
                 'success' => false,
-                'message' => 'Error while updating: ' . $e->getMessage(),
+                'message' => $e->getMessage(),
             ], 500);
         }
     }
+
 
     public function getLoanRepayment($id)
     {
@@ -411,5 +455,25 @@ class LoanController extends Controller
             ->get();
 
         return response()->json($repayments);
+    }
+
+    public function deleteLoan($id)
+    {
+        $loan = Loan::with('repayments')->find($id);
+
+        if (!$loan) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Loan record not found.',
+            ], 404);
+        }
+
+        $loan->repayments()->delete();
+        $loan->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Loan record deleted successfully.',
+        ]);
     }
 }

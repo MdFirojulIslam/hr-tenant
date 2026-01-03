@@ -11,7 +11,6 @@ const { isOpen, editStore, updateinfo, roleId } = defineProps([
     "roleId",
 ]);
 
-console.log("Loan Setup Form - editStore:", editStore);
 // Emits for parent communication
 const emit = defineEmits(["modal-close", "refresh-list"]);
 
@@ -109,7 +108,7 @@ const create = async () => {
 const update = async () => {
     try {
         const response = await api.put(
-            `/employee-loan/${editStore.loanID}`,
+            `/employee-loan/${editStore.loan_id}`,
             form.value
         );
         if (response.data.success) {

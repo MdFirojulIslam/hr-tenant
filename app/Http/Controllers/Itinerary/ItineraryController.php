@@ -4,16 +4,19 @@ namespace App\Http\Controllers\Itinerary;
 
 use App\Models\itinerary_logs;
 use App\Models\itineraries;
+use App\Models\itineraries_updates;
 use App\Http\Controllers\Controller;
 use App\Models\employee;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
 
 class ItineraryController extends Controller
 {
     public function store(Request $request)
     {
+
         $user_id = Auth::user()->EID;
         $monthString = $request->year . '-' . str_pad($request->month, 2, '0', STR_PAD_LEFT) . '-01';
         DB::beginTransaction();
@@ -401,52 +404,60 @@ class ItineraryController extends Controller
     public function getDailyItems()
     {
         $user_id = Auth::user()->EID;
+        $date = Carbon::today()->toDateString();
 
-        $items = DB::table('itinerary_logs')
-            ->join('itineraries', 'itineraries.itinerary_logs_id', '=', 'itinerary_logs.id')
-            ->leftJoin('itineraries_updates', 'itineraries_updates.itineraries_id', '=', 'itineraries.id')
+        $itineraires_actual = itineraries_updates::where('itineraries_updates.employee_id', $user_id)
+            ->join('employees', 'employees.id', '=', 'itineraries_updates.employee_id')
+            ->join('towns', 'towns.id', '=', 'itineraries_updates.town_id')
             ->select(
-                'itineraries.id as itinerary_id',
-                'itineraries.visit_date',
-                'itineraries.town_id',
-                'itineraries.location',
-                'itineraries.visit_with',
-                'itineraries.visit_objective',
-                'itineraries.meeting_with',
-                'itineraries.visit_start_time',
-                'itineraries.visit_end_time',
-                'itinerary_logs.status as itinerary_status',
-                'itinerary_logs.id as itinerary_logs_id',
-                'itineraries_updates.visit_date as updated_visit_date',
-                'itineraries_updates.status as updated_visit_status',
-                'itineraries_updates.town_id as updated_town_id',
-                'itineraries_updates.location as updated_location',
-                'itineraries_updates.visit_with as updated_visit_with',
-                'itineraries_updates.visit_objective as updated_visit_objective',
-                'itineraries_updates.meeting_with as updated_meeting_with',
-                'itineraries_updates.visit_start_time as updated_visit_start_time',
-                'itineraries_updates.visit_end_time as updated_visit_end_time',
+                'itineraries_updates.*',
+                'itineraries_updates.itineraries_id as itinerary_id',
+                'employees.Full_Name as employee_name',
+                'towns.Name as town_name'
             )
-            ->where('itinerary_logs.created_by', $user_id)
-            ->whereDate('itineraries.visit_date', now()->toDateString())
-            ->whereExists(function ($query) {
-                $query->select(DB::raw(1))
-                    ->from('itineraries_updates')
-                    ->whereColumn(
-                        'itineraries_updates.itineraries_id',
-                        'itineraries.id'
-                    )->where('itineraries_updates.status', 'ACTUAL');
-            })
+            ->where('itineraries_updates.status', 'ACTUAL')
+            ->whereDate('itineraries_updates.visit_date', $date)
             ->get();
 
-        return response()->json($items); // <-- return JSON instead of dd()
+        if ($itineraires_actual->isNotEmpty()) {
+            return response()->json($itineraires_actual);
+        }
+
+        $itineraires_plan = itineraries_updates::where('itineraries_updates.employee_id', $user_id)
+            ->join('employees', 'employees.id', '=', 'itineraries_updates.employee_id')
+            ->join('towns', 'towns.id', '=', 'itineraries_updates.town_id')
+            ->select(
+                'itineraries_updates.*',
+                'itineraries_updates.itineraries_id as itinerary_id',
+                'employees.Full_Name as employee_name',
+                'towns.Name as town_name'
+            )
+            ->where('itineraries_updates.status', 'PLAN')
+            ->whereDate('itineraries_updates.visit_date', $date)
+            ->get();
+
+        if ($itineraires_plan->isNotEmpty()) {
+            return response()->json($itineraires_plan);
+        }
+
+        $itineraires_response = itineraries::where('itineraries.created_by', $user_id)
+            ->join('itinerary_logs', 'itineraries.itinerary_logs_id', '=', 'itinerary_logs.id')
+            ->join('employees', 'itineraries.created_by', '=', 'employees.id')
+            ->join('towns', 'itineraries.town_id', '=', 'towns.id')
+            ->select('itineraries.*', 'itineraries.id as itinerary_id', 'itinerary_logs.status as log_status', 'employees.Full_Name as employee_name', 'towns.Name as town_name')
+            ->whereDate('itineraries.visit_date', $date)
+            ->get();
+        if ($itineraires_response->isNotEmpty()) {
+            return response()->json($itineraires_response);
+        }
     }
 
     public function dailyItineraryUpdate(Request $request)
     {
 
         $user_id = Auth::user()->EID;
-        $status = $request->input('status') ?? '';
+        $status = $request->input('updateStatus') ?? '';
+
 
         if ($status === 'ACTUAL') {
             DB::table('itineraries_updates')
@@ -463,7 +474,7 @@ class ItineraryController extends Controller
                     'created_at'        => now(),
                     'updated_at'        => now(),
                 ]);
-        } else if ($status === 'APPROVED') {
+        } else if ($status === 'PLAN' || empty($status)) {
             DB::table('itineraries_updates')->insert([
                 'itineraries_id'   => $request->input('itinerary_id') ?? null,
                 'employee_id'      => $user_id,
@@ -483,19 +494,239 @@ class ItineraryController extends Controller
     }
     public function getDailyAllItems(Request $request)
     {
-        $date = $request->query('date', date('Y-m-d'));
-        $employees = $request->query('employee_id', null);
+        $date = $request->query('date', Carbon::today()->toDateString());
+        $employeeId = $request->query('employee_id');
 
-        $items = DB::table('itinerary_logs')
-            ->join('itineraries', 'itinerary_logs.id', '=', 'itineraries.itinerary_logs_id')
-            ->join('employees', 'employees.id', '=', 'itinerary_logs.created_by')
+        $items = DB::table('itineraries as i')
+
+            ->leftJoin('itineraries_updates as ua', function ($join) use ($date) {
+                $join->on('ua.itineraries_id', '=', 'i.id')
+                    ->where('ua.status', 'ACTUAL')
+                    ->whereDate('ua.visit_date', $date);
+            })
+
+            ->leftJoin('itineraries_updates as up', function ($join) use ($date) {
+                $join->on('up.itineraries_id', '=', 'i.id')
+                    ->where('up.status', 'PLAN')
+                    ->whereDate('up.visit_date', $date);
+            })
+
+            ->join('employees', 'employees.id', '=', 'i.created_by')
+            ->join('towns', 'towns.id', '=', 'i.town_id')
+
             ->select(
+                'i.id as itinerary_id',
+
+                // date priority
+                DB::raw('COALESCE(ua.visit_date, up.visit_date, i.visit_date) as visit_date'),
+
                 'employees.Full_Name as employee_name',
-                'itinerary_logs.id as itinerary_logs_id',
-                'itineraries.id as itinerary_id',
-            )->get();
-        dd($items);
+                'towns.Name as town_name',
+
+                // field priority
+                DB::raw('COALESCE(ua.location, up.location, i.location) as location'),
+                DB::raw('COALESCE(ua.visit_with, up.visit_with, i.visit_with) as visit_with'),
+                DB::raw('COALESCE(ua.visit_objective, up.visit_objective, i.visit_objective) as visit_objective'),
+                DB::raw('COALESCE(ua.meeting_with, up.meeting_with, i.meeting_with) as meeting_with'),
+                DB::raw('COALESCE(ua.visit_start_time, up.visit_start_time, i.visit_start_time) as visit_start_time'),
+                DB::raw('COALESCE(ua.visit_end_time, up.visit_end_time, i.visit_end_time) as visit_end_time'),
+
+                // which source was used
+                DB::raw("
+            CASE
+                WHEN ua.id IS NOT NULL THEN 'ACTUAL'
+                WHEN up.id IS NOT NULL THEN 'PLAN'
+                ELSE 'ORIGINAL'
+            END as source
+        ")
+            )
+
+            ->whereDate('i.visit_date', $date)
+
+            ->when($employeeId, function ($q) use ($employeeId) {
+                $q->where('employees.id', $employeeId);
+            })
+
+            ->get();
 
         return response()->json($items);
+
+        // $date = $request->query('date', Carbon::today()->toDateString());
+        // $employeeId = $request->query('employee_id');
+
+        // $itineraries_response = DB::table('itineraries')
+        //     ->join('employees', 'employees.id', '=', 'itineraries.created_by')
+        //     ->join('towns', 'towns.id', '=', 'itineraries.town_id')
+        //     ->select(
+        //         'itineraries.id as itinerary_id',
+        //         'itineraries.visit_date as visit_date',
+        //         'employees.Full_Name as employee_name',
+        //         'towns.Name as town_name',
+        //         'itineraries.location as location',
+        //         'itineraries.visit_with as visit_with',
+        //         'itineraries.visit_objective as visit_objective',
+        //         'itineraries.meeting_with as meeting_with',
+        //         'itineraries.visit_start_time as visit_start_time',
+        //         'itineraries.visit_end_time as visit_end_time',
+        //     )
+        //     ->whereDate('visit_date', $date)
+        //     ->where(function ($q) use ($employeeId) {
+        //         if ($employeeId) {
+        //             $q->where('employees.id', $employeeId);
+        //         }
+        //     })
+        //     ->get();
+
+        // $itinerary_plan = DB::table('itineraries_updates')
+        //     ->join('employees', 'employees.id', '=', 'itineraries_updates.employee_id')
+        //     ->join('towns', 'towns.id', '=', 'itineraries_updates.town_id')
+        //     ->select(
+        //         'itineraries_updates.id as update_plan_id',
+        //         'itineraries_updates.visit_date as visit_date',
+        //         'employees.Full_Name as employee_name',
+        //         'towns.Name as town_name',
+        //         'itineraries_updates.location as location',
+        //         'itineraries_updates.visit_with as visit_with',
+        //         'itineraries_updates.visit_objective as visit_objective',
+        //         'itineraries_updates.meeting_with as meeting_with',
+        //         'itineraries_updates.visit_start_time as visit_start_time',
+        //         'itineraries_updates.visit_end_time as visit_end_time'
+        //     )
+        //     ->where('status', 'PLAN')
+        //     ->whereDate('visit_date', $date)
+        //     ->where(function ($q) use ($employeeId) {
+        //         if ($employeeId) {
+        //             $q->where('employees.id', $employeeId);
+        //         }
+        //     })
+        //     ->get();
+
+        // $itinerary_actual = DB::table('itineraries_updates')
+        //     ->join('employees', 'employees.id', '=', 'itineraries_updates.employee_id')
+        //     ->join('towns', 'towns.id', '=', 'itineraries_updates.town_id')
+        //     ->select(
+        //         'itineraries_updates.id as update_actual_id',
+        //         'itineraries_updates.visit_date as visit_date',
+        //         'employees.Full_Name as employee_name',
+        //         'towns.Name as town_name',
+        //         'itineraries_updates.location as location',
+        //         'itineraries_updates.visit_with as visit_with',
+        //         'itineraries_updates.visit_objective as visit_objective',
+        //         'itineraries_updates.meeting_with as meeting_with',
+        //         'itineraries_updates.visit_start_time as visit_start_time',
+        //         'itineraries_updates.visit_end_time as visit_end_time'
+        //     )
+        //     ->where('status', 'ACTUAL')
+        //     ->whereDate('visit_date', $date)
+        //     ->where(function ($q) use ($employeeId) {
+        //         if ($employeeId) {
+        //             $q->where('employees.id', $employeeId);
+        //         }
+        //     })
+        //     ->get();
+
+
+
+        // if ($itineraries_response->isNotEmpty()) {
+        //     return response()->json($itineraries_response);
+        // }
+
+        // $itinerary_actual = DB::table('itineraries_updates')
+        //     ->join('employees', 'employees.id', '=', 'itineraries_updates.employee_id')
+        //     ->join('towns', 'towns.id', '=', 'itineraries_updates.town_id')
+        //     ->select(
+        //         'itineraries_updates.visit_date as visit_date',
+        //         'employees.Full_Name as employee_name',
+        //         'towns.Name as town_name',
+        //         'itineraries_updates.location as location',
+        //         'itineraries_updates.visit_with as visit_with',
+        //         'itineraries_updates.visit_objective as visit_objective',
+        //         'itineraries_updates.meeting_with as meeting_with',
+        //         'itineraries_updates.visit_start_time as visit_start_time',
+        //         'itineraries_updates.visit_end_time as visit_end_time',
+        //         // id	itineraries_id	employee_id	visit_date	status	town_id	visit_with	location
+        //         // visit_objective	meeting_with	visit_start_time	visit_end_time	remarks	supervisor_id	updated_by	created_at	updated_at
+        //         // 'itineraries_updates.id as itineraries_actual_id',
+        //         // 'itineraries_updates.itineraries_id as itinerary_id',
+        //         // 'itineraries_updates.itineraries_id as itinerary_id'
+        //     )
+        //     ->where('status', 'ACTUAL')
+        //     ->whereDate('visit_date', $date)
+        //     ->get();
+
+
+
+        // if ($itinerary_actual->isNotEmpty()) {
+        //     return response()->json($itinerary_actual);
+        // }
+
+        // $itinerary_plan = DB::table('itineraries_updates')
+        //     ->join('employees', 'employees.id', '=', 'itineraries_updates.employee_id')
+        //     ->join('towns', 'towns.id', '=', 'itineraries_updates.town_id')
+        //     ->select(
+        //         'itineraries_updates.visit_date as visit_date',
+        //         'employees.Full_Name as employee_name',
+        //         'towns.Name as town_name',
+        //         'itineraries_updates.location as location',
+        //         'itineraries_updates.visit_with as visit_with',
+        //         'itineraries_updates.visit_objective as visit_objective',
+        //         'itineraries_updates.meeting_with as meeting_with',
+        //         'itineraries_updates.visit_start_time as visit_start_time',
+        //         'itineraries_updates.visit_end_time as visit_end_time',
+        //         // id	itineraries_id	employee_id	visit_date	status	town_id	visit_with	location
+        //         // visit_objective	meeting_with	visit_start_time	visit_end_time	remarks	supervisor_id	updated_by	created_at	updated_at
+        //         // 'itineraries_updates.id as itineraries_actual_id',
+        //         // 'itineraries_updates.itineraries_id as itinerary_id',
+        //         // 'itineraries_updates.itineraries_id as itinerary_id'
+        //     )
+        //     ->where('status', 'PLAN')
+        //     ->whereDate('visit_date', $date)
+        //     ->get();
+
+
+        // if ($itinerary_plan->isNotEmpty()) {
+        //     return response()->json($itinerary_plan);
+        // }
+
+
+        // $employeeId = $request->query('employee_id');
+
+        // $items = DB::table('itinerary_logs')
+        //     ->join('itineraries', 'itinerary_logs.id', '=', 'itineraries.itinerary_logs_id')
+
+        //     ->leftJoin('itineraries_updates as actual', function ($join) use ($date) {
+        //         $join->on('actual.itineraries_id', '=', 'itineraries.id')
+        //             ->where('actual.status', 'ACTUAL')
+        //             ->whereDate('actual.visit_date', $date);
+        //     })
+
+        //     ->leftJoin('itineraries_updates as plan', function ($join) use ($date) {
+        //         $join->on('plan.itineraries_id', '=', 'itineraries.id')
+        //             ->where('plan.status', 'PLAN')
+        //             ->whereDate('plan.visit_date', $date);
+        //     })
+
+        //     ->join('employees', 'employees.id', '=', 'itinerary_logs.created_by')
+        //     ->join('towns', 'towns.id', '=', 'itineraries.town_id')
+
+        //     ->select(
+        //         'employees.id as employee_id',
+        //         'employees.Full_Name as employee_name',
+        //         'towns.Name as town_name',
+        //          DB::raw('COALESCE(actual.visit_date, plan.visit_date, itineraries.visit_date) as visit_date'),
+        //          DB::raw('COALESCE(actual.status, plan.status, "BASE") as final_status')
+        //      )
+
+        //      ->whereDate('itineraries.visit_date', $date)
+
+        //      ->when($employeeId, function ($q) use ($employeeId) {
+        //          $q->where('employees.id', $employeeId);
+        //      })
+
+        //      ->orderByRaw('COALESCE(actual.visit_date, plan.visit_date, itineraries.visit_date) ASC')
+
+        //      ->get();
+
+
     }
 }

@@ -33,23 +33,19 @@ const formatTime = (timeStr) => {
 };
 
 // Search fields
-const searchDate = ref("");
 const searchEmp = ref(""); // employee_id
 
 /* -------------------------
    Fetch itinerary items
 --------------------------*/
-const getDailyItems = async (
-    date = searchDate.value,
-    employee_id = searchEmp.value
-) => {
+const getDailyItems = async (employee_id = searchEmp.value) => {
     try {
+        console.log("check employee ID : ", employee_id);
         const res = await api.get("/itinerary-daily-all-items", {
-            params: { date, employee_id },
+            params: { employee_id },
         });
-        dailyItems.value = res.data;
 
-        console.log("Daily Items:", dailyItems.value);
+        dailyItems.value = res.data;
     } catch (err) {
         error.value = err?.message || "Failed to load data";
         Swal.fire("Error", error.value, "error");
@@ -72,37 +68,19 @@ const loadEmployees = async () => {
    Filtered data
 --------------------------*/
 const filteredItems = computed(() => {
-    return dailyItems.value
-        .map((item) => {
-            return {
-                itinerary_id: item.itinerary_id,
-                visit_date: item.updated_visit_date ?? item.visit_date,
-                town_name: item.updated_town_name ?? item.town_name,
-                location: item.updated_location ?? item.location,
-                visit_with: item.updated_visit_with ?? item.visit_with,
-                employee_id: item.employee_id,
-                visit_objective:
-                    item.updated_visit_objective ?? item.visit_objective,
-                meeting_with: item.updated_meeting_with ?? item.meeting_with,
-                visit_start_time:
-                    item.updated_visit_start_time ?? item.visit_start_time,
-                visit_end_time:
-                    item.updated_visit_end_time ?? item.visit_end_time,
-                itinerary_status:
-                    item.updated_visit_status ?? item.itinerary_status,
-            };
-        })
-        .filter((item) => {
-            const matchDate = searchDate.value
-                ? item.visit_date === searchDate.value
-                : true;
-
-            const matchEmployee = searchEmp.value
-                ? item.employee_id === searchEmp.value
-                : true;
-
-            return matchDate && matchEmployee;
-        });
+    return dailyItems.value.map((item) => {
+        return {
+            visit_date: item.visit_date,
+            employee_name: item.employee_name,
+            town_name: item.town_name,
+            location: item.location,
+            visit_with: item.visit_with,
+            visit_objective: item.visit_objective,
+            meeting_with: item.meeting_with,
+            visit_start_time: item.visit_start_time,
+            visit_end_time: item.visit_end_time,
+        };
+    });
 });
 
 onMounted(() => {
@@ -117,14 +95,13 @@ onMounted(() => {
 
         <!-- Filters -->
         <div class="row g-3 mb-4">
-            <div class="col-lg-3">
-                <label class="form-label">Search by Date</label>
-                <input type="date" v-model="searchDate" class="form-control" />
-            </div>
-
-            <div class="col-lg-4 position-relative">
+            <div class="col-lg-3 position-relative">
                 <label class="form-label">Select Employee</label>
-                <select v-model="searchEmp" class="form-control">
+                <select
+                    v-model="searchEmp"
+                    class="form-control"
+                    @change="getDailyItems(searchEmp)"
+                >
                     <option value="">All Employees</option>
                     <option
                         v-for="emp in employeeIDs"
@@ -138,7 +115,10 @@ onMounted(() => {
                 <button
                     v-if="searchEmp"
                     class="btn btn-sm btn-link position-absolute top-0 end-0 mt-4 me-2"
-                    @click="searchEmp = ''"
+                    @click="
+                        searchEmp = '';
+                        getDailyItems();
+                    "
                 >
                     <i class="fa fa-times"></i>
                 </button>
@@ -150,29 +130,40 @@ onMounted(() => {
             <table class="table table-bordered table-hover table-sm">
                 <thead class="table-light">
                     <tr>
-                        <th>DATE</th>
-                        <th>NAME</th>
-                        <th>TOWN</th>
-                        <th>LOCATION</th>
-                        <th>VISIT WITH</th>
-                        <th>OBJECTIVE</th>
-                        <th>MEETING WITH</th>
-                        <th>START</th>
-                        <th>END</th>
+                        <th class="text-center" style="width: 2%">SN</th>
+                        <th class="text-center" style="width: 6%">DATE</th>
+                        <th style="width: 10%">NAME</th>
+                        <th style="width: 3%">TOWN</th>
+                        <th style="width: 10%">LOCATION</th>
+                        <th style="width: 10%">VISIT WITH</th>
+                        <th style="width: 15%">OBJECTIVE</th>
+                        <th style="width: 15%">MEETING WITH</th>
+                        <th class="text-center" style="width: 5%">START</th>
+                        <th class="text-center" style="width: 5%">END</th>
                     </tr>
                 </thead>
 
                 <tbody>
-                    <tr v-for="item in filteredItems" :key="item.itinerary_id">
-                        <td>{{ formatDate(item.visit_date) }}</td>
+                    <tr
+                        v-for="(item, index) in filteredItems"
+                        :key="item.itinerary_id"
+                    >
+                        <td class="text-center">{{ index + 1 }}</td>
+                        <td class="text-center">
+                            {{ formatDate(item.visit_date) }}
+                        </td>
                         <td>{{ item.employee_name }}</td>
-                        <td>{{ item.town_id }}</td>
+                        <td>{{ item.town_name }}</td>
                         <td>{{ item.location }}</td>
                         <td>{{ item.visit_with }}</td>
                         <td>{{ item.visit_objective }}</td>
                         <td>{{ item.meeting_with }}</td>
-                        <td>{{ formatTime(item.visit_start_time) }}</td>
-                        <td>{{ formatTime(item.visit_end_time) }}</td>
+                        <td class="text-center">
+                            {{ formatTime(item.visit_start_time) }}
+                        </td>
+                        <td class="text-center">
+                            {{ formatTime(item.visit_end_time) }}
+                        </td>
                     </tr>
 
                     <tr v-if="filteredItems.length === 0">

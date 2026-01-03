@@ -15,6 +15,7 @@ class loan extends Model
         'tenure_months',
         'monthly_installments',
         'installment_dates',
+        'updated_by',
         'status',
         'remarks',
         'created_by',

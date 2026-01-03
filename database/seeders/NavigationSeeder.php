@@ -46,10 +46,6 @@ class NavigationSeeder extends Seeder
             ['id' => '33', 'name' => 'Organizational Hierarchy', 'url' => '/setup/employee/organizational-hierarchy', 'icon' => 'NULL', 'page' => 'OrganizationalHierarchy', 'path' => './pages/setup/employee/hierarchy.vue', 'parent_id' => '6', 'active' => '1'],
             ['id' => '34', 'name' => 'Workstation', 'url' => '/workstation', 'icon' => 'fa-solid fa-briefcase', 'page' => 'NULL', 'path' => 'NULL', 'parent_id' => '0', 'active' => '1'],
             ['id' => '35', 'name' => 'Notes', 'url' => '/workstation/notes', 'icon' => 'NULL', 'page' => 'Notes', 'path' => './pages/workstation/notes.vue', 'parent_id' => '34', 'active' => '1'],
-            ['id' => '47', 'name' => 'Itinerary', 'url' => '/workstation/itinerary', 'icon' => 'NULL', 'page' => 'Itinerary', 'path' => './pages/workstation/itinerary.vue', 'parent_id' => '34', 'active' => '1'],
-            ['id' => '48', 'name' => 'Daily Itinerary', 'url' => '/workstation/daily-itinerary', 'icon' => 'NULL', 'page' => 'DailyItinerary', 'path' => './pages/workstation/dailyItinerary.vue', 'parent_id' => '34', 'active' => '1'],
-            ['id' => '49', 'name' => 'Daily Itinerary List', 'url' => '/workstation/daily-itinerary-list', 'icon' => 'NULL', 'page' => 'DailyItineraryList', 'path' => './pages/workstation/dailyItineraryList.vue', 'parent_id' => '34', 'active' => '1'],
-            ['id' => '50', 'name' => 'Admin Itinerary List', 'url' => '/workstation/admin-itinerary-list', 'icon' => 'NULL', 'page' => 'AdminItineraryList', 'path' => './pages/workstation/adminItineraryList.vue', 'parent_id' => '34', 'active' => '1'],
             ['id' => '36', 'name' => 'Vehicle', 'url' => '/vehicle', 'icon' => 'fa-solid fa-car', 'page' => 'NULL', 'path' => 'NULL', 'parent_id' => '0', 'active' => '1'],
             ['id' => '37', 'name' => 'Vehicle Setup', 'url' => '/setup/vehicle/vehicle-setup', 'icon' => 'NULL', 'page' => 'VehicleSetup', 'path' => './pages/setup/vehicle/vehicleSetup.vue', 'parent_id' => '6', 'active' => '1'],
             ['id' => '38', 'name' => 'Vehicle Requisition', 'url' => '/vehicle/vehicle-requisition', 'icon' => 'NULL', 'page' => 'VehicleRequisition', 'path' => './pages/vehicle/vehicleRequisition.vue', 'parent_id' => '36', 'active' => '1'],
@@ -60,7 +56,11 @@ class NavigationSeeder extends Seeder
             ['id' => '43', 'name' => 'Salary Adjustment List', 'url' => '/payroll/salary-adjustment', 'icon' => 'NULL', 'page' => 'SalaryAdjustment', 'path' => './pages/payroll/salaryAdjustment.vue', 'parent_id' => '41', 'active' => '1'],
             ['id' => '44', 'name' => 'Employee Loan List', 'url' => '/payroll/employee-loan', 'icon' => 'NULL', 'page' => 'EmployeeLoan', 'path' => './pages/payroll/employeeLoan.vue', 'parent_id' => '41', 'active' => '1'],
             ['id' => '45', 'name' => 'Salary Sheet', 'url' => '/payroll/salary-sheet', 'icon' => 'NULL', 'page' => 'SalarySheet', 'path' => './pages/payroll/salarySheet.vue', 'parent_id' => '41', 'active' => '1'],
-            ['id' => '46', 'name' => 'Loan Application', 'url' => '/payroll/loan-application', 'icon' => 'NULL', 'page' => 'LoanApplication', 'path' => './pages/payroll/loanApplication.vue', 'parent_id' => '41', 'active' => '1'],
+            ['id' => '47', 'name' => 'Itinerary', 'url' => '/workstation/itinerary', 'icon' => 'NULL', 'page' => 'Itinerary', 'path' => './pages/workstation/itinerary.vue', 'parent_id' => '34', 'active' => '1'],
+            ['id' => '48', 'name' => 'Daily Itinerary', 'url' => '/workstation/daily-itinerary', 'icon' => 'NULL', 'page' => 'DailyItinerary', 'path' => './pages/workstation/dailyItinerary.vue', 'parent_id' => '34', 'active' => '1'],
+            ['id' => '49', 'name' => 'Daily Itinerary List', 'url' => '/workstation/daily-itinerary-list', 'icon' => 'NULL', 'page' => 'DailyItineraryList', 'path' => './pages/workstation/dailyItineraryList.vue', 'parent_id' => '34', 'active' => '1'],
+            ['id' => '50', 'name' => 'Admin Itinerary List', 'url' => '/workstation/admin-itinerary-list', 'icon' => 'NULL', 'page' => 'AdminItineraryList', 'path' => './pages/workstation/adminItineraryList.vue', 'parent_id' => '34', 'active' => '1'],
+            ['id' => '51', 'name' => 'Salary Disbursement', 'url' => '/payroll/salary-disbursement', 'icon' => 'NULL', 'page' => 'SalaryDisbursement', 'path' => './pages/payroll/salaryDisbursement.vue', 'parent_id' => '41', 'active' => '1'],
         ];
 
         foreach ($navigations as $item) {

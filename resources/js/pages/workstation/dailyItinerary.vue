@@ -30,29 +30,26 @@ const getData = async () => {
         town_options.value = resTowns.data;
         daily_items.value = resItems.data;
 
-        // Pre-fill form with first item if exists
         if (daily_items.value.length > 0) {
             const d = daily_items.value[0];
 
             form.value = {
-                status: d.updated_visit_status ?? d.itinerary_status,
+                logStatus: d.log_status,
+                updateStatus: d.status,
                 itinerary_id: d.itinerary_id,
                 itinerary_logs_id: d.itinerary_logs_id,
+                date: d.visit_date,
+                day: new Date(d.visit_date).toLocaleDateString("en-US", {
+                    weekday: "long",
+                }),
 
-                // ✅ Prefer ACTUAL (updated) values
-                date: d.updated_visit_date ?? d.visit_date,
-
-                day: new Date(
-                    d.updated_visit_date ?? d.visit_date
-                ).toLocaleDateString("en-US", { weekday: "long" }),
-
-                town: d.updated_town_id ?? d.town_id,
-                location: d.updated_location ?? d.location,
-                visitWith: d.updated_visit_with ?? d.visit_with,
-                objective: d.updated_visit_objective ?? d.visit_objective,
-                meetingWith: d.updated_meeting_with ?? d.meeting_with,
-                startTime: d.updated_visit_start_time ?? d.visit_start_time,
-                endTime: d.updated_visit_end_time ?? d.visit_end_time,
+                town: d.town_id,
+                location: d.location,
+                visitWith: d.visit_with,
+                objective: d.visit_objective,
+                meetingWith: d.meeting_with,
+                startTime: d.visit_start_time,
+                endTime: d.visit_end_time,
             };
         }
 

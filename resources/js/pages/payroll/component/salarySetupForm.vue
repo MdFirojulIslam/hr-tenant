@@ -387,7 +387,7 @@ onMounted(() => {
                                             >
                                             <span> :</span>
                                         </div>
-                                        <div class="col-md-5">
+                                        <div class="col-md-6">
                                             <select
                                                 class="form-select border-color custom-input"
                                                 v-model="form.department"
@@ -421,7 +421,7 @@ onMounted(() => {
                                             >
                                             <span>:</span>
                                         </div>
-                                        <div class="col-md-5">
+                                        <div class="col-md-6">
                                             <select
                                                 class="form-select border-color custom-input"
                                                 v-model="form.eid"
@@ -451,7 +451,7 @@ onMounted(() => {
                                             >
                                             <span>:</span>
                                         </div>
-                                        <div class="col-md-5">
+                                        <div class="col-md-6">
                                             <input
                                                 type="text"
                                                 class="form-control border-color custom-input"
@@ -465,14 +465,24 @@ onMounted(() => {
                                 </div>
 
                                 <!-- Employee Image -->
-                                <div class="col-md-4 text-center">
-                                    <img
-                                        :src="emp_img ? emp_img.img_url : ''"
-                                        class="rounded border"
-                                        alt="Employee"
-                                        height="120"
-                                        width="120"
-                                    />
+                                <div
+                                    class="col-lg-5 col-md-6"
+                                    v-for="(item, index) in employee"
+                                    :key="item.id"
+                                >
+                                    <div
+                                        v-if="index === 0"
+                                        class="about-avatar"
+                                    >
+                                        <img
+                                            :src="item.img_url"
+                                            class="img-fluid"
+                                            style="
+                                                max-height: 150px;
+                                                max-width: 130px;
+                                            "
+                                        />
+                                    </div>
                                 </div>
                             </div>
                         </div>

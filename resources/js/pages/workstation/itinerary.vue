@@ -114,7 +114,7 @@ const saveItems = async (id) => {
         confirmButtonText: "Yes, Submit",
     });
     if (!confirm.isConfirmed) return;
-    // await api.get(`/itinerary-sender-mail/${id}`);
+    await api.get(`/itinerary-sender-mail/${id}`);
     await api.post(`/itinerary/submit/${id}`);
     Swal.fire({
         icon: "success",

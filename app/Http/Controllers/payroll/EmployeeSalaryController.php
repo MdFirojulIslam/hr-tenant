@@ -15,6 +15,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Maatwebsite\Excel\Facades\Excel;
 
+use Barryvdh\DomPDF\Facade\Pdf;
+
 class EmployeeSalaryController extends Controller
 {
     public function index()
@@ -34,7 +36,7 @@ class EmployeeSalaryController extends Controller
                 'designations.Name as designation_name',
                 DB::raw('salaries.consolidated + salaries.festival_bonus + salaries.daily_allowance + salaries.travel_allowance + salaries.mobile_bill + salaries.other_allowance AS total_earning'),
                 DB::raw('salaries.provident_fund + salaries.income_tax + salaries.revenue_stamp AS total_deduction')
-            )->paginate(12);
+            )->paginate(16);
 
         return response()->json($salaries);
     }
@@ -256,6 +258,8 @@ class EmployeeSalaryController extends Controller
                 'salaries.*'
             )->get();
 
+
+
         foreach ($salaries as $salary) {
 
             $earning = $earnings[$salary->employee_id]->total_earning ?? 0;
@@ -304,9 +308,11 @@ class EmployeeSalaryController extends Controller
                     'total_deduction' => $total_deduction,
                     'monthly_loan_repayments' => $loan,
                     'salary_status' => 'approved',
+                    'payment_method' => $salary->salary_type,
                     'bank_account_no' => $salary->bank_account_no,
                     'net_pay' => $net_salary,
                     'created_by' => $user_id,
+
                 ]
             );
         }
@@ -410,5 +416,123 @@ class EmployeeSalaryController extends Controller
         } else {
             return response()->json(['message' => 'Employee not found'], 404);
         }
+    }
+
+    public function deleteSalary($id)
+    {
+
+
+        DB::beginTransaction();
+
+        try {
+            // Find the salary record by employee_id
+            $salary = salaries::where('employee_id', $id)->first();
+
+            if (!$salary) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Salary record not found'
+                ], 404);
+            }
+
+            // Delete the salary record
+            $salary->delete();
+
+            DB::commit();
+            return response()->json([
+                'success' => true,
+                'message' => 'Salary record deleted successfully'
+            ]);
+        } catch (\Throwable $e) {
+            DB::rollBack();
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Error while deleting salary record',
+                'error'   => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    public function salaryDisbursement(Request $request)
+    {
+        $year = $request->year;
+        $month = $request->month;
+
+        $salaries = DB::table('salary_sheets')
+            ->join('employees', 'employees.id', '=', 'salary_sheets.employee_id')
+            ->whereYear('salary_sheets.salary_date', $year)
+            ->whereMonth('salary_sheets.salary_date', $month)
+            ->select(
+                'employees.Employee_Id as employee_id',
+                'employees.Full_Name as full_name',
+                'salary_sheets.bank_account_no',
+                'salary_sheets.net_pay'
+            )->get();
+
+        return response()->json($salaries);
+    }
+
+    public function SalaryDisbursementBank(Request $request)
+    {
+        $year = $request->year;
+        $month = $request->month;
+
+        // Convert month number to month name
+        $monthName = date('F', mktime(0, 0, 0, $month, 10)); // e.g., 1 => January
+
+        $salaries = DB::table('salary_sheets')
+            ->join('employees', 'employees.id', '=', 'salary_sheets.employee_id')
+            ->where('salary_sheets.payment_method', 'bank')
+            ->whereYear('salary_sheets.salary_date', $year)
+            ->whereMonth('salary_sheets.salary_date', $month)
+            ->select(
+                'employees.Employee_Id as employee_id',
+                'employees.Full_Name as full_name',
+                'salary_sheets.bank_account_no',
+                'salary_sheets.net_pay'
+            )->get();
+
+        $pdf = Pdf::loadView('pdf.salary-disbursement-bank', [
+            'data' => $salaries,
+            'year' => $year,
+            'month' => $month,
+            'monthName' => $monthName // pass it to view
+        ]);
+
+        $pdf->setPaper('A4', 'portrait');
+
+        return $pdf->download("Salary_Disbursement_{$monthName}_{$year}.pdf"); // use month name in filename
+    }
+
+    public function SalaryDisbursementCash(Request $request)
+    {
+        $year = $request->year;
+        $month = $request->month;
+
+        // Convert month number to month name
+        $monthName = date('F', mktime(0, 0, 0, $month, 10)); // e.g., 1 => January
+
+        $salaries = DB::table('salary_sheets')
+            ->join('employees', 'employees.id', '=', 'salary_sheets.employee_id')
+            ->whereYear('salary_sheets.salary_date', $year)
+            ->whereMonth('salary_sheets.salary_date', $month)
+            ->select(
+                'employees.Employee_Id as employee_id',
+                'employees.Full_Name as full_name',
+                'salary_sheets.bank_account_no',
+                'salary_sheets.net_pay'
+            )->get();
+
+        $pdf = Pdf::loadView('pdf.salary-disbursement-cash', [
+            'data' => $salaries,
+            'year' => $year,
+            'month' => $month,
+            'monthName' => $monthName // pass it to view
+        ]);
+
+        $pdf->setPaper('A4', 'portrait');
+
+        return $pdf->download("Salary_Disbursement_{$monthName}_{$year}.pdf"); // use month name in filename
     }
 }

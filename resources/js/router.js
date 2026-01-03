@@ -391,16 +391,16 @@ const routes = [
             pageId: 45,
         },
     },
-    //added by feroj
     {
-        path: "/payroll/loan-application",
-        name: "LoanApplication",
-        component: () => import("./pages/payroll/loanApplication.vue"),
+        path: "/payroll/salary-disbursement",
+        name: "SalaryDisbursement",
+        component: () => import("./pages/payroll/salaryDisbursement.vue"),
         meta: {
             requireAuth: true,
-            pageId: 46,
+            pageId: 51,
         },
     },
+    //added by feroj
     {
         path: "/payroll/salary-details/:id?",
         name: "SalaryDetails",

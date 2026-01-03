@@ -36,11 +36,17 @@ Route::get('/get-loan-amount/{id}', [LoanController::class, 'getLoanAmount']);
 Route::post('/loan-repayment', [LoanController::class, 'createRepayment']);
 Route::get('/loan-installments/{id}', [LoanController::class, 'repaymentHistory']);
 Route::get('/repayments-info', [LoanController::class, 'repaymentInfo']);
+Route::get('/delete-loan/{id}', [LoanController::class, 'deleteLoan']);
 
 
-//ended by firoj
+Route::get('/delete-salary/{id}', [EmployeeSalaryController::class, 'deleteSalary']);
+
 
 //added by firoj
 Route::get('/employee-salary-profile-information/{id}', [EmployeeSalaryController::class, 'salary_profile']);
 Route::get('/emp-info/{id}', [EmployeeSalaryController::class, 'getEmployeeInfo']);
 //ended by firoj
+
+Route::get('/salary-disbursement', [EmployeeSalaryController::class, 'salaryDisbursement']);
+Route::get('/salary-disbursement-bank', [EmployeeSalaryController::class, 'SalaryDisbursementBank']);
+Route::get('/salary-disbursement-cash', [EmployeeSalaryController::class, 'SalaryDisbursementCash']);

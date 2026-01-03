@@ -97,7 +97,6 @@
                                     class="form-control"
                                     v-model="form.purpose"
                                     rows="3"
-                                    readonly
                                 ></textarea>
                             </div>
                         </div>

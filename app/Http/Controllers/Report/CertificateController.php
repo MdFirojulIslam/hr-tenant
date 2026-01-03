@@ -12,7 +12,6 @@ use NumberFormatter;
 
 class CertificateController extends Controller
 {
-
     function jasperView()
     {
         $input = storage_path('/jasper/report1.jasper');
@@ -180,7 +179,7 @@ class CertificateController extends Controller
     }
 
 
-    public function getSalaryPayslip($id) 
+    public function getSalaryPayslip($id)
     {
         $employee = Employee::with('official', 'official.department', 'official.designation', 'employee_salary')->where('id', $id)->first();
 
