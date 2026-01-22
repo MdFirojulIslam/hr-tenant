@@ -20,8 +20,6 @@ const getData = async () => {
 };
 
 onMounted(() => getData());
-
-// 👉 Your Microsoft Forms link
 </script>
 
 <template>
@@ -37,8 +35,6 @@ onMounted(() => getData());
             <Footer v-if="$store.getters.getToken !== 0" />
         </div>
     </div>
-
-    <!-- Floating Tech Assist Button -->
 </template>
 
 <style scoped>

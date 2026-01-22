@@ -5,9 +5,9 @@ import Swal from "sweetalert2";
 
 const error = ref([]);
 const disburse = ref([]);
-const selectedMonth = ref(new Date().getMonth());
+const selectedMonth = ref(new Date().getMonth() + 1);
 const selectedYear = ref(new Date().getFullYear());
-const searchQuery = ref(""); // New ref for the search input
+const searchQuery = ref("");
 
 const years = ref([
     "2022",
@@ -226,9 +226,9 @@ onMounted(() => getData());
                     class="d-flex align-items-center px-2 py-2 fw-semibold border-bottom bg-light"
                 >
                     <span class="me-2">Total Employees:</span>
-                    <span
-                        class="bg-white border rounded px-3 py-1 fw-medium"
-                    ></span>
+                    <span class="bg-white border rounded px-3 py-1 fw-medium">
+                        {{ filteredDisbursement.length }}</span
+                    >
                 </div>
 
                 <div class="table-responsive shadow-sm bg-light">
@@ -257,7 +257,11 @@ onMounted(() => getData());
                                     {{ item.full_name }}
                                 </td>
                                 <td class="text-center">
-                                    {{ item.bank_account_no }}
+                                    {{
+                                        item.bank_account_no === null
+                                            ? "Cash"
+                                            : item.bank_account_no
+                                    }}
                                 </td>
                                 <td class="text-center">{{ item.net_pay }}</td>
                             </tr>

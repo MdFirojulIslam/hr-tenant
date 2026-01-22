@@ -19,6 +19,7 @@ class NavigationSeeder extends Seeder
             ['id' => '3', 'name' => 'User Registration', 'url' => '/security/user-registration', 'icon' => 'NULL', 'page' => 'UserRegistration', 'path' => './pages/security/userRegistration.vue', 'parent_id' => '2', 'active' => '1'],
             ['id' => '4', 'name' => 'Role', 'url' => '/security/create-role', 'icon' => 'NULL', 'page' => 'CreateRole', 'path' => './pages/security/createRole.vue', 'parent_id' => '2', 'active' => '0'],
             ['id' => '5', 'name' => 'User Page Permission', 'url' => '/security/user-page-permission', 'icon' => 'NULL', 'page' => 'UserPagePermission', 'path' => './pages/security/userPagePermission.vue', 'parent_id' => '2', 'active' => '1'],
+            ['id' => '56', 'name' => 'User Component Permission', 'url' => '/security/user-component-permission', 'icon' => 'NULL', 'page' => 'UserComponentPermission', 'path' => './pages/security/userComponentPermission.vue', 'parent_id' => '2', 'active' => '1'],
             ['id' => '6', 'name' => 'Setup', 'url' => 'NULL', 'icon' => 'fa-solid fa-wrench', 'page' => 'NULL', 'path' => 'NULL', 'parent_id' => '0', 'active' => '1'],
             ['id' => '7', 'name' => 'Employee', 'url' => '/setup/employee/employeeList', 'icon' => 'NULL', 'page' => 'EmployeeList', 'path' => './pages/setup/employee/employeeList.vue', 'parent_id' => '6', 'active' => '1'],
             ['id' => '8', 'name' => 'Employee List', 'url' => '/setup/employee/empexl', 'icon' => 'NULL', 'page' => 'EmpExl', 'path' => './pages/setup/employee/empExl.vue', 'parent_id' => '6', 'active' => '1'],
@@ -51,16 +52,23 @@ class NavigationSeeder extends Seeder
             ['id' => '38', 'name' => 'Vehicle Requisition', 'url' => '/vehicle/vehicle-requisition', 'icon' => 'NULL', 'page' => 'VehicleRequisition', 'path' => './pages/vehicle/vehicleRequisition.vue', 'parent_id' => '36', 'active' => '1'],
             ['id' => '39', 'name' => 'Vehicle Requisition Approval', 'url' => '/vehicle/vehicle-requisition-approval', 'icon' => 'NULL', 'page' => 'VehicleRequisitionApproval', 'path' => './pages/vehicle/vehicleRequisitionApproval.vue', 'parent_id' => '36', 'active' => '1'],
             ['id' => '40', 'name' => 'Expense Permission', 'url' => '/expense/expense-permission', 'icon' => 'NULL', 'page' => 'ExpensePermission', 'path' => './pages/expense/expensePermission.vue', 'parent_id' => '27', 'active' => '1'],
+
             ['id' => '41', 'name' => 'Payroll', 'url' => '/payroll', 'icon' => 'fa-solid fa-money-check-dollar', 'page' => 'NULL', 'path' => 'NULL', 'parent_id' => '0', 'active' => '1'],
             ['id' => '42', 'name' => 'Salary Setup', 'url' => '/payroll/salary-setup', 'icon' => 'NULL', 'page' => 'SalarySetup', 'path' => './pages/payroll/salarySetup.vue', 'parent_id' => '41', 'active' => '1'],
             ['id' => '43', 'name' => 'Salary Adjustment List', 'url' => '/payroll/salary-adjustment', 'icon' => 'NULL', 'page' => 'SalaryAdjustment', 'path' => './pages/payroll/salaryAdjustment.vue', 'parent_id' => '41', 'active' => '1'],
             ['id' => '44', 'name' => 'Employee Loan List', 'url' => '/payroll/employee-loan', 'icon' => 'NULL', 'page' => 'EmployeeLoan', 'path' => './pages/payroll/employeeLoan.vue', 'parent_id' => '41', 'active' => '1'],
             ['id' => '45', 'name' => 'Salary Sheet', 'url' => '/payroll/salary-sheet', 'icon' => 'NULL', 'page' => 'SalarySheet', 'path' => './pages/payroll/salarySheet.vue', 'parent_id' => '41', 'active' => '1'],
+            ['id' => '51', 'name' => 'Salary Disbursement', 'url' => '/payroll/salary-disbursement', 'icon' => 'NULL', 'page' => 'SalaryDisbursement', 'path' => './pages/payroll/salaryDisbursement.vue', 'parent_id' => '41', 'active' => '1'],
             ['id' => '47', 'name' => 'Itinerary', 'url' => '/workstation/itinerary', 'icon' => 'NULL', 'page' => 'Itinerary', 'path' => './pages/workstation/itinerary.vue', 'parent_id' => '34', 'active' => '1'],
             ['id' => '48', 'name' => 'Daily Itinerary', 'url' => '/workstation/daily-itinerary', 'icon' => 'NULL', 'page' => 'DailyItinerary', 'path' => './pages/workstation/dailyItinerary.vue', 'parent_id' => '34', 'active' => '1'],
             ['id' => '49', 'name' => 'Daily Itinerary List', 'url' => '/workstation/daily-itinerary-list', 'icon' => 'NULL', 'page' => 'DailyItineraryList', 'path' => './pages/workstation/dailyItineraryList.vue', 'parent_id' => '34', 'active' => '1'],
             ['id' => '50', 'name' => 'Admin Itinerary List', 'url' => '/workstation/admin-itinerary-list', 'icon' => 'NULL', 'page' => 'AdminItineraryList', 'path' => './pages/workstation/adminItineraryList.vue', 'parent_id' => '34', 'active' => '1'],
-            ['id' => '51', 'name' => 'Salary Disbursement', 'url' => '/payroll/salary-disbursement', 'icon' => 'NULL', 'page' => 'SalaryDisbursement', 'path' => './pages/payroll/salaryDisbursement.vue', 'parent_id' => '41', 'active' => '1'],
+
+            ['id' => '52', 'name' => 'Employee Separation', 'url' => '/separation', 'icon' => 'fa-solid fa-money-check-dollar', 'page' => 'NULL', 'path' => 'NULL', 'parent_id' => '0', 'active' => '1'],
+
+            ['id' => '53', 'name' => 'Separation Request', 'url' => '/separation/separation-request', 'icon' => 'NULL', 'page' => 'SeparationRequest', 'path' => './pages/separation/separationRequest.vue', 'parent_id' => '52', 'active' => '1'],
+            ['id' => '54', 'name' => 'Separation Approval', 'url' => '/separation/separation-approval', 'icon' => 'NULL', 'page' => 'SeparationApproval', 'path' => './pages/separation/separationApproval.vue', 'parent_id' => '52', 'active' => '1'],
+            ['id' => '55', 'name' => 'All Separations', 'url' => '/separation/all-separations', 'icon' => 'NULL', 'page' => 'AllSeparations', 'path' => './pages/separation/allSeparations.vue', 'parent_id' => '52', 'active' => '1']
         ];
 
         foreach ($navigations as $item) {

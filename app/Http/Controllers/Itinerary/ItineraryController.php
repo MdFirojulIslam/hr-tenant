@@ -137,7 +137,8 @@ class ItineraryController extends Controller
                 'itineraries.*'
             )
             ->where('itinerary_logs.id', $id)
-            ->orderBy('itineraries.id', 'DESC')
+            ->orderBy('itineraries.visit_date', 'ASC')
+            ->orderBy('itineraries_updates.visit_date', 'ASC')
             ->get();
 
         return response()->json($item);
@@ -325,7 +326,7 @@ class ItineraryController extends Controller
                         $data + [
                             'itineraries_id' => $row['itinerary_id'],
                             'status'         => 'PLAN',
-                            'created_by'     => $user_id,
+                            'updated_by'     => $user_id,
                             'created_at'     => now(),
                         ]
                     );

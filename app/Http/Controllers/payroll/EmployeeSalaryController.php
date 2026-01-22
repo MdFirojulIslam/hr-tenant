@@ -19,24 +19,55 @@ use Barryvdh\DomPDF\Facade\Pdf;
 
 class EmployeeSalaryController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $salaries = DB::table('salaries')
+        $query = DB::table('salaries')
             ->join('employees', 'employees.id', '=', 'salaries.employee_id')
             ->join('officials', 'officials.EID', '=', 'salaries.employee_id')
             ->join('departments', 'departments.id', '=', 'officials.Department_id')
             ->join('designations', 'designations.id', '=', 'officials.Designation_Id')
             ->select(
                 'salaries.*',
-                DB::raw('salaries.employee_id'),
                 'employees.Employee_Id as official_id',
                 'employees.Full_Name as full_name',
                 'departments.Name as department_name',
                 'departments.id as department_id',
                 'designations.Name as designation_name',
-                DB::raw('salaries.consolidated + salaries.festival_bonus + salaries.daily_allowance + salaries.travel_allowance + salaries.mobile_bill + salaries.other_allowance AS total_earning'),
-                DB::raw('salaries.provident_fund + salaries.income_tax + salaries.revenue_stamp AS total_deduction')
-            )->paginate(16);
+                DB::raw('
+                salaries.consolidated +
+                salaries.festival_bonus +
+                salaries.daily_allowance +
+                salaries.travel_allowance +
+                salaries.mobile_bill +
+                salaries.other_allowance AS total_earning
+            '),
+                DB::raw('
+                salaries.provident_fund +
+                salaries.income_tax +
+                salaries.revenue_stamp AS total_deduction
+            ')
+            );
+
+        /* 🔍 Search by Account No or Official ID */
+        if ($request->filled('query')) {
+            $search = $request->query('query');
+            $query->where(function ($q) use ($search) {
+                $q->where('salaries.bank_account_no', 'like', "%{$search}%")
+                    ->orWhere('employees.Employee_Id', 'like', "%{$search}%");
+            });
+        }
+
+        /* 🏢 Department filter */
+        if ($request->filled('department_id')) {
+            $query->where('departments.id', $request->department_id);
+        }
+
+        /* 👤 Employee filter */
+        if ($request->filled('employee_id')) {
+            $query->where('employees.id', $request->employee_id);
+        }
+
+        $salaries = $query->paginate(16);
 
         return response()->json($salaries);
     }
@@ -54,6 +85,8 @@ class EmployeeSalaryController extends Controller
                 'message' => $validator->errors()
             ], 422);
         }
+
+
 
         DB::beginTransaction();
 
@@ -335,18 +368,23 @@ class EmployeeSalaryController extends Controller
 
         $salaries = DB::table('salary_sheets')
             ->join('employees', 'employees.id', '=', 'salary_sheets.employee_id')
+            ->join('officials', 'officials.EID', '=', 'salary_sheets.employee_id')
+            ->join('departments', 'departments.id', '=', 'officials.Department_Id')
             ->whereYear('salary_sheets.salary_date', $year)
             ->whereMonth('salary_sheets.salary_date', $month)
             ->select(
                 'employees.Employee_Id as employee_id',
                 'employees.Full_Name as full_name',
+                'departments.Name as department_name',
                 'salary_sheets.gross_salary',
                 DB::raw('salary_sheets.earning_adjustment + salary_sheets.consolidated + salary_sheets.daily_allowance + salary_sheets.festival_bonus + salary_sheets.travel_allowance + salary_sheets.mobile_bill + salary_sheets.other_allowance AS total_earning'),
                 DB::raw('salary_sheets.deduction_adjustment + salary_sheets.provident_fund + salary_sheets.income_tax + salary_sheets.revenue_stamp AS total_deduction'),
                 'salary_sheets.monthly_loan_repayments',
                 'salary_sheets.bank_account_no',
                 'salary_sheets.net_pay'
-            )->get();
+            )
+            ->orderBy('departments.id')
+            ->get();
 
         return response()->json($salaries);
     }
@@ -473,6 +511,8 @@ class EmployeeSalaryController extends Controller
         return response()->json($salaries);
     }
 
+
+
     public function SalaryDisbursementBank(Request $request)
     {
         $year = $request->year;
@@ -483,6 +523,8 @@ class EmployeeSalaryController extends Controller
 
         $salaries = DB::table('salary_sheets')
             ->join('employees', 'employees.id', '=', 'salary_sheets.employee_id')
+            ->join('officials', 'officials.EID', '=', 'salary_sheets.employee_id')
+            ->join('departments', 'departments.id', '=', 'officials.Department_Id')
             ->where('salary_sheets.payment_method', 'bank')
             ->whereYear('salary_sheets.salary_date', $year)
             ->whereMonth('salary_sheets.salary_date', $month)
@@ -491,48 +533,58 @@ class EmployeeSalaryController extends Controller
                 'employees.Full_Name as full_name',
                 'salary_sheets.bank_account_no',
                 'salary_sheets.net_pay'
-            )->get();
+            )->orderBy('departments.id')->get();
+        $grandTotal = $salaries->sum('net_pay');
 
         $pdf = Pdf::loadView('pdf.salary-disbursement-bank', [
             'data' => $salaries,
             'year' => $year,
             'month' => $month,
-            'monthName' => $monthName // pass it to view
+            'monthName' => $monthName, // pass it to view
+            'grandTotal' => $grandTotal
         ]);
 
         $pdf->setPaper('A4', 'portrait');
 
-        return $pdf->download("Salary_Disbursement_{$monthName}_{$year}.pdf"); // use month name in filename
+        return $pdf->download("Salary_Disbursement_{$monthName}_{$year}.pdf");
     }
+
 
     public function SalaryDisbursementCash(Request $request)
     {
         $year = $request->year;
         $month = $request->month;
 
-        // Convert month number to month name
         $monthName = date('F', mktime(0, 0, 0, $month, 10)); // e.g., 1 => January
 
         $salaries = DB::table('salary_sheets')
             ->join('employees', 'employees.id', '=', 'salary_sheets.employee_id')
+            ->join('officials', 'officials.EID', '=', 'salary_sheets.employee_id')
+            ->join('departments', 'departments.id', '=', 'officials.Department_Id')
+            ->where('salary_sheets.payment_method', 'cash')
             ->whereYear('salary_sheets.salary_date', $year)
             ->whereMonth('salary_sheets.salary_date', $month)
             ->select(
                 'employees.Employee_Id as employee_id',
                 'employees.Full_Name as full_name',
-                'salary_sheets.bank_account_no',
+                'salary_sheets.payment_method',
                 'salary_sheets.net_pay'
-            )->get();
+            )->orderBy('departments.id')
+            ->get();
+
+        // Calculate grand total
+        $grandTotal = $salaries->sum('net_pay');
 
         $pdf = Pdf::loadView('pdf.salary-disbursement-cash', [
             'data' => $salaries,
             'year' => $year,
             'month' => $month,
-            'monthName' => $monthName // pass it to view
+            'monthName' => $monthName,
+            'grandTotal' => $grandTotal, // pass grand total to view
         ]);
 
         $pdf->setPaper('A4', 'portrait');
 
-        return $pdf->download("Salary_Disbursement_{$monthName}_{$year}.pdf"); // use month name in filename
+        return $pdf->download("Salary_Disbursement_{$monthName}_{$year}.pdf");
     }
 }

@@ -332,30 +332,32 @@ onMounted(() => getData());
                     </div>
                 </div>
                 <!-- Salary Table -->
-                <div class="border rounded mt-5">
+                <div class="mt-5">
                     <div
                         class="d-flex align-items-center px-2 py-2 fw-semibold border-bottom bg-light"
                     >
-                        <span class="me-2">Total Employees:</span>
+                        <span class="me-2">Total:</span>
                         <span
                             class="bg-white border rounded px-3 py-1 fw-medium"
                             >{{ salaries.total }}</span
                         >
                     </div>
-                    <div class="table-responsive px-2 bg-light">
-                        <table class="table table-hover table-sm">
+                    <div class="table-responsive shadow-sm bg-light">
+                        <table
+                            class="table table-bordered table-hover table-sm"
+                        >
                             <thead class="table-light">
                                 <tr class="text-nowrap fw-bold">
                                     <th style="width: 3%">S/N</th>
                                     <th style="width: 8%">EMPLOYEE ID</th>
                                     <th style="width: 16%">EMPLOYEE NAME</th>
-                                    <th style="width: 16%">DEPARTMENT</th>
+                                    <th style="width: 13%">DEPARTMENT</th>
                                     <th style="width: 10%">ADJUSTMENT TYPE</th>
                                     <th style="width: 14%">ADJUSTMENT NAME</th>
                                     <th style="width: 10%">DATE</th>
                                     <th style="width: 10%">AMOUNT</th>
                                     <th style="width: 10%">REMARKS</th>
-                                    <th class="text-right" style="width: 3%">
+                                    <th class="text-center" style="width: 6%">
                                         ACTION
                                     </th>
                                 </tr>
@@ -367,7 +369,9 @@ onMounted(() => getData());
                                     :key="index"
                                 >
                                     <td>{{ index + 1 }}</td>
-                                    <td>ANBN-{{ item.eid }}</td>
+                                    <td>
+                                        ANBN-{{ item.employee_official_id }}
+                                    </td>
                                     <td>{{ item.emp_name }}</td>
                                     <td>
                                         {{ getDeptShortName(item.emp_dept) }}
@@ -398,6 +402,17 @@ onMounted(() => getData());
                                             ></i>
                                         </button>
                                     </td>
+                                    <!-- <button
+                                        class="btn btn-sm btn-light border"
+                                        title="Delete"
+                                        @click="
+                                            deleteadjustment(item.employee_id)
+                                        "
+                                    >
+                                        <i
+                                            class="fa-solid fa-trash text-danger"
+                                        ></i>
+                                    </button> -->
                                 </tr>
                             </tbody>
                         </table>

@@ -25,6 +25,7 @@ class SalaryAdjustmentController extends Controller
             ->select(
                 'salary_earnings.id as earning_id',
                 'employees.id as eid',
+                'employees.Employee_Id as employee_official_id',
                 'employees.Full_Name as emp_name',
                 'departments.id as dept_id',
                 'departments.Name as emp_dept',
@@ -45,6 +46,7 @@ class SalaryAdjustmentController extends Controller
             ->select(
                 'salary_deductions.id as deduction_id',
                 'employees.id as eid',
+                'employees.Employee_Id as employee_official_id',
                 'employees.Full_Name as emp_name',
                 'departments.id as dept_id',
                 'departments.Name as emp_dept',
@@ -58,8 +60,9 @@ class SalaryAdjustmentController extends Controller
 
         $data = $earnings
             ->unionAll($deductions)
+            ->orderBy('dept_id', 'asc')
             ->orderBy('date', 'desc')
-            ->paginate(12);
+            ->paginate(30);
 
         return response()->json($data);
     }
@@ -109,55 +112,36 @@ class SalaryAdjustmentController extends Controller
         $userId = Auth::user()->EID;
 
 
-        // $adjustment_type = DB::table('salary_adjustment_types')
-        //     ->where('id', $request->input('adjustment_type'))
-        //     ->value('adjustment_type');
         $date = $request->year . '-' . str_pad($request->month, 2, '0', STR_PAD_LEFT) . '-01';
 
         if (!empty($request->earnings)) {
             foreach ($request->earnings as $earning) {
-                salary_earning::create([
-                    'employee_id' => $request->input('eid'),
-                    'adjustment_types_id' => $earning['adjustment_type'],
-                    'date' => $date,
-                    'amount' => $earning['amount'],
-                    'remarks' => $earning['remarks'],
-                    'created_by' => $userId,
-                ]);
+                if ($earning['adjustment_type'] != NULL) {
+                    salary_earning::create([
+                        'employee_id' => $request->input('eid'),
+                        'adjustment_types_id' => $earning['adjustment_type'],
+                        'date' => $date,
+                        'amount' => $earning['amount'],
+                        'remarks' => $earning['remarks'],
+                        'created_by' => $userId,
+                    ]);
+                }
             }
         }
         if (!empty($request->deductions)) {
             foreach ($request->deductions as $deduction) {
-                salary_deduction::create([
-                    'employee_id' => $request->input('eid'),
-                    'adjustment_types_id' => $deduction['adjustment_type'],
-                    'date' => $date,
-                    'amount' => $deduction['amount'],
-                    'remarks' => $deduction['remarks'],
-                    'created_by' => $userId,
-                ]);
+                if ($deduction['adjustment_type'] != NULL) {
+                    salary_deduction::create([
+                        'employee_id' => $request->input('eid'),
+                        'adjustment_types_id' => $deduction['adjustment_type'],
+                        'date' => $date,
+                        'amount' => $deduction['amount'],
+                        'remarks' => $deduction['remarks'],
+                        'created_by' => $userId,
+                    ]);
+                }
             }
         }
-
-        // if ($adjustment_type == 0) {
-        //     salary_deduction::create([
-        //         'employee_id' => $request->input('eid'),
-        //         'adjustment_types_id' => $request->input('adjustment_type'),
-        //         'date' => $request->year . '-' . str_pad($request->month, 2, '0', STR_PAD_LEFT) . '-01',
-        //         'amount' => $request->input('amount'),
-        //         'remarks' => $request->input('remarks'),
-        //         'created_by' => $userId,
-        //     ]);
-        // } else if ($adjustment_type == 1) {
-        //     salary_earning::create([
-        //         'employee_id' => $request->input('eid'),
-        //         'adjustment_types_id' => $request->input('adjustment_type'),
-        //         'date' => $request->year . '-' . str_pad($request->month, 2, '0', STR_PAD_LEFT) . '-01',
-        //         'amount' => $request->input('amount'),
-        //         'remarks' => $request->input('remarks'),
-        //         'created_by' => $userId,
-        //     ]);
-        // }
 
         $response = [
             'success'   =>  true,

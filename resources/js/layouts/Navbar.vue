@@ -1,6 +1,5 @@
 <template>
     <nav class="sb-topnav navbar navbar-expand navbar-dark bg-dark">
-        <!-- Navbar Brand-->
         <Router-Link class="navbar-brand ps-3" to="#">
             <img
                 src="/public/storage/uploads/1718087744_artisan.png"
@@ -10,18 +9,14 @@
             />
             Artisan HRM</Router-Link
         >
-        <!-- Sidebar Toggle-->
+
         <button class="btn btn-link btn-sm mx-4" id="sidebarToggle" href="#!">
             <i class="fas fa-bars"></i>
         </button>
 
-        <!-- Navbar Search-->
         <form
             class="d-none d-md-inline-block form-inline ms-auto me-0 me-md-3 my-2 my-md-0"
-        >
-            <!-- Search form here -->
-        </form>
-        <!-- Navbar-->
+        ></form>
 
         <ul class="navbar-nav ms-auto ms-md-0 me-3 me-lg-4">
             <li class="nav-item dropdown position-relative p-2">
@@ -34,7 +29,7 @@
                     aria-expanded="false"
                 >
                     <i class="fa-solid fa-bell" style="font-size: large"></i>
-                    <!-- Notification count badge -->
+
                     <span
                         v-if="totalNotifications > 0"
                         class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
@@ -207,7 +202,6 @@ onMounted(() => {
             !sidebar.contains(event.target) &&
             !sidebarToggle.contains(event.target)
         ) {
-            // If clicked outside of sidebar and toggle button, close sidebar
             if (document.body.classList.contains("sb-sidenav-toggled")) {
                 document.body.classList.remove("sb-sidenav-toggled");
                 localStorage.setItem("sb|sidebar-toggle", false);
@@ -215,7 +209,6 @@ onMounted(() => {
         }
     });
 
-    // Restore sidebar state from localStorage
     if (localStorage.getItem("sb|sidebar-toggle") === "true") {
         document.body.classList.add("sb-sidenav-toggled");
     }

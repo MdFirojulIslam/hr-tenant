@@ -7,11 +7,9 @@ use Illuminate\Support\Facades\Route;
 
 //Leave controller
 Route::get('/leave-type', [LeaveTypeController::class, 'index']);
-Route::get('/get-earned-leave/{id}', [LeaveTypeController::class, 'getEarnedLeave']);
-
 Route::get('/leave', [LeaveController::class, 'index']);
 Route::post('/leave', [LeaveController::class, 'store']);
-Route::get('/leave/{id}', [LeaveController::class, 'show']);
+Route::get('/personal-leave-details/{id}', [LeaveController::class, 'showUsedLeave']);
 Route::put('/leave/{id}', [LeaveController::class, 'update']);
 Route::delete('/soft-delete-leave/{id}', [LeaveController::class, 'softDeleteLeave']);
 Route::get('/leave-summery/{id}', [LeaveController::class, 'leaveSummery']);

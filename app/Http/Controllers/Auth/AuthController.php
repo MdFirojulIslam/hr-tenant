@@ -181,9 +181,9 @@ class AuthController extends Controller
         Cookie::queue(Cookie::forget('XSRF-TOKEN'));
         Cookie::queue(Cookie::forget('laravel_session'));
         Cookie::queue(Cookie::forget('abnb_session'));
-        
+
         Auth::guard('web')->logout();
-    
+
         // Invalidate the session
         $request->session()->invalidate();
         $request->session()->regenerateToken();

@@ -60,6 +60,7 @@ class NavigationController extends Controller
 
         $navTree = $this->buildTree($filteredNavItems);
 
+
         $dashboard = in_array(1, $decodedPermissions);
 
         return response()->json(['dashboard' => $dashboard, 'tree' => $navTree]);

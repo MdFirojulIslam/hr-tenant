@@ -32,6 +32,7 @@ const route = useRoute();
 const department = ref([]);
 const leaveType = ref([]);
 const allLeave = ref([]);
+const officialLeaveData = ref([]); // dynamic leave info table
 const employeesByDept = ref([]);
 const employee = ref([]);
 const earnedLeave = ref("");
@@ -121,11 +122,19 @@ const getEmployee = async (deptId) => {
 
 const getLeaveInfo = async (id) => {
     try {
-        const res = await api.get(`/leave/${id}`);
-        employee.value = res.data;
+        const res = await api.get(`/personal-leave-details/${id}`);
+        const data = res.data;
 
-        const earnedRes = await api.get(`/get-earned-leave/${id}`);
-        earnedLeave.value = earnedRes.data;
+        // Transform API response into array for dynamic table
+        const leaveArray = [];
+        for (const type in data.entitled_leave) {
+            leaveArray.push({
+                leave_name: type.charAt(0).toUpperCase() + type.slice(1), // Capitalize
+                total_max_days: Number(data.entitled_leave[type]),
+                used_leave: Number(data.used_leave[type] || 0),
+            });
+        }
+        officialLeaveData.value = leaveArray;
     } catch (err) {
         console.error(err);
     }
@@ -282,6 +291,7 @@ onMounted(async () => {
                                 </section>
                             </div>
                             <!-- RIGHT: Leave Summary -->
+                            <!-- RIGHT: Leave Summary -->
                             <div class="col-lg-4 col-md-12 px-2 mb-4">
                                 <table class="leave-status">
                                     <thead class="table_head">
@@ -292,11 +302,12 @@ onMounted(async () => {
                                             <th>Balance</th>
                                         </tr>
                                     </thead>
-
                                     <tbody>
                                         <tr
-                                            v-for="(info, typeName) in employee"
-                                            :key="typeName"
+                                            v-for="(
+                                                info, index
+                                            ) in officialLeaveData"
+                                            :key="index"
                                         >
                                             <th>{{ info.leave_name }}</th>
                                             <td>{{ info.total_max_days }}</td>

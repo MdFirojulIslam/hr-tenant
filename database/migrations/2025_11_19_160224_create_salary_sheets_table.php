@@ -41,7 +41,7 @@ return new class extends Migration
             $table->unsignedInteger('late_days');
             $table->decimal('net_pay', 10, 2);
             $table->enum('salary_status', ['pending', 'approved', 'rejected'])->default('pending');
-            $table->enum('payment_method', ['bank_transfer', 'cash'])->default('bank_transfer');
+            $table->enum('payment_method', ['bank', 'cash'])->default('bank');
             $table->string('bank_account_no', 100)->nullable();
             $table->unsignedInteger('created_by');
             $table->timestamps();

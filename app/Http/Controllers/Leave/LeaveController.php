@@ -6,12 +6,18 @@ use App\Http\Controllers\Controller;
 use App\Models\attendence;
 use App\Models\leave;
 use App\Models\holiday;
+
+use App\Models\app_attendance;
+
+use App\Models\leave_type;
 use App\Models\official;
 use App\Models\employee;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+
+use DateTime;
 
 class LeaveController extends Controller
 {
@@ -70,12 +76,15 @@ class LeaveController extends Controller
 
     public function getSubordinates($userId)
     {
+        $currentYear = now()->year;
         $data = official::select('leaves.id as leave_id', 'officials.Supervisor_Id', 'employees.Full_Name', 'employees.id as EID',  'departments.Name as department', 'departments.id as dept_id', 'leaves.status', 'leaves.from_date', 'leaves.to_date', 'leaves.purpose', 'leave_types.leave_name')
             ->join('leaves', 'leaves.employee_id', '=', 'officials.EID')
             ->join('employees', 'employees.id', '=', 'officials.EID')
             ->join('leave_types', 'leaves.leave_type_id', '=', 'leave_types.id')
             ->join('departments', 'departments.id', '=', 'officials.Department_Id')
             ->where('officials.Supervisor_Id', '=', $userId)
+            ->where('officials.Status', '=', 'N')
+            ->whereYear('leaves.from_date', '=', $currentYear)
             ->get();
         return $data;
     }
@@ -361,66 +370,85 @@ class LeaveController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show($id)
+
+
+
+    public function showUsedLeave($id)
     {
-        $currentYear = date('Y');
+        $currentYear = now()->year;
 
-        $leavesWithEarned = DB::table('leaves as l')
-            ->select(
-                'l.employee_id',
-                'e.Full_Name',
-                'lt.leave_name',
-                DB::raw('CASE WHEN lt.leave_name LIKE "%Earn%" THEN IFNULL(a.total_earn,0) ELSE lt.max_leave_days END as total_max_days'),
-                DB::raw('SUM(DATEDIFF(l.to_date, l.from_date) + 1) as used_leave'),
-                'd.Name as department_name',
-                'des.Name as designation_name',
-                'ei.img_url'
-            )
-            ->join('leave_types as lt', 'lt.id', '=', 'l.leave_type_id')
-            ->join('employees as e', 'e.id', '=', 'l.employee_id')
-            ->join('officials as o', 'o.EID', '=', 'e.id')
-            ->join('departments as d', 'd.id', '=', 'o.Department_Id')
-            ->join('designations as des', 'des.id', '=', 'o.Designation_Id')
-            ->leftJoin('emp_imgs as ei', function ($join) {
-                $join->on('ei.EID', '=', 'e.id')
-                    ->whereRaw('ei.id = (SELECT MAX(id) FROM emp_imgs WHERE EID = e.id)');
-            })
-            ->leftJoin(DB::raw("(
-            SELECT
-                EID,
-                FLOOR(COUNT(CASE WHEN STATUS IN ('P', 'L', 'in') THEN 1 END) / 18) AS total_earn
-            FROM (
-                SELECT EID, STATUS, DATE
-                FROM attendences
-                WHERE YEAR(DATE) = {$currentYear}
+        // Get leave type info as array
+        $official_leave_info = leave_type::all()->toArray();
 
-                UNION ALL
+        // Check if employee has any 'in' attendance records
+        $attendanceEmployeeIds = app_attendance::where('status', 'in')
+            ->distinct()
+            ->pluck('EID')
+            ->toArray();
 
-                SELECT EID, STATUS, DATE(created_at) AS DATE
-                FROM app_attendances
-                WHERE YEAR(created_at) = {$currentYear}
-            ) all_att
-            GROUP BY EID
-        ) a"), 'a.EID', '=', 'l.employee_id')
-            ->where('l.employee_id', $id)
-            ->whereYear('l.from_date', $currentYear)
-            ->where('l.status', 'Approved')
-            ->whereIn('l.leave_type_id', [1, 2, 3])
-            ->groupBy(
-                'l.employee_id',
-                'e.Full_Name',
-                'lt.leave_name',
-                'lt.max_leave_days',
-                'd.Name',
-                'des.Name',
-                'ei.img_url',
-                'a.total_earn'
-            )
-            ->orderBy('lt.leave_name', 'ASC')
-            ->get();
+        $hasAttendance = in_array($id, $attendanceEmployeeIds);
 
-        return response()->json($leavesWithEarned);
+        // Calculate used leave for this employee
+        $usedLeaveRecords = Leave::where('employee_id', $id)
+            ->whereYear('from_date', $currentYear)
+            ->where('status', 'Approved')
+            ->get()
+            ->toArray();
+
+        $usedLeave = [
+            'casual' => 0,
+            'sick' => 0,
+            'earned' => 0,
+        ];
+
+        foreach ($usedLeaveRecords as $leave) {
+            $from = new DateTime($leave['from_date']);
+            $to = new DateTime($leave['to_date']);
+
+            $diffDays = $to->diff($from)->days + 1;
+            if ($leave['leave_type_id'] == 1) {
+                $usedLeave['casual'] += $diffDays;
+            } elseif ($leave['leave_type_id'] == 2) {
+                $usedLeave['sick'] += $diffDays;
+            } elseif ($leave['leave_type_id'] == 3) {
+                $usedLeave['earned'] += $diffDays;
+            }
+        }
+        if ($hasAttendance) {
+            $attendanceCount = attendence::where('EID', $id)
+                ->where('status', 'in')
+                ->whereYear('created_at', $currentYear)
+                ->count();
+
+            $earnedLeave = (int) floor($attendanceCount / 18);
+        } else {
+            $attendanceCount = DB::table('attendences')
+                ->join('employees', 'employees.id', '=', 'attendences.EID')
+                ->where('employees.id', $id)
+                ->whereIn('attendences.Status', ['P', 'L'])
+                ->whereYear('attendences.Date', $currentYear)
+                ->select(DB::raw('DATE(attendences.created_at)'))
+                ->distinct()
+                ->count();
+
+            $earnedLeave = (int) floor($attendanceCount / 18);
+        }
+
+        $entitledLeave = [
+            'casual' => $official_leave_info[0]['max_leave_days'] ?? 0,
+            'sick' => $official_leave_info[1]['max_leave_days'] ?? 0,
+            'earned' => $earnedLeave,
+        ];
+
+        // Final result: first entitled, then used
+        $result = [
+            'entitled_leave' => $entitledLeave,
+            'used_leave' => $usedLeave,
+        ];
+
+        return response()->json($result);
     }
+
 
 
     /**

@@ -1,0 +1,606 @@
+<script setup>
+import { onMounted, ref } from "vue";
+import api from "@/api";
+
+const separationsList = ref([]);
+const showDetails = ref(false);
+const selectedSeparation = ref(null);
+
+const getData = async () => {
+    try {
+        const response = await api.get("/separations-list");
+        separationsList.value = response.data;
+    } catch (error) {
+        console.error("Error fetching separations:", error);
+    }
+};
+
+const getSeparationInfo = (separation) => {
+    selectedSeparation.value = separation;
+    showDetails.value = true;
+};
+
+const closeDetails = () => {
+    showDetails.value = false;
+};
+
+const formatDate = (dateStr) => {
+    if (!dateStr) return "";
+    const date = new Date(dateStr);
+    const day = String(date.getDate()).padStart(2, "0");
+    const month = date.toLocaleString("en-US", { month: "short" });
+    const year = date.getFullYear();
+    return `${day} ${month}, ${year}`;
+};
+
+onMounted(() => {
+    getData();
+});
+</script>
+
+<template>
+    <!-- Details Card -->
+    <div v-if="showDetails" class="details-wrapper" @click.stop>
+        <div class="card position-relative p-3">
+            <i
+                class="fa fa-times position-absolute top-0 end-0 m-2 icon-colour"
+                @click.stop="closeDetails"
+                style="cursor: pointer"
+            ></i>
+
+            <div class="row g-3">
+                <div class="col-lg-6 col-md-6 col-sm-12">
+                    <div
+                        class="card mt-3 p-3"
+                        style="height: 230px; width: 100%"
+                    >
+                        <div class="card-body">
+                            <div class="d-flex">
+                                <div class="col-lg-6 col-md-6 col-sm-12">
+                                    <div class="m-3">
+                                        <img
+                                            src=""
+                                            alt=""
+                                            class="image-style"
+                                        />
+                                    </div>
+                                    <div class="ms-4 d-flex">
+                                        <div class="label">Date of Join</div>
+                                        <span class="value"> : 25-10-2025</span>
+                                    </div>
+                                    <div class="ms-4 d-flex">
+                                        <div class="label">Resign Date</div>
+                                        <span class="value"> : 25-10-2025</span>
+                                    </div>
+                                    <div class="ms-4 d-flex">
+                                        <div class="label">
+                                            Service Duration
+                                        </div>
+                                        <span class="value">
+                                            : 12 month 3 Days</span
+                                        >
+                                    </div>
+                                </div>
+                                <div class="col-lg-6 col-md-6 col-sm-12">
+                                    <div
+                                        class="d-flex flex-column justify-content-center align-items-start h-100"
+                                    >
+                                        <div class="mb-2 d-flex">
+                                            <div class="label">Employee ID</div>
+                                            <span class="value">
+                                                : ABNB-20145</span
+                                            >
+                                        </div>
+                                        <div class="mb-2 d-flex">
+                                            <div class="label">
+                                                Employee Name
+                                            </div>
+                                            <span class="value">
+                                                : Juan Dela Cruz</span
+                                            >
+                                        </div>
+                                        <div class="mb-2 d-flex">
+                                            <div class="label">Department</div>
+                                            <span class="value"> : IT</span>
+                                        </div>
+                                        <div class="mb-2 d-flex">
+                                            <div class="label">Designation</div>
+                                            <span class="value">
+                                                : Software Engineer</span
+                                            >
+                                        </div>
+                                        <div class="mb-2 d-flex">
+                                            <div class="label">
+                                                Employee Status
+                                            </div>
+                                            <span class="value"> : Active</span>
+                                        </div>
+                                        <div class="mb-2 d-flex">
+                                            <div class="label">
+                                                Separation Type
+                                            </div>
+                                            <span class="value">
+                                                : Voluntary</span
+                                            >
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <!--
+                        <div>
+                            <label for=""
+                                >Separation Reason :
+                                <span>Personal Reasons</span></label
+                            >
+                        </div> -->
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-6 col-md-6 col-sm-12">
+                    <div
+                        class="card p-3 mt-3"
+                        style="height: 230px; width: 100%"
+                    >
+                        <div class="card-body">
+                            <div
+                                class="d-flex justify-content-center align-items-center mt-2 mb-3"
+                            >
+                                <h3>IT Clearance</h3>
+                            </div>
+                            <div class="mb-2 d-flex align-items-center">
+                                <div class="dept-label">Remove User Email</div>
+
+                                <span class="value d-flex align-items-center">
+                                    :
+                                    <input
+                                        class="ms-3"
+                                        type="radio"
+                                        name="rehire"
+                                        id="yes"
+                                    />
+                                    <label class="ms-1 me-3" for="yes"
+                                        >Yes</label
+                                    >
+
+                                    <input
+                                        type="radio"
+                                        name="rehire"
+                                        id="no"
+                                        class="ms-2"
+                                    />
+                                    <label class="ms-1" for="no">No</label>
+                                </span>
+                            </div>
+
+                            <div class="mb-2 d-flex align-items-center">
+                                <div class="dept-label">Remove DMS Account</div>
+
+                                <span class="value d-flex align-items-center">
+                                    :
+                                    <input
+                                        class="ms-3"
+                                        type="radio"
+                                        name="rehire"
+                                        id="yes"
+                                    />
+                                    <label class="ms-1 me-3" for="yes"
+                                        >Yes</label
+                                    >
+
+                                    <input
+                                        type="radio"
+                                        name="rehire"
+                                        id="no"
+                                        class="ms-2"
+                                    />
+                                    <label class="ms-1" for="no">No</label>
+                                </span>
+                            </div>
+
+                            <div class="mb-2 d-flex align-items-center">
+                                <div class="dept-label">User Email Backup</div>
+
+                                <span class="value d-flex align-items-center">
+                                    :
+                                    <input
+                                        class="ms-3"
+                                        type="radio"
+                                        name="rehire"
+                                        id="yes"
+                                    />
+                                    <label class="ms-1 me-3" for="yes"
+                                        >Yes</label
+                                    >
+
+                                    <input
+                                        type="radio"
+                                        name="rehire"
+                                        id="no"
+                                        class="ms-2"
+                                    />
+                                    <label class="ms-1" for="no">No</label>
+                                </span>
+                            </div>
+
+                            <div class="mb-2 d-flex align-items-center">
+                                <div class="dept-label">
+                                    Remove HRIS Account
+                                </div>
+
+                                <span class="value d-flex align-items-center">
+                                    :
+                                    <input
+                                        class="ms-3"
+                                        type="radio"
+                                        name="rehire"
+                                        id="yes"
+                                    />
+                                    <label class="ms-1 me-3" for="yes"
+                                        >Yes</label
+                                    >
+
+                                    <input
+                                        type="radio"
+                                        name="rehire"
+                                        id="no"
+                                        class="ms-2"
+                                    />
+                                    <label class="ms-1" for="no">No</label>
+                                </span>
+                            </div>
+
+                            <div class="mb-2 d-flex align-items-center">
+                                <div class="dept-label">Laptop Name</div>
+
+                                <span class="value d-flex align-items-center">
+                                    :
+
+                                    <input
+                                        class="ms-3"
+                                        type="radio"
+                                        name="rehire"
+                                        id="yes"
+                                    />
+                                    <label class="ms-1 me-3" for="yes"
+                                        >Yes</label
+                                    >
+
+                                    <input
+                                        type="radio"
+                                        name="rehire"
+                                        id="no"
+                                        class="ms-2"
+                                    />
+                                    <label class="ms-1" for="no">No</label>
+                                    <span class="ms-3">
+                                        <b>[Lenevo]</b>
+                                    </span>
+                                </span>
+                            </div>
+
+                            <div class="mb-2 d-flex align-items-center">
+                                <div class="dept-label">Other Accesories</div>
+
+                                <span class="value d-flex align-items-center">
+                                    :
+                                    <input
+                                        class="ms-3"
+                                        type="radio"
+                                        name="rehire"
+                                        id="yes"
+                                    />
+                                    <label class="ms-1 me-3" for="yes"
+                                        >Yes</label
+                                    >
+
+                                    <input
+                                        type="radio"
+                                        name="rehire"
+                                        id="no"
+                                        class="ms-2"
+                                    />
+                                    <label class="ms-1" for="no">No</label>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-6 col-md-6 col-sm-12">
+                    <div class="card" style="height: 150px; width: 100%">
+                        <div class="card-body">
+                            <div
+                                class="d-flex justify-content-center align-items-center mt-2 mb-3"
+                            >
+                                <h3>Department Clearance</h3>
+                            </div>
+                            <div class="mb-2 d-flex align-items-center">
+                                <div class="dept-label">Would you rehire</div>
+
+                                <span class="value d-flex align-items-center">
+                                    :
+                                    <input
+                                        class="ms-3"
+                                        type="radio"
+                                        name="rehire"
+                                        id="yes"
+                                    />
+                                    <label class="ms-1 me-3" for="yes"
+                                        >Yes</label
+                                    >
+
+                                    <input
+                                        type="radio"
+                                        name="rehire"
+                                        id="no"
+                                        class="ms-2"
+                                    />
+                                    <label class="ms-1" for="no">No</label>
+                                </span>
+                            </div>
+
+                            <div class="mb-2 d-flex">
+                                <div class="dept-label">
+                                    Would you need replacement
+                                </div>
+                                <span class="value d-flex align-items-center">
+                                    :
+                                    <input
+                                        class="ms-3"
+                                        type="radio"
+                                        name="rehire"
+                                        id="yes"
+                                    />
+                                    <label class="ms-1 me-3" for="yes"
+                                        >Yes</label
+                                    >
+
+                                    <input
+                                        type="radio"
+                                        name="rehire"
+                                        id="no"
+                                        class="ms-2"
+                                    />
+                                    <label class="ms-1" for="no">No</label>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-6 col-md-6 col-sm-12">
+                    <div class="card" style="height: 150px; width: 100%">
+                        <div class="card-body">
+                            <div
+                                class="d-flex justify-content-center align-items-center mt-2 mb-3"
+                            >
+                                <h3>HR and Payroll</h3>
+                            </div>
+                            <div class="d-flex">
+                                <div class="col-lg-6 col-md-6 col-sm-12">
+                                    <div class="mb-2 d-flex align-items-center">
+                                        <div class="dept-label">
+                                            Any benefits
+                                        </div>
+                                        <span
+                                            class="value d-flex align-items-center"
+                                        >
+                                            :
+                                            <input
+                                                class="ms-3"
+                                                type="text"
+                                                name="rehire"
+                                                id="yes"
+                                            />
+                                        </span>
+                                    </div>
+                                    <div class="mb-2 d-flex align-items-center">
+                                        <div class="dept-label">
+                                            Total Amount
+                                        </div>
+
+                                        <span
+                                            class="value d-flex align-items-center"
+                                        >
+                                            :
+                                            <input
+                                                class="ms-3"
+                                                type="text"
+                                                name="rehire"
+                                                id="yes"
+                                            />
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="col-lg-6 col-md-6 col-sm-12">
+                                    <div class="mb-2 d-flex align-items-center">
+                                        <div class="dept-label">
+                                            Deduction Cause
+                                        </div>
+
+                                        <span
+                                            class="value d-flex align-items-center"
+                                        >
+                                            :
+                                            <input
+                                                class="ms-3"
+                                                type="text"
+                                                name="rehire"
+                                                id="yes"
+                                            />
+                                        </span>
+                                    </div>
+                                    <div class="mb-2 d-flex align-items-center">
+                                        <div class="dept-label">
+                                            Total Amount of final payment
+                                        </div>
+
+                                        <span
+                                            class="value d-flex align-items-center"
+                                        >
+                                            :
+                                            <input
+                                                class="ms-3"
+                                                type="text"
+                                                name="rehire"
+                                                id="yes"
+                                            />
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-6 col-md-6 col-sm-12">
+                    <div class="card" style="height: 150px; width: 100%">
+                        <div class="card-body">
+                            <div
+                                class="d-flex justify-content-center align-items-center mt-2 mb-3"
+                            >
+                                <h3>Accounts</h3>
+                            </div>
+                            <div class="mb-2 d-flex align-items-center">
+                                <div class="dept-label">Payment Date</div>
+
+                                <span class="value d-flex align-items-center">
+                                    :
+                                    <input
+                                        class="ms-3"
+                                        type="date"
+                                        name="rehire"
+                                        id="yes"
+                                    />
+                                </span>
+                            </div>
+                            <div class="mb-2 d-flex align-items-center">
+                                <div class="dept-label">
+                                    Final Payment Credited Via
+                                </div>
+
+                                <span class="value d-flex align-items-center">
+                                    :
+                                    <input
+                                        class="ms-3"
+                                        type="radio"
+                                        name="rehire"
+                                        id="yes"
+                                    />
+                                    <label class="ms-1 me-3" for="yes"
+                                        >Bank Transfer</label
+                                    >
+
+                                    <input
+                                        type="radio"
+                                        name="rehire"
+                                        id="no"
+                                        class="ms-2"
+                                    />
+                                    <label class="ms-1" for="no"
+                                        >Bank Deposit</label
+                                    >
+                                    <input
+                                        type="radio"
+                                        name="rehire"
+                                        id="no"
+                                        class="ms-2"
+                                    />
+                                    <label class="ms-1" for="no">Cash</label>
+                                    <input
+                                        type="radio"
+                                        name="rehire"
+                                        id="no"
+                                        class="ms-2"
+                                    />
+                                    <label class="ms-1" for="no"
+                                        >Bank Check</label
+                                    >
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="d-flex justify-content-end mt-2 button-style">
+                <button>Submit</button>
+            </div>
+        </div>
+    </div>
+    <div class="container-fluid p-3 border shadow-sm bg-white">
+        <h3>Separations List</h3>
+
+        <!-- Table -->
+        <div class="table-responsive mt-4">
+            <table class="table table-hover table-bordered">
+                <thead>
+                    <tr>
+                        <th>EMPLOYEE NAME</th>
+                        <th>DEPARTMENT NAME</th>
+                        <th>SEPARATION TYPE</th>
+                        <th>REASON</th>
+                        <th>DATE OF SEPARATION</th>
+                        <th>STATUS</th>
+                        <th class="text-center">ACTION</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    <tr
+                        v-for="separation in separationsList"
+                        :key="separation.id"
+                        @click="getSeparationInfo(separation)"
+                    >
+                        <td>{{ separation.employee_name }}</td>
+                        <td>{{ separation.department_name }}</td>
+                        <td>{{ separation.separation_type }}</td>
+                        <td>{{ separation.reason_for_separation }}</td>
+                        <td>{{ formatDate(separation.separation_date) }}</td>
+                        <td>{{ separation.status }}</td>
+                        <td>
+                            <div class="d-flex gap-2 justify-content-center">
+                                <button class="btn btn-primary btn-sm">
+                                    APPROVE
+                                </button>
+                                <button class="btn btn-primary btn-sm">
+                                    DETAILS
+                                </button>
+                                <button class="btn btn-primary btn-sm">
+                                    REJECT
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</template>
+
+<style>
+.icon-colour {
+    background-color: red;
+    padding: 1px 6px;
+    color: white;
+}
+.details-wrapper {
+    margin-bottom: 20px;
+}
+.image-style {
+    height: 120px;
+    width: 120px;
+    background-color: gray;
+    border-radius: 50%;
+    object-fit: cover;
+}
+.label {
+    width: 100px;
+}
+.value {
+    flex: 1;
+}
+.dept-label {
+    width: 170px;
+}
+</style>

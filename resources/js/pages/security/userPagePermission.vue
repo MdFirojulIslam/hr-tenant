@@ -55,7 +55,6 @@ const getEmployee = async (id) => {
     }
 };
 
-
 // Fetch permissions based on employee selection
 const getPermission = async (id) => {
     try {
@@ -98,7 +97,6 @@ const applyPermissions = (permissions) => {
     updatePermissions();
     checkAllPermissionsState();
 };
-
 
 // Reset form data
 const resetForm = () => {
@@ -198,7 +196,6 @@ onMounted(() => getData());
                         <div class="col-lg-12 col-sm-12 mb-3">
                             <div class="card">
                                 <div class="card-body">
-
                                     <form @submit.prevent="submit">
                                         <div class="row">
                                             <div class="col-lg-5">
@@ -211,7 +208,7 @@ onMounted(() => getData());
                                                         "
                                                         @change="
                                                             getEmployee(
-                                                                form.department
+                                                                form.department,
                                                             )
                                                         "
                                                     >
@@ -241,7 +238,7 @@ onMounted(() => getData());
                                                         "
                                                         @change="
                                                             getPermission(
-                                                                form.employee_Id
+                                                                form.employee_Id,
                                                             )
                                                         "
                                                     >
@@ -250,7 +247,8 @@ onMounted(() => getData());
                                                             :key="emp.id"
                                                             :value="emp.EID"
                                                         >
-                                                            {{ emp.name }} - {{ emp.Full_Name }} 
+                                                            {{ emp.name }} -
+                                                            {{ emp.Full_Name }}
                                                         </option>
                                                     </select>
                                                 </div>

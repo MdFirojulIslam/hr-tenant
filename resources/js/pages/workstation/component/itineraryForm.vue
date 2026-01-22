@@ -142,8 +142,6 @@ const loadItinerary = async () => {
     }
 };
 
-console.log("itinerary status", log_status.value);
-
 // ----------------------
 // HELPER FUNCTIONS
 // ----------------------

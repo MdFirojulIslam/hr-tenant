@@ -5,7 +5,7 @@ import Swal from "sweetalert2";
 
 const error = ref([]);
 const salaries = ref([]);
-const selectedMonth = ref(new Date().getMonth());
+const selectedMonth = ref(new Date().getMonth() + 1);
 const selectedYear = ref(new Date().getFullYear());
 const searchQuery = ref(""); // New ref for the search input
 
@@ -219,24 +219,25 @@ onMounted(() => getData());
                 </div>
             </div>
 
-            <div class="border rounded mt-5">
+            <div class="mt-5">
                 <!-- Total Employees Row -->
                 <div
                     class="d-flex align-items-center px-2 py-2 fw-semibold border-bottom bg-light"
                 >
                     <span class="me-2">Total Employees:</span>
                     <span class="bg-white border rounded px-3 py-1 fw-medium">{{
-                        salaries.total
+                        filteredSalaries.length
                     }}</span>
                 </div>
 
-                <div class="table-responsive px-2 bg-light">
-                    <table class="table table-hover table-sm">
+                <div class="table-responsive shadow-sm bg-light">
+                    <table class="table table-bordered table-hover table-sm">
                         <thead>
                             <tr>
                                 <th>S/N</th>
                                 <th class="text-center">EMPLOYEE ID</th>
                                 <th>EMPLOYEE NAME</th>
+                                <th>DEPARTMENT NAME</th>
                                 <th class="text-center">GROSS</th>
                                 <th class="text-center">TOTAL EARNING</th>
                                 <th class="text-center">TOTAL DEDUCTION</th>
@@ -245,7 +246,7 @@ onMounted(() => getData());
                                 <th class="text-center">NET SALARY</th>
                             </tr>
                         </thead>
-                        <!-- <pre>{{ filteredSalaries }}</pre> -->
+
                         <tbody>
                             <tr
                                 class="ver-align"
@@ -256,6 +257,7 @@ onMounted(() => getData());
                                     ABNB-{{ salary.employee_id }}
                                 </td>
                                 <td>{{ salary.full_name }}</td>
+                                <td>{{ salary.department_name }}</td>
                                 <td class="text-center">
                                     {{ salary.gross_salary }}
                                 </td>
@@ -281,7 +283,11 @@ onMounted(() => getData());
                                     }}
                                 </td>
                                 <td class="text-center">
-                                    {{ salary.bank_account_no }}
+                                    {{
+                                        salary.bank_account_no === null
+                                            ? "Cash"
+                                            : salary.bank_account_no
+                                    }}
                                 </td>
                                 <td class="text-center">
                                     {{ salary.net_pay }}

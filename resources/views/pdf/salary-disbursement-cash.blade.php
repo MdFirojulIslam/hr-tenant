@@ -3,6 +3,7 @@
 
 <head>
   <meta charset="utf-8">
+
   <style>
     @page {
       margin: 120px 50px 80px 50px;
@@ -14,19 +15,14 @@
       font-size: 12px;
     }
 
-    /* Header only on first page */
-    header {
-      position: fixed;
-      top: -100px;
-      left: 0;
-      right: 0;
-    }
-
+    /* ================= HEADER (FIRST PAGE ONLY) ================= */
     .first-page-header {
-      display: block;
+      text-align: center;
+      margin-bottom: 30px;
     }
 
-    /* Footer */
+
+    /* ================= FOOTER ================= */
     footer {
       position: fixed;
       bottom: -60px;
@@ -40,12 +36,16 @@
       content: counter(page) " of " counter(pages);
     }
 
-    /* Main table */
+    /* ================= TABLE ================= */
     table {
       width: 100%;
       border-collapse: collapse;
       margin-top: 15px;
       page-break-inside: auto;
+    }
+
+    thead {
+      display: table-header-group;
     }
 
     tr {
@@ -73,9 +73,11 @@
       text-align: right;
     }
 
+    /* ================= SIGNATURE ================= */
     .signature {
       margin-top: 80px;
     }
+
 
     p {
       margin: 0;
@@ -85,66 +87,59 @@
 
 <body>
 
-  <!-- Section 1: Header content (only once) -->
+  <!-- ================= FIRST PAGE HEADER ================= -->
   <div class="first-page-header">
-    <p>Date: {{ \Carbon\Carbon::now()->format('dS F Y') }}</p>
+    <h3>Salary for the month of {{ $monthName }} {{ $year }}</h3>
 
-    <p>
-      The Manager <br>
-      The City Bank Ltd <br>
-      Gulshan Branch, Dhaka
-    </p>
-
-    <p><strong>Subject:</strong> Requesting to Disburse Salary for the month of {{ $monthName }} {{ $year }}.</p>
-
-    <p>Dear Sir,</p>
-
-    <p>
-      Please arrange to transfer the salary to our individual staff account as follows:
-    </p>
+    <h5>Artisan Business Network Bangladesh</h5>
   </div>
 
-  <!-- Section 2: Table -->
+  <!-- ================= TABLE ================= -->
   <table>
     <thead>
       <tr>
         <th width="10%">EID</th>
         <th width="30%">Name</th>
-        <th width="30%">Bank A/C No</th>
+        <th width="30%">Payment Method</th>
         <th width="15%">Amount</th>
       </tr>
     </thead>
+
     <tbody>
       @foreach($data as $row)
       <tr>
         <td class="text-center">ABNB{{ $row->employee_id }}</td>
         <td>{{ $row->full_name }}</td>
-        <td class="text-center">{{ $row->bank_account_no }}</td>
+        <td class="text-center">{{ $row->payment_method }}</td>
         <td class="text-right">{{ number_format($row->net_pay, 2) }}</td>
       </tr>
       @endforeach
     </tbody>
+
+    <!-- Grand Total -->
+    <tfoot>
+      <tr>
+        <th colspan="3" class="text-right">Total</th>
+        <th class="text-right">{{ number_format($grandTotal, 2) }}</th>
+      </tr>
+    </tfoot>
   </table>
 
-  <!-- Section 3: Footer / Signature (only once) -->
-  <p style="margin-top: 25px;">
-    According to the statement mentioned above, you are requested to debit from our
-    Artisan Business Network Bangladesh,
-    A/C No.: <strong>3101496682001</strong>
-  </p>
+
+  <!-- ================= FOOTER TEXT / SIGNATURE ================= -->
+
 
   <div class="signature">
-    <p>Yours Sincerely</p>
-    <br><br>
+
     ___________________________<br>
-    Signature & Seal
+    Signature &amp; Seal
   </div>
 
-  <!-- Page numbers -->
-  <footer>
+  <!-- ================= PAGE NUMBER ================= -->
+  <!-- <footer>
     <span class="page">Page </span>
-  </footer>
-</body>
+  </footer> -->
 
+</body>
 
 </html>

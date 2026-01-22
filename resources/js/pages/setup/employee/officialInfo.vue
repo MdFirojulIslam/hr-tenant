@@ -63,7 +63,7 @@ const getData = async () => {
 };
 
 const modifiedSupervisorData = computed(() => {
-    return supervisorData.value.map(item => {
+    return supervisorData.value.map((item) => {
         return {
             ...item,
             label: `${item.Full_Name} - ABNB${item.Employee_Id}`, // Concatenate the string here
@@ -113,7 +113,7 @@ watch(empEdit, async (newEmpData) => {
         // newEmpData.supervisor
         //     ? (official.value.supervisor = newEmpData.supervisor)
         //     : (official.value.supervisor = "");
-        
+
         if (newEmpData.supervisor) {
             // Find the supervisor object from the modified supervisor data
             const supervisor = supervisorData.value.find(
@@ -122,12 +122,12 @@ watch(empEdit, async (newEmpData) => {
             // If found, assign it to official.supervisor
             official.value.supervisor = supervisor
                 ? {
-                    ...supervisor,
-                    label: `${supervisor.Full_Name} - ABNB${supervisor.Employee_Id}`, // Concatenate the label
-                }
-                : "";  // In case the supervisor data doesn't exist in the supervisorData array
+                      ...supervisor,
+                      label: `${supervisor.Full_Name} - ABNB${supervisor.Employee_Id}`, // Concatenate the label
+                  }
+                : ""; // In case the supervisor data doesn't exist in the supervisorData array
         } else {
-            official.value.supervisor = "";  // Reset if no supervisor
+            official.value.supervisor = ""; // Reset if no supervisor
         }
 
         inactive.value = newEmpData.Status === "Y";
@@ -136,10 +136,9 @@ watch(empEdit, async (newEmpData) => {
 
 watch(townEdit, (newTownData) => {
     if (newTownData) {
-        official.value.townIds = newTownData.map(town => town.town);
+        official.value.townIds = newTownData.map((town) => town.town);
     }
 });
-
 
 const getDepartment = async (id) => {
     try {
@@ -238,37 +237,65 @@ onMounted(() => getData());
         <form @submit.prevent="submit">
             <div class="row mb-3">
                 <div class="col-lg-4 col-md-6 col-sm-12">
-                    <label for="" class="">Department*
+                    <label for="" class=""
+                        >Department*
                         <span class="text-danger">{{
                             error.departmentId ? error.departmentId[0] : ""
-                            }}</span>
+                        }}</span>
                     </label>
-                    <select class="form-control" name="status" id="" v-model="official.departmentId"
-                        @change="getDepartment(official.departmentId)">
+                    <select
+                        class="form-control"
+                        name="status"
+                        id=""
+                        v-model="official.departmentId"
+                        @change="getDepartment(official.departmentId)"
+                    >
                         <option selected disabled>select</option>
-                        <option v-for="dept in officialInfo.department" :key="dept.id" :value="dept.id">
+                        <option
+                            v-for="dept in officialInfo.department"
+                            :key="dept.id"
+                            :value="dept.id"
+                        >
                             {{ dept.Name }}
                         </option>
                     </select>
                 </div>
                 <div class="col-lg-4 col-md-6 col-sm-12">
-                    <label for="" class="">Designation*
+                    <label for="" class=""
+                        >Designation*
                         <span class="text-danger">{{
                             error.designationId ? error.designationId[0] : ""
-                            }}</span></label>
-                    <select class="form-control" name="status" id="" v-model="official.designationId">
+                        }}</span></label
+                    >
+                    <select
+                        class="form-control"
+                        name="status"
+                        id=""
+                        v-model="official.designationId"
+                    >
                         <option selected disabled>select</option>
-                        <option v-for="des in designations" :key="des.id" :value="des.id">
+                        <option
+                            v-for="des in designations"
+                            :key="des.id"
+                            :value="des.id"
+                        >
                             {{ des.Name }}
                         </option>
                     </select>
                 </div>
                 <div class="col-lg-4 col-md-6 col-sm-12">
-                    <label for="" class="">Employee Grade*
+                    <label for="" class=""
+                        >Employee Grade*
                         <span class="text-danger">{{
                             error.employeeGrade ? error.employeeGrade[0] : ""
-                            }}</span></label>
-                    <select name="" id="" class="form-control" v-model="official.employeeGrade">
+                        }}</span></label
+                    >
+                    <select
+                        name=""
+                        id=""
+                        class="form-control"
+                        v-model="official.employeeGrade"
+                    >
                         <option selected disabled value="">select</option>
                         <option value="1">Grade 1</option>
                         <option value="2">Grade 2</option>
@@ -297,30 +324,59 @@ onMounted(() => getData());
             <div class="row mb-3">
                 <div class="col-lg-4 col-md-6 col-sm-12">
                     <label for="" class="">Area</label>
-                    <select class="form-control" name="status" id="" v-model="official.areaId">
+                    <select
+                        class="form-control"
+                        name="status"
+                        id=""
+                        v-model="official.areaId"
+                    >
                         <option selected disabled>select</option>
-                        <option v-for="area in officialInfo.area" :key="area.id" :value="area.id">
+                        <option
+                            v-for="area in officialInfo.area"
+                            :key="area.id"
+                            :value="area.id"
+                        >
                             {{ area.Name }}
                         </option>
                     </select>
                 </div>
                 <div class="col-lg-4 col-md-6 col-sm-12">
                     <label for="" class="">Territory</label>
-                    <select class="form-control" name="status" id="" v-model="official.territoryId">
+                    <select
+                        class="form-control"
+                        name="status"
+                        id=""
+                        v-model="official.territoryId"
+                    >
                         <option selected disabled>select</option>
-                        <option v-for="ter in officialInfo.territory" :key="ter.id" :value="ter.id">
+                        <option
+                            v-for="ter in officialInfo.territory"
+                            :key="ter.id"
+                            :value="ter.id"
+                        >
                             {{ ter.Name }}
                         </option>
                     </select>
                 </div>
                 <div class="col-lg-4 col-md-6 col-sm-12">
-                    <label for="" class="">Employee Type*
+                    <label for="" class=""
+                        >Employee Type*
                         <span class="text-danger">{{
                             error.employeeTypeId ? error.employeeTypeId[0] : ""
-                            }}</span></label>
-                    <select class="form-control" name="status" id="" v-model="official.employeeTypeId">
+                        }}</span></label
+                    >
+                    <select
+                        class="form-control"
+                        name="status"
+                        id=""
+                        v-model="official.employeeTypeId"
+                    >
                         <option selected disabled>select</option>
-                        <option v-for="typ in officialInfo.emptype" :key="typ.id" :value="typ.id">
+                        <option
+                            v-for="typ in officialInfo.emptype"
+                            :key="typ.id"
+                            :value="typ.id"
+                        >
                             {{ typ.Name }}
                         </option>
                     </select>
@@ -330,39 +386,75 @@ onMounted(() => getData());
             <div class="row mb-3">
                 <div class="col-lg-4 col-md-6 col-sm-12">
                     <label for="" class="">Date of Joining</label>
-                    <input type="date" class="form-control" id="disabledTextInput" aria-describedby="emailHelp"
-                        v-model="official.doj" />
+                    <input
+                        type="date"
+                        class="form-control"
+                        id="disabledTextInput"
+                        aria-describedby="emailHelp"
+                        v-model="official.doj"
+                    />
                 </div>
                 <div class="col-lg-4 col-md-6 col-sm-12">
                     <label for="" class="">Date of Confirmation</label>
-                    <input type="date" class="form-control" id="disabledTextInput" aria-describedby="emailHelp"
-                        v-model="official.doc" />
+                    <input
+                        type="date"
+                        class="form-control"
+                        id="disabledTextInput"
+                        aria-describedby="emailHelp"
+                        v-model="official.doc"
+                    />
                 </div>
                 <div class="col-lg-4 col-md-6 col-sm-12">
                     <label for="" class="">Date of Leaving</label>
-                    <input type="date" class="form-control" id="disabledTextInput" aria-describedby="emailHelp"
-                        v-model="official.dol" />
+                    <input
+                        type="date"
+                        class="form-control"
+                        id="disabledTextInput"
+                        aria-describedby="emailHelp"
+                        v-model="official.dol"
+                    />
                 </div>
             </div>
 
             <div class="row mb-3">
                 <div class="col-lg-4 col-md-6 col-sm-12">
-                    <label for="exampleInputEmail1" class="">Probation Period</label>
-                    <input type="text" class="form-control" id="disabledTextInput" aria-describedby="emailHelp"
-                        v-model="official.provationPeriod" />
+                    <label for="exampleInputEmail1" class=""
+                        >Probation Period</label
+                    >
+                    <input
+                        type="text"
+                        class="form-control"
+                        id="disabledTextInput"
+                        aria-describedby="emailHelp"
+                        v-model="official.provationPeriod"
+                    />
                 </div>
                 <div class="col-lg-4 col-md-6 col-sm-12">
                     <label for="" class="">Job Location</label>
-                    <select class="form-control" name="status" id="" v-model="official.jobLocation">
+                    <select
+                        class="form-control"
+                        name="status"
+                        id=""
+                        v-model="official.jobLocation"
+                    >
                         <option selected disabled>select</option>
-                        <option v-for="branch in officialInfo.branch" :key="branch.id" :value="branch.id">
+                        <option
+                            v-for="branch in officialInfo.branch"
+                            :key="branch.id"
+                            :value="branch.id"
+                        >
                             {{ branch.Name }}
                         </option>
                     </select>
                 </div>
                 <div class="col-lg-4 col-md-6 col-sm-12">
                     <label for="exampleInputEmail1" class="">Shift</label>
-                    <select name="" id="" class="form-control" v-model="official.shift">
+                    <select
+                        name=""
+                        id=""
+                        class="form-control"
+                        v-model="official.shift"
+                    >
                         <option selected disabled>select</option>
                         <option value="D">Day</option>
                         <option value="N">Night</option>
@@ -372,16 +464,33 @@ onMounted(() => getData());
             <div class="row mb-3">
                 <div class="col-lg-4 col-md-6 col-sm-12">
                     <label for="multiSelect">Supervisor</label>
-                    <multiselect class="custom-multiselect" v-model="official.supervisor"
-                        :options="modifiedSupervisorData" :close-on-select="true" :clear-on-select="false"
-                        :preserve-search="true" placeholder="Select Towns" label="label" track-by="id">
+                    <multiselect
+                        class="custom-multiselect"
+                        v-model="official.supervisor"
+                        :options="modifiedSupervisorData"
+                        :close-on-select="true"
+                        :clear-on-select="false"
+                        :preserve-search="true"
+                        placeholder="Select Towns"
+                        label="label"
+                        track-by="id"
+                    >
                     </multiselect>
                 </div>
                 <div class="col-lg-4 col-md-6 col-sm-12">
                     <label for="multiSelect">Town</label>
-                    <multiselect class="custom-multiselect" v-model="official.townIds" :options="townData"
-                        :multiple="true" :close-on-select="false" :clear-on-select="false" :preserve-search="true"
-                        placeholder="Select Towns" label="Name" track-by="id"></multiselect>
+                    <multiselect
+                        class="custom-multiselect"
+                        v-model="official.townIds"
+                        :options="townData"
+                        :multiple="true"
+                        :close-on-select="false"
+                        :clear-on-select="false"
+                        :preserve-search="true"
+                        placeholder="Select Towns"
+                        label="Name"
+                        track-by="id"
+                    ></multiselect>
                 </div>
             </div>
             <div class="d-flex align-items-center">

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Leave;
 
 use App\Http\Controllers\Controller;
+use App\Models\app_attendance;
 use App\Models\attendence;
 use App\Models\leave_type;
 use Illuminate\Http\Request;
@@ -18,23 +19,6 @@ class LeaveTypeController extends Controller
     {
         $leaveType = leave_type::get();
         return response()->json($leaveType);
-    }
-
-    public function getEarnedLeave($id)
-    {
-        $currentYear = now()->year;
-
-        $attendanceRecords = DB::table('attendences')
-            ->join('employees', 'employees.id', '=', 'attendences.EID')
-            ->where('employees.id', $id)
-            ->whereIn('attendences.Status', ['P', 'L'])
-            ->whereYear('attendences.Date', $currentYear)
-            ->distinct()
-            ->count();
-            
-            $earnedLeave = floor($attendanceRecords / 18);
-
-        return response()->json($earnedLeave);
     }
 
     /**

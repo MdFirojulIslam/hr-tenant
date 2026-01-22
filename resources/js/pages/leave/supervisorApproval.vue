@@ -5,18 +5,18 @@ import Swal from "sweetalert2";
 import api from "@/api";
 import { useStore } from "vuex";
 
-// ----------------- Vuex & Router -----------------
 const store = useStore();
 const user = store.getters.getUser;
 const router = useRouter();
 const route = useRoute();
 
-// ----------------- Reactive State -----------------
+// Reactive state
 const department = ref([]);
 const leaveType = ref([]);
 const allLeave = ref([]);
 const employeesByDept = ref([]);
 const employee = ref([]);
+const officialLeaveData = ref([]); // Dynamic leave summary table
 const earnedLeave = ref("");
 
 const selectedDept = ref("");
@@ -26,7 +26,14 @@ const selectedStatus = ref("Pending");
 
 const error = ref(null);
 
-// ----------------- Helper Functions -----------------
+// Modal and edit state
+const editModal = ref(false);
+const selectedLeave = ref(null);
+const EditLeaveModal = defineAsyncComponent(() =>
+    import("@/pages/leave/component/statusUpdateForm.vue")
+);
+
+// Helper functions
 const formatDate = (dateStr) => {
     if (!dateStr) return "";
     const date = new Date(dateStr);
@@ -38,16 +45,9 @@ const formatDate = (dateStr) => {
 
 const openAttachment = (url) => url && window.open(url, "_blank");
 
-const EditLeaveModal = defineAsyncComponent(() =>
-    import("@/pages/leave/component/statusUpdateForm.vue")
-);
-
 const closeEditModal = () => {
     editModal.value = false;
 };
-
-const editModal = ref(false);
-const selectedLeave = ref(null);
 
 const editLeave = (leave) => {
     selectedLeave.value = leave;
@@ -66,7 +66,7 @@ const editLeaveStatus = async (id, status) => {
                 showConfirmButton: false,
                 timer: 1500,
             });
-            // Update locally
+
             const leaveIndex = allLeave.value.findIndex((l) => l.id === id);
             if (leaveIndex !== -1) {
                 allLeave.value[leaveIndex].status = status;
@@ -76,7 +76,7 @@ const editLeaveStatus = async (id, status) => {
             selectedDept.value = "";
             selectedEmp.value = "";
             selectedType.value = "";
-            selectedStatus.value = "Pending"; // default status again
+            selectedStatus.value = "Pending";
             employee.value = [];
             employeesByDept.value = [];
             earnedLeave.value = "";
@@ -89,7 +89,7 @@ const editLeaveStatus = async (id, status) => {
     }
 };
 
-// ----------------- Data Fetching -----------------
+// Fetch core data
 const getData = async () => {
     try {
         const [deptRes, typeRes, leaveRes] = await Promise.all([
@@ -105,6 +105,7 @@ const getData = async () => {
     }
 };
 
+// Fetch employees by department
 const getEmployee = async (deptId) => {
     if (!deptId) {
         employeesByDept.value = [];
@@ -118,19 +119,28 @@ const getEmployee = async (deptId) => {
     }
 };
 
+// Fetch dynamic leave info for selected employee
 const getLeaveInfo = async (id) => {
     try {
-        const res = await api.get(`/leave/${id}`);
-        employee.value = res.data;
+        const res = await api.get(`/personal-leave-details/${id}`);
+        const data = res.data;
 
-        const earnedRes = await api.get(`/get-earned-leave/${id}`);
-        earnedLeave.value = earnedRes.data;
+        // Transform API response into array for dynamic table
+        const leaveArray = [];
+        for (const type in data.entitled_leave) {
+            leaveArray.push({
+                leave_name: type.charAt(0).toUpperCase() + type.slice(1), // Capitalize
+                total_max_days: Number(data.entitled_leave[type]),
+                used_leave: Number(data.used_leave[type] || 0),
+            });
+        }
+        officialLeaveData.value = leaveArray;
     } catch (err) {
         console.error(err);
     }
 };
 
-// ----------------- Filtered Leaves -----------------
+// Filter leave table
 const filteredData = computed(() =>
     allLeave.value.filter((item) => {
         const deptMatch =
@@ -144,44 +154,12 @@ const filteredData = computed(() =>
     })
 );
 
-// const totalLeaveDays = computed(() => {
-//     const totals = {};
-
-//     if (Array.isArray(leaveType.value) && leaveType.value.length > 0) {
-//         leaveType.value.forEach((type) => {
-//             totals[type.Name] = {
-//                 totalDays: 0,
-//                 maxDays: type.Max_Days || 0,
-//             };
-//         });
-
-//         employee.value.forEach((item) => {
-//             const typeName = item.leave_type;
-//             if (!totals[typeName]) {
-//                 totals[typeName] = {
-//                     totalDays: 0,
-//                     maxDays: item.Max_Days,
-//                 };
-//             }
-
-//             totals[typeName].maxDays = item.Max_Days;
-
-//             if (item.Status === "Approved") {
-//                 totals[typeName].totalDays += item.daysBetween;
-//             }
-//         });
-//     }
-
-//     return totals;
-// });
-
-// ----------------- Auto-select from query -----------------
+// Initialize selected query from URL
 const setQuerySelection = async () => {
     if (!department.value.length || !leaveType.value.length) return;
 
     let needUpdate = false;
 
-    // Department
     if (route.query.department_name) {
         const dept = department.value.find(
             (d) => d.Name === route.query.department_name
@@ -191,38 +169,27 @@ const setQuerySelection = async () => {
             await getEmployee(dept.id);
             needUpdate = true;
 
-            // Employee
             if (route.query.full_name) {
                 const emp = employeesByDept.value.find(
                     (e) => e.Full_Name === route.query.full_name
                 );
                 if (emp) {
                     selectedEmp.value = emp.id;
-                    await getLeaveInfo(emp.id);
+                    await getLeaveInfo(emp.id); // fetch leave dynamically
                 }
             }
         }
     }
 
-    // Leave Type
-    // if (route.query.leave_type) {
-    //     const type = leaveType.value.find(
-    //         (t) => t.leave_name === route.query.leave_type
-    //     );
-    //     if (type) selectedType.value = type.id;
-    //     needUpdate = true;
-    // }
-
-    // Remove query parameters from URL after using them
     if (needUpdate) {
         router.replace({ path: route.path, query: {} });
     }
 };
 
-// ----------------- Watch Query Changes -----------------
+// Watch route query changes
 watch(route, () => setQuerySelection(), { immediate: true });
 
-// ----------------- Lifecycle -----------------
+// On component mount
 onMounted(async () => {
     await getData();
     await setQuerySelection();
@@ -322,8 +289,10 @@ onMounted(async () => {
 
                                     <tbody>
                                         <tr
-                                            v-for="(info, typeName) in employee"
-                                            :key="typeName"
+                                            v-for="(
+                                                info, index
+                                            ) in officialLeaveData"
+                                            :key="index"
                                         >
                                             <th>{{ info.leave_name }}</th>
                                             <td>{{ info.total_max_days }}</td>

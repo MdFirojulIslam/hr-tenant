@@ -21,6 +21,8 @@ use App\Models\department;
 use App\Models\blood_group;
 use App\Models\employee_type;
 use App\Models\town;
+use App\Models\separation_request;
+
 use App\Models\town_belong;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
@@ -169,29 +171,19 @@ class EmployeeInformationController extends Controller
         ]);
     }
 
-
+    //added by firoj
     public function getNotification()
     {
         $user = Auth::user();
+        $currentYear = now()->year;
 
-        // if ($user->role_id == 1) {
-        //     $leave = leave::select('leaves.id', 'employees.Full_Name', 'leaves.status', 'leaves.purpose', 'leave_types.leave_name as Leave_Type')
-        //         ->join('employees', 'employees.id', '=', 'leaves.employee_id')
-        //         ->join('leave_types', 'leaves.leave_type_id', '=', 'leave_types.id')
-        //         ->where('leaves.status', '=', 'Approved (SV)')
-        //         ->get();
-        // } else {
-        //     $leave = leave::select('leaves.id', 'employees.Full_Name', 'leaves.status', 'leaves.purpose', 'leave_types.leave_name as Leave_Type')
-        //         ->join('employees', 'employees.id', '=', 'leaves.employee_id')
-        //         ->join('officials', 'employees.id', '=', 'officials.EID')
-        //         ->join('leave_types', 'leaves.leave_type_id', '=', 'leave_types.id')
-        //         ->where('officials.Supervisor_Id', '=', $user->EID)
-        //         ->where('leaves.status', '=', 'Pending')
-        //         ->get();
-        // }
-
-        if ($user->EID == 13) {
-            $currentYear = now()->year;
+        $hrId = employee::query()
+            ->join('officials as o', 'o.EID', '=', 'employees.id')
+            ->where('o.department_id', 5)
+            ->where('o.status', 'N')
+            ->pluck('employees.id')
+            ->first();
+        if ($user->EID == $hrId) {
             $pending_leave = official::select('leaves.id as leave_id', 'employees.Full_Name', 'departments.Name as department_name', 'leaves.status', 'leaves.purpose', 'leave_types.leave_name as Leave_Type')
                 ->join('leaves', 'leaves.employee_id', '=', 'officials.EID')
                 ->join('employees', 'employees.id', '=', 'officials.EID')
@@ -209,10 +201,50 @@ class EmployeeInformationController extends Controller
                 ->join('departments', 'departments.id', '=', 'officials.Department_Id')
                 ->where('officials.Supervisor_Id', '=', $user->EID)
                 ->where('leaves.status', '=', 'Pending')
+                ->where('officials.Status', '=', 'N')
+                ->whereYear('leaves.from_date', '=', $currentYear)
                 ->get();
         }
+
+
+
+
+        // $pending_separation = separation_request::select(
+        //     'separation_request.id as separation_request_id',
+        //     'employees.Full_Name as employee_name',
+        //     'departments.Name as department_name',
+        //     'separation_info.status as approval_status',
+        //     'separation_info.separation_approval_id as first_approval_id',
+        //     'separation_info.department_approval_id',
+        //     'separation_info.hr_approval_id',
+        //     'separation_info.it_approval_id',
+        //     'separation_info.accounts_approval_id'
+        // )
+        //     ->join('employees', 'employees.id', '=', 'separation_request.employee_id')
+        //     ->join('departments', 'departments.id', '=', 'employees.department_id')
+        //     ->where('separation_request.status', '=', 'Pending')
+        //     ->get();
+
+        // $all_dept = department::pluck('id')->toArray();
+
+        // if($all_dept == 1)
+
+        // $first_approval = separation_request::select(
+        //     'separation_request.id as separation_request_id',
+        //     'employees.Full_Name as employee_name',
+        //     'departments.Name as department_name',
+        //     'separation_info.status as approval_status',
+        //     'separation_info.separation_approval_id as first_approval_id'
+        // )
+        //     ->join('employees', 'employees.id', '=', 'separation_request.employee_id')
+        //     ->join('officials', 'officials.EID', '=', 'employees.id')
+        //     ->join('departments', 'departments.id', '=', 'officials.Department_Id')
+        //     ->where('separation_request.status', '=', 'Pending')
+        //     ->get();
+
         return response()->json($pending_leave);
     }
+    //firoj ends
 
 
     public function getOfficialInfo()

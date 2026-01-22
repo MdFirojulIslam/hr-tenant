@@ -107,6 +107,16 @@ const routes = [
             pageId: 3,
         },
     },
+
+    {
+        path: "/security/user-component-permission",
+        name: "UserComponentPermission",
+        component: () => import("./pages/security/userComponentPermission.vue"),
+        meta: {
+            requireAuth: true,
+            pageId: 56,
+        },
+    },
     {
         path: "/security/create-role",
         name: "CreateRole",
@@ -391,6 +401,7 @@ const routes = [
             pageId: 45,
         },
     },
+
     {
         path: "/payroll/salary-disbursement",
         name: "SalaryDisbursement",
@@ -400,7 +411,37 @@ const routes = [
             pageId: 51,
         },
     },
-    //added by feroj
+
+    {
+        path: "/separation/separation-request",
+        name: "SeparationRequest",
+        component: () => import("./pages/separation/separationRequest.vue"),
+        meta: {
+            requireAuth: true,
+            pageId: 53,
+        },
+    },
+
+    {
+        path: "/separation/separation-approval",
+        name: "SeparationApproval",
+        component: () => import("./pages/separation/separationApproval.vue"),
+        meta: {
+            requireAuth: true,
+            pageId: 54,
+        },
+    },
+
+    {
+        path: "/separation/all-separations",
+        name: "AllSeparations",
+        component: () => import("./pages/separation/allSeparations.vue"),
+        meta: {
+            requireAuth: true,
+            pageId: 55,
+        },
+    },
+
     {
         path: "/payroll/salary-details/:id?",
         name: "SalaryDetails",

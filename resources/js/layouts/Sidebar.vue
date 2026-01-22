@@ -69,15 +69,14 @@ onMounted(() => getData());
                             Profile
                         </Router-Link>
                     </div>
-
                     <div v-for="nav in nav_tree" :key="nav.id">
                         <a
                             class="nav-link collapsed"
                             href="#"
                             data-bs-toggle="collapse"
-                            :data-bs-target="'#' + nav.name"
+                            :data-bs-target="'#nav-' + nav.id"
                             aria-expanded="false"
-                            :aria-controls="nav.name"
+                            :aria-controls="'nav-' + nav.id"
                         >
                             <div class="sb-nav-link-icon">
                                 <i :class="nav.icon + ''"></i>
@@ -93,7 +92,7 @@ onMounted(() => getData());
 
                         <div
                             class="collapse"
-                            :id="nav.name"
+                            :id="'nav-' + nav.id"
                             aria-labelledby="headingOne"
                             data-bs-parent="#sidenavAccordion"
                             v-if="nav.children"

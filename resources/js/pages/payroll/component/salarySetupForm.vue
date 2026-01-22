@@ -466,7 +466,7 @@ onMounted(() => {
 
                                 <!-- Employee Image -->
                                 <div
-                                    class="col-lg-5 col-md-6"
+                                    class="col-md-4"
                                     v-for="(item, index) in employee"
                                     :key="item.id"
                                 >

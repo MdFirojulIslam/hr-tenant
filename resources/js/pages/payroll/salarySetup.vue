@@ -1,14 +1,10 @@
 <script setup>
-import { ref, onMounted, computed, defineAsyncComponent } from "vue";
-
+import { ref, onMounted, watch, defineAsyncComponent } from "vue";
 import { Bootstrap4Pagination } from "laravel-vue-pagination";
 import api from "@/api";
 import Swal from "sweetalert2";
-
-// import { useRouter } from "vue-router";
-// const router = useRouter();
-
 import { useStore } from "vuex";
+
 const store = useStore();
 const role_id = store.getters.getRoleId;
 
@@ -16,32 +12,69 @@ const salaryComponent = defineAsyncComponent(() =>
     import("./component/salarySetupForm.vue")
 );
 
-// const currentYear = ref(new Date().getFullYear());
-
 const isLoading = ref(true);
 const error = ref(null);
-const selectedStore = ref(null);
-const heading = ref(null);
-const filter = ref("");
 
 const department = ref([]);
 const employeeIDs = ref([]);
+const salaries = ref({});
+
 const searchDept = ref("");
 const searchEmp = ref("");
+const searchQuery = ref("");
 
-const salaries = ref([]);
-
-const salaryId = ref();
 const salaryModel = ref(false);
+const selectedStore = ref(null);
+const salaryId = ref(null);
+const heading = ref("");
 
+/* ---------------- FETCH DATA ---------------- */
+const getData = async (page = 1) => {
+    try {
+        const [deptRes, salaryRes] = await Promise.all([
+            api.get("/department"),
+            api.get("/salary", {
+                params: {
+                    page,
+                    query: searchQuery.value,
+                    department_id: searchDept.value,
+                    employee_id: searchEmp.value,
+                },
+            }),
+        ]);
+
+        department.value = deptRes.data;
+        salaries.value = salaryRes.data;
+    } catch (err) {
+        error.value = err.message;
+    } finally {
+        isLoading.value = false;
+    }
+};
+
+/* ---------------- EMPLOYEE BY DEPT ---------------- */
+const getEmployee = async (deptID) => {
+    if (!deptID) {
+        employeeIDs.value = [];
+        searchEmp.value = "";
+        return;
+    }
+    const res = await api.get(`/emp/${deptID}`);
+    employeeIDs.value = res.data;
+};
+
+/* ---------------- WATCH FILTERS ---------------- */
+watch([searchDept, searchEmp, searchQuery], () => {
+    getData();
+});
+
+/* ---------------- MODAL ---------------- */
 const salaryOpen = (title) => {
     heading.value = title;
-
     if (title === "Save") {
-        selectedStore.value = null; // reset previous edit data
-        salaryId.value = null; // reset salary id
+        selectedStore.value = null;
+        salaryId.value = null;
     }
-
     salaryModel.value = true;
 };
 
@@ -50,105 +83,28 @@ const salaryClose = () => {
     getData();
 };
 
-const openSalaryDetails = (id) => {
-    window.open(`/payroll/salary-details/${id}`, "_blank");
-};
-
-// get employees for department
-const getEmployee = async (deptID) => {
-    if (!deptID) {
-        employeeIDs.value = [];
-        return;
-    }
-    const empIDs = await api.get(`/emp/${deptID}`);
-    employeeIDs.value = empIDs.data;
-};
-
-const employeeName = ref("");
-const searchQuery = ref(""); // single input field for account_no or official_id
-
-const searchemp = async () => {
-    // Only trigger search if something is typed
-    if (searchQuery.value) {
-        try {
-            const response = await api.get("/employee-salary-search", {
-                params: {
-                    query: searchQuery.value, // send the input as 'query'
-                },
-            });
-            salaries.value = response.data; // replace current salaries
-        } catch (error) {
-            console.error(error);
-        }
-    } else {
-        getData(); // fetch all if input is empty
-    }
-};
-
-const getData = async (page = 1) => {
-    try {
-        const [deptRes, salary] = await Promise.all([
-            api.get("/department"),
-            api.get(`/salary?page=${page}`),
-        ]);
-        department.value = deptRes.data;
-        salaries.value = salary.data;
-    } catch (err) {
-        error.value = err.message || "Error fetching data";
-    } finally {
-        isLoading.value = false;
-    }
-};
-
-const filteredData = computed(() => {
-    // check if salaries.value has 'data'
-    const salaryList = salaries.value.data || [];
-
-    return salaryList.filter((item) => {
-        const matchesDept = searchDept.value
-            ? item.department_id == searchDept.value
-            : true;
-        const matchesEmp = searchEmp.value
-            ? item.employee_id == searchEmp.value
-            : true;
-
-        return matchesDept && matchesEmp;
-    });
-});
-
-const editsalary = async (id) => {
-    try {
-        selectedStore.value = salaries.value.data.find(
-            (item) => item.employee_id === id
-        );
-        salaryId.value = id;
-        salaryOpen("Update");
-    } catch (err) {
-        console.error("Error fetching store data for editing:", err);
-    }
+/* ---------------- ACTIONS ---------------- */
+const editsalary = (id) => {
+    selectedStore.value = salaries.value.data.find(
+        (item) => item.employee_id === id
+    );
+    salaryId.value = id;
+    salaryOpen("Update");
 };
 
 const deletesalary = async (id) => {
-    try {
-        const response = await api.get(`/delete-salary/${id}`);
-        if (response.data.success) {
-            Swal.fire({
-                position: "middle",
-                icon: "success",
-                title: "Information has been Deleted",
-                showConfirmButton: false,
-                timer: 1500,
-            });
-            await getData();
-        }
-    } catch (err) {
-        console.error("Error fetching store data for editing:", err);
+    const res = await api.get(`/delete-salary/${id}`);
+    if (res.data.success) {
+        Swal.fire({
+            icon: "success",
+            title: "Deleted successfully",
+            timer: 1500,
+            showConfirmButton: false,
+        });
+        getData();
     }
 };
 
-const submitHandler = async () => {
-    await getData();
-};
 onMounted(() => getData());
 </script>
 
@@ -291,9 +247,10 @@ onMounted(() => getData());
                                     </th>
                                 </tr>
                             </thead>
+
                             <tbody>
                                 <tr
-                                    v-for="(salary, index) in filteredData"
+                                    v-for="(salary, index) in salaries.data"
                                     :key="salary.id"
                                 >
                                     <td>{{ salaries.from + index }}</td>
@@ -317,7 +274,9 @@ onMounted(() => getData());
                                         }}
                                     </td>
                                     <td>{{ salary.net_pay }}</td>
-                                    <td>{{ salary.bank_account_no }}</td>
+                                    <td>
+                                        {{ salary.bank_account_no ?? "Cash" }}
+                                    </td>
 
                                     <td
                                         v-if="role_id == 1 || role_id == 2"
@@ -370,7 +329,6 @@ onMounted(() => getData());
                 <div class="d-flex justify-content-end mt-0">
                     <Bootstrap4Pagination
                         :data="salaries"
-                        :limit="2"
                         @pagination-change-page="getData"
                     />
                 </div>
