@@ -1,7 +1,24 @@
 <script setup>
-import { ref, defineProps, getCurrentInstance, watch, onMounted } from "vue";
+import {
+    ref,
+    reactive,
+    defineProps,
+    getCurrentInstance,
+    watch,
+    onMounted,
+} from "vue";
 import Swal from "sweetalert2";
 import api from "@/api";
+import { useStore } from "vuex";
+import { useRouter } from "vue-router";
+import Multiselect from "vue-multiselect";
+import "vue-multiselect/dist/vue-multiselect.min.css";
+
+// ----------------------------
+// BASIC SETUP
+// ----------------------------
+const store = useStore();
+const user = store.getters.getUser;
 
 const { isOpen, editStore, updateinfo } = defineProps([
     "isOpen",
@@ -9,54 +26,30 @@ const { isOpen, editStore, updateinfo } = defineProps([
     "updateinfo",
 ]);
 
+console.log("Edit Store Data:", editStore);
+
 const error = ref([]);
 const department = ref([]);
 const employee = ref([]);
 const emp_img = ref(null);
-const salaryAdjustment = ref([]);
 const adjustments = ref([]);
+const selectedEmployee = ref(null);
 
 const selectedMonth = ref(new Date().getMonth() + 1);
 const selectedYear = ref(new Date().getFullYear());
 
-const form = ref({
+const form = reactive({
     department: "",
     eid: "",
-    adjustment_type: "",
+    adjustment_type_id: "",
     year: selectedYear.value,
     month: selectedMonth.value,
-    adjustmentCategory: "",
     amount: "",
     remarks: "",
+    type: "",
 });
 
-const earningOptions = [
-    { id: 1, key: "pending_salary", value: "Pending Salary" },
-    { id: 2, key: "overtime", value: "Overtime" },
-    { id: 3, key: "others", value: "Other" },
-];
-const deductionOptions = [
-    { id: 1, key: "advance", value: "Advance" },
-    { id: 2, key: "other_deductions", value: "Other Deductions" },
-];
-
-const years = ref([
-    "2022",
-    "2023",
-    "2024",
-    "2025",
-    "2026",
-    "2027",
-    "2028",
-    "2029",
-    "2030",
-    "2031",
-    "2032",
-    "2033",
-    "2034",
-    "2035",
-]);
-
+const years = ref(Array.from({ length: 14 }, (_, i) => 2022 + i));
 const months = ref([
     "January",
     "February",
@@ -74,38 +67,43 @@ const months = ref([
 
 const instance = getCurrentInstance();
 
-// Fetch departments & salary adjustments
+// -------------------------
+// FETCH DATA
+// -------------------------
 const getData = async () => {
     try {
-        const [departmentRes, adjustmentRes, adjustmentTypeRes] =
-            await Promise.all([
-                api.get("/department"),
-                api.get("/salary-adjustment"),
-                api.get("/salary-adjustment-types"),
-            ]);
-        department.value = departmentRes.data;
-        salaryAdjustment.value = adjustmentRes.data;
-        adjustments.value = adjustmentTypeRes.data;
+        const [deptRes, adjTypeRes] = await Promise.all([
+            api.get(`/department-list/${user.id}`),
+            api.get("/salary-adjustment-types"),
+        ]);
+        department.value = deptRes.data;
+        adjustments.value = adjTypeRes.data;
     } catch (err) {
         error.value = err.message || "Error fetching data";
     }
 };
 
-// Fetch employees for a department
+// FETCH EMPLOYEES
 const getEmployee = async (deptID) => {
     if (!deptID) {
         employee.value = [];
+        selectedEmployee.value = null;
+        form.eid = "";
+        emp_img.value = null;
         return;
     }
     try {
         const res = await api.get(`/emp/${deptID}`);
         employee.value = res.data;
+        selectedEmployee.value = null;
+        form.eid = "";
+        emp_img.value = null;
     } catch (err) {
         console.error("Error fetching employees:", err);
     }
 };
 
-// Fetch employee image
+// FETCH EMPLOYEE IMAGE
 const getEmployeeImg = async (eid) => {
     if (!eid) return;
     try {
@@ -116,56 +114,78 @@ const getEmployeeImg = async (eid) => {
     }
 };
 
-// Watch for editStore changes (prefill form)
+// HANDLE EMPLOYEE SELECT
+const onEmployeeSelect = (emp) => {
+    if (!emp) {
+        form.eid = "";
+        emp_img.value = null;
+        return;
+    }
+    form.eid = emp.id;
+    getEmployeeImg(emp.id);
+};
+
+// -------------------------
+// PREFILL FORM ON EDIT
+// -------------------------
 watch(
     () => editStore,
     async (item) => {
         if (item) {
-            form.value.department = item.dept_id || "";
+            form.department = item.dept_id ? Number(item.dept_id) : "";
+            console.log("Employee List for Department:", form.department);
             await getEmployee(item.dept_id);
-            form.value.eid = item.eid || "";
+
+            form.eid = item.eid ? String(item.eid) : "";
+            selectedEmployee.value =
+                employee.value.find((e) => String(e.id) === String(item.eid)) ||
+                null;
             await getEmployeeImg(item.eid);
 
-            form.value.adjustment_type = item.adjustment_id || "";
-            form.value.amount = item.amount || "";
-            form.value.remarks = item.remarks || "";
-
+            form.adjustment_type_id = item.adjustment_id
+                ? String(item.adjustment_id)
+                : "";
+            form.amount = item.amount || "";
+            form.remarks = item.remarks || "";
+            form.type = item.type || "";
             if (item.date) {
                 const [year, month] = item.date.split("-");
-                form.value.year = year;
-                form.value.month = parseInt(month);
+                form.year = parseInt(year);
+                form.month = parseInt(month);
             }
-        } else {
-            resetForm();
-        }
+        } else resetForm();
     },
-    { immediate: true }
+    { immediate: true },
 );
 
-// Reset form
+// -------------------------
+// RESET FORM
+// -------------------------
 const resetForm = () => {
-    form.value = {
-        department: "",
-        eid: "",
-        adjustment_type: "",
-        year: selectedYear.value,
-        month: selectedMonth.value,
-        adjustmentCategory: "",
-        amount: "",
-        remarks: "",
-    };
+    form.department = "";
+    form.eid = "";
+    form.adjustment_type_id = "";
+    form.year = selectedYear.value;
+    form.month = selectedMonth.value;
+    form.amount = "";
+    form.remarks = "";
     emp_img.value = null;
+    selectedEmployee.value = null;
 };
 
-// Close modal
+// -------------------------
+// CLOSE MODAL
+// -------------------------
 const closeModal = () => {
     instance.emit("modal-close");
 };
 
-// Create salary adjustment
+// -------------------------
+// CREATE & UPDATE
+// -------------------------
 const create = async () => {
     try {
-        const res = await api.post("/salary-adjustment", form.value);
+        const res = await api.post("/salary-adjustment", form);
         if (res.data.success) {
             Swal.fire({
                 icon: "success",
@@ -176,27 +196,20 @@ const create = async () => {
             resetForm();
             getData();
             closeModal();
-        } else {
+        } else
             Swal.fire({
                 icon: "error",
                 title: res.data.message,
                 showConfirmButton: true,
             });
-        }
     } catch (err) {
         console.error("Error creating adjustment:", err);
     }
 };
 
-// Update salary adjustment
 const update = async () => {
     try {
-        // Use eid + year + month as unique identifier if no id exists
-        const recordIdentifier = `${form.value.eid}-${form.value.year}-${form.value.month}`;
-        const res = await api.put(
-            `/salary-adjustment/${recordIdentifier}`,
-            form.value
-        );
+        const res = await api.put(`/salary-adjustment/${editStore.id}`, form);
         if (res.data.success) {
             Swal.fire({
                 icon: "success",
@@ -213,56 +226,46 @@ const update = async () => {
     }
 };
 
-// Submit handler
+// SUBMIT
 const submit = () => {
     if (updateinfo === "Save") create();
     else if (updateinfo === "Update") update();
     else console.error("Invalid updateinfo:", updateinfo);
 };
 
+// -------------------------
+// DRAG MODAL
+// -------------------------
 const enableDrag = () => {
     const dialog = document.querySelector(".modal-dialog");
     const header = document.querySelector(".modal-header");
-
     if (!dialog || !header) return;
 
-    let isDragging = false;
-    let offsetX = 0;
-    let offsetY = 0;
-    let originalWidth = 0;
+    let isDragging = false,
+        offsetX = 0,
+        offsetY = 0,
+        originalWidth = 0;
 
     header.style.cursor = "move";
 
     header.addEventListener("mousedown", (e) => {
         isDragging = true;
-
-        // lock width
         originalWidth = dialog.offsetWidth;
         dialog.style.width = originalWidth + "px";
 
         const rect = dialog.getBoundingClientRect();
-
-        // SAVE CURRENT POSITION BEFORE REMOVING transform
-        const currentLeft = rect.left;
-        const currentTop = rect.top;
-
-        // remove bootstrap centering
-        dialog.style.transform = "none";
-        dialog.style.margin = 0;
         dialog.style.position = "absolute";
+        dialog.style.left = rect.left + "px";
+        dialog.style.top = rect.top + "px";
+        dialog.style.margin = 0;
+        dialog.style.transform = "none";
 
-        // SET EXPLICIT LEFT + TOP so modal does NOT jump
-        dialog.style.left = currentLeft + "px";
-        dialog.style.top = currentTop + "px";
-
-        // mouse offsets
-        offsetX = e.clientX - currentLeft;
-        offsetY = e.clientY - currentTop;
+        offsetX = e.clientX - rect.left;
+        offsetY = e.clientY - rect.top;
     });
 
     document.addEventListener("mousemove", (e) => {
         if (!isDragging) return;
-
         dialog.style.left = e.clientX - offsetX + "px";
         dialog.style.top = e.clientY - offsetY + "px";
     });
@@ -272,7 +275,9 @@ const enableDrag = () => {
     });
 };
 
-// Mounted
+// -------------------------
+// ON MOUNT
+// -------------------------
 onMounted(() => {
     getData();
     enableDrag();
@@ -280,15 +285,10 @@ onMounted(() => {
 </script>
 
 <template>
-    <div
-        v-if="isOpen"
-        class="modal fade show d-block"
-        tabindex="-1"
-        role="dialog"
-    >
+    <div v-if="isOpen" class="modal fade show d-block" tabindex="-1">
         <div class="modal-dialog modal-lg modal-dialog-centered">
             <div class="modal-content">
-                <!-- Modal Header -->
+                <!-- Header -->
                 <div class="modal-header gradient text-white">
                     <h5 class="modal-title">
                         <i class="bi bi-sliders me-2"></i>
@@ -305,9 +305,9 @@ onMounted(() => {
                     ></button>
                 </div>
 
-                <!-- Modal Body -->
+                <!-- Body -->
                 <div class="modal-body overflow-auto" style="max-height: 80vh">
-                    <!-- Employee Section -->
+                    <!-- Employee Info -->
                     <div class="card mb-3 shadow-sm">
                         <div class="card-header bg-light fw-bold">
                             EMPLOYEE INFORMATION
@@ -318,10 +318,7 @@ onMounted(() => {
                                     <!-- Department -->
                                     <div class="row mb-3 align-items-center">
                                         <div class="col-3 d-flex">
-                                            <span class="flex-grow-1 me-2"
-                                                >Department Name</span
-                                            >
-                                            <span> :</span>
+                                            Department :
                                         </div>
                                         <div class="col-md-6">
                                             <select
@@ -331,51 +328,52 @@ onMounted(() => {
                                                     getEmployee(form.department)
                                                 "
                                             >
-                                                <option
-                                                    value=""
-                                                    selected
-                                                    disabled
-                                                >
+                                                <option value="" disabled>
                                                     Select Department
                                                 </option>
                                                 <option
                                                     v-for="dept in department"
-                                                    :key="dept.id"
-                                                    :value="dept.id"
+                                                    :key="dept.department_id"
+                                                    :value="
+                                                        Number(
+                                                            dept.department_id,
+                                                        )
+                                                    "
                                                 >
-                                                    {{ dept.Name }}
+                                                    {{ dept.department_name }}
                                                 </option>
                                             </select>
                                         </div>
                                     </div>
 
-                                    <!-- Employee Name -->
+                                    <!-- Employee -->
                                     <div class="row mb-3 align-items-center">
                                         <div class="col-3 d-flex">
-                                            <span class="flex-grow-1 me-2"
-                                                >Employee Name</span
-                                            >
-                                            <span>:</span>
+                                            Employee :
                                         </div>
-                                        <div class="col-md-6">
-                                            <select
-                                                class="form-select border-color custom-input"
-                                                v-model="form.eid"
-                                                @change="
-                                                    getEmployeeInfo(form.eid)
+                                        <div class="col-md-6 position-relative">
+                                            <Multiselect
+                                                v-model="selectedEmployee"
+                                                :options="employee"
+                                                label="Full_Name"
+                                                track-by="id"
+                                                placeholder="Select or search employee"
+                                                :searchable="true"
+                                                :close-on-select="true"
+                                                :allow-empty="true"
+                                                @update:modelValue="
+                                                    onEmployeeSelect
                                                 "
+                                                :clear-on-select="false"
+                                            />
+                                            <!-- <button
+                                                v-if="selectedEmployee"
+                                                type="button"
+                                                class="btn btn-sm btn-link position-absolute top-0 end-0 mt-1 me-2"
+                                                @click="selectedEmployee = null"
                                             >
-                                                <option value="" selected>
-                                                    Select Employee
-                                                </option>
-                                                <option
-                                                    v-for="emp in employee"
-                                                    :key="emp.id"
-                                                    :value="emp.id"
-                                                >
-                                                    {{ emp.Full_Name }}
-                                                </option>
-                                            </select>
+                                                <i class="fa fa-times"></i>
+                                            </button> -->
                                         </div>
                                     </div>
                                 </div>
@@ -394,7 +392,7 @@ onMounted(() => {
                         </div>
                     </div>
 
-                    <!-- Adjustment Section -->
+                    <!-- Adjustment Details -->
                     <div class="card mb-3 shadow-sm">
                         <div class="card-header bg-light fw-bold">
                             ADJUSTMENT DETAILS
@@ -407,21 +405,20 @@ onMounted(() => {
                                     >
                                     <select
                                         class="form-select border-color custom-input"
-                                        v-model="form.adjustment_type"
+                                        v-model="form.adjustment_type_id"
                                     >
                                         <option disabled value="">
                                             Select Type
                                         </option>
                                         <option
-                                            v-for="adjustment in adjustments"
-                                            :key="adjustment.adjustment_id"
-                                            :value="adjustment.adjustment_id"
+                                            v-for="adj in adjustments"
+                                            :key="adj.adjustment_id"
+                                            :value="String(adj.adjustment_id)"
                                         >
-                                            {{ adjustment.adjustment_name }}
+                                            {{ adj.adjustment_name }}
                                         </option>
                                     </select>
                                 </div>
-
                                 <div class="col-md-4">
                                     <label class="form-label"
                                         >Salary Year</label
@@ -442,7 +439,6 @@ onMounted(() => {
                                         </option>
                                     </select>
                                 </div>
-
                                 <div class="col-md-4">
                                     <label class="form-label"
                                         >Salary Month</label
@@ -464,7 +460,8 @@ onMounted(() => {
                                     </select>
                                 </div>
                             </div>
-                            <div class="row g-3 mt-0">
+
+                            <div class="row g-3 mt-3">
                                 <div class="col-md-4">
                                     <label class="form-label">Amount</label>
                                     <input
@@ -474,7 +471,6 @@ onMounted(() => {
                                         placeholder="Amount"
                                     />
                                 </div>
-
                                 <div class="col-md-4">
                                     <label class="form-label">Remarks</label>
                                     <input
@@ -489,13 +485,10 @@ onMounted(() => {
                     </div>
                 </div>
 
-                <!-- Modal Footer -->
+                <!-- Footer -->
                 <div class="modal-footer">
                     <button class="btn btn-success" @click="submit">
                         <i class="bi bi-check-circle"></i> {{ updateinfo }}
-                    </button>
-                    <button class="btn btn-warning" @click="resetForm">
-                        <i class="bi bi-arrow-clockwise"></i> Reset
                     </button>
                     <button class="btn btn-secondary" @click="closeModal">
                         <i class="bi bi-x-circle"></i> Cancel
@@ -533,7 +526,6 @@ onMounted(() => {
     background-color: rgba(0, 0, 0, 0.5);
 }
 
-/* Text Transform */
 .modal-content label,
 .modal-content .card-header,
 .modal-content option,

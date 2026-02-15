@@ -99,6 +99,31 @@ const routes = [
         ],
     },
     {
+        path: "/setup/employee/active-employee",
+        name: "ActiveEmployee",
+        component: () => import("./pages/setup/employee/activeEmployee.vue"),
+        meta: {
+            requireAuth: true,
+        },
+    },
+    {
+        path: "/setup/employee/without-account",
+        name: "WithoutAccount",
+        component: () => import("./pages/setup/employee/withoutAccount.vue"),
+        meta: {
+            requireAuth: true,
+        },
+    },
+    {
+        path: "/setup/employee/inactive",
+        name: "Inactive",
+        component: () => import("./pages/setup/employee/inactiveEmployee.vue"),
+        meta: {
+            requireAuth: true,
+        },
+    },
+
+    {
         path: "/security/user-registration",
         name: "UserRegistration",
         component: () => import("./pages/security/userRegistration.vue"),
@@ -411,6 +436,15 @@ const routes = [
             pageId: 51,
         },
     },
+    {
+        path: "/payroll/salary-payslip",
+        name: "SalaryPayslip",
+        component: () => import("./pages/payroll/salaryPayslip.vue"),
+        meta: {
+            requireAuth: true,
+            pageId: 57,
+        },
+    },
 
     {
         path: "/separation/separation-request",
@@ -495,8 +529,8 @@ const routes = [
     },
     {
         path: "/workstation/daily-itinerary-list",
-        name: "DailyItineraryList",
-        component: () => import("./pages/workstation/dailyItineraryList.vue"),
+        name: "ItineraryList",
+        component: () => import("./pages/workstation/itineraryList.vue"),
         meta: {
             requireAuth: true,
         },

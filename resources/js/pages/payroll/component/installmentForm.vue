@@ -69,7 +69,7 @@ const getLoanAmount = async (empID) => {
 
     try {
         const res = await api.get(`/get-loan-amount/${empID}`);
-        console.log("Loan Amount Response:", res.data);
+        // console.log("Loan Amount Response:", res.data);
         const data = res.data;
 
         if (data.success) {
@@ -96,7 +96,7 @@ watch(
     () => form.value.employee_id,
     (newEmpID) => {
         getLoanAmount(newEmpID);
-    }
+    },
 );
 
 // Watch editStore for edit mode
@@ -126,7 +126,7 @@ watch(
             emp_img.value = loan.emp_img || null;
         }
     },
-    { immediate: true }
+    { immediate: true },
 );
 
 // Reset form
@@ -298,7 +298,7 @@ onMounted(() => {
                                                 v-model="form.department_id"
                                                 @change="
                                                     getEmployee(
-                                                        form.department_id
+                                                        form.department_id,
                                                     )
                                                 "
                                             >

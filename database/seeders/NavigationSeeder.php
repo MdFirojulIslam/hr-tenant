@@ -61,14 +61,15 @@ class NavigationSeeder extends Seeder
             ['id' => '51', 'name' => 'Salary Disbursement', 'url' => '/payroll/salary-disbursement', 'icon' => 'NULL', 'page' => 'SalaryDisbursement', 'path' => './pages/payroll/salaryDisbursement.vue', 'parent_id' => '41', 'active' => '1'],
             ['id' => '47', 'name' => 'Itinerary', 'url' => '/workstation/itinerary', 'icon' => 'NULL', 'page' => 'Itinerary', 'path' => './pages/workstation/itinerary.vue', 'parent_id' => '34', 'active' => '1'],
             ['id' => '48', 'name' => 'Daily Itinerary', 'url' => '/workstation/daily-itinerary', 'icon' => 'NULL', 'page' => 'DailyItinerary', 'path' => './pages/workstation/dailyItinerary.vue', 'parent_id' => '34', 'active' => '1'],
-            ['id' => '49', 'name' => 'Daily Itinerary List', 'url' => '/workstation/daily-itinerary-list', 'icon' => 'NULL', 'page' => 'DailyItineraryList', 'path' => './pages/workstation/dailyItineraryList.vue', 'parent_id' => '34', 'active' => '1'],
+            ['id' => '49', 'name' => 'Itinerary List', 'url' => '/workstation/itinerary-list', 'icon' => 'NULL', 'page' => 'ItineraryList', 'path' => './pages/workstation/itineraryList.vue', 'parent_id' => '34', 'active' => '1'],
             ['id' => '50', 'name' => 'Admin Itinerary List', 'url' => '/workstation/admin-itinerary-list', 'icon' => 'NULL', 'page' => 'AdminItineraryList', 'path' => './pages/workstation/adminItineraryList.vue', 'parent_id' => '34', 'active' => '1'],
 
             ['id' => '52', 'name' => 'Employee Separation', 'url' => '/separation', 'icon' => 'fa-solid fa-money-check-dollar', 'page' => 'NULL', 'path' => 'NULL', 'parent_id' => '0', 'active' => '1'],
 
             ['id' => '53', 'name' => 'Separation Request', 'url' => '/separation/separation-request', 'icon' => 'NULL', 'page' => 'SeparationRequest', 'path' => './pages/separation/separationRequest.vue', 'parent_id' => '52', 'active' => '1'],
             ['id' => '54', 'name' => 'Separation Approval', 'url' => '/separation/separation-approval', 'icon' => 'NULL', 'page' => 'SeparationApproval', 'path' => './pages/separation/separationApproval.vue', 'parent_id' => '52', 'active' => '1'],
-            ['id' => '55', 'name' => 'All Separations', 'url' => '/separation/all-separations', 'icon' => 'NULL', 'page' => 'AllSeparations', 'path' => './pages/separation/allSeparations.vue', 'parent_id' => '52', 'active' => '1']
+            ['id' => '55', 'name' => 'All Separations', 'url' => '/separation/all-separations', 'icon' => 'NULL', 'page' => 'AllSeparations', 'path' => './pages/separation/allSeparations.vue', 'parent_id' => '52', 'active' => '1'],
+            ['id' => '57', 'name' => 'Salary Payslip', 'url' => '/payroll/salary-payslip', 'icon' => 'NULL', 'page' => 'SalaryPayslip', 'path' => './pages/payroll/salaryPayslip.vue', 'parent_id' => '41', 'active' => '1']
         ];
 
         foreach ($navigations as $item) {

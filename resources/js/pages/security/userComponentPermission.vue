@@ -9,7 +9,6 @@ const getData = async () => {
     try {
         const response = await api.get("/navigation-items");
         navigationItems.value = response.data;
-        console.log("Navigation Items", navigationItems.value);
     } catch (err) {
         if (err.response && err.response.status === 401) {
             router.push({ name: "Login" });

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\emp_img;
 use App\Models\employee;
 use App\Models\User;
+use App\Models\official;
 use Illuminate\Http\Request;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\DB;
@@ -21,9 +22,209 @@ class EmployeeController extends Controller
 
     public function index()
     {
-        $employee = employee::with('empImg')->where('Full_Name', '!=', 'Admin')->orderBy('Employee_Id', 'asc')->paginate(12);
+        $employee = employee::select(
+            'employees.id',
+            'employees.Employee_Id',
+            'employees.Full_Name',
+            'employees.Card_No',
+            'employees.DOB',
+            'employees.Contact_No',
+            'employees.Official_Email',
+            'departments.Name as department_name',
+            'emp_imgs.img_url'
+        )
+            ->leftjoin('officials', 'officials.EID', '=', 'employees.id')
+            ->leftjoin('departments', 'officials.Department_Id', '=', 'departments.id')
+            ->leftjoin('emp_imgs', 'emp_imgs.EID', '=', 'employees.id')
+            ->distinct('employees.id')
+            // ->where('employees.status', '=', 1)
+            ->orderby('employees.Employee_Id', 'asc')
+            ->paginate(20);
         return response()->json($employee);
     }
+
+
+    public function haveAccount()
+    {
+        $employee = employee::select(
+            'employees.id',
+            'employees.Employee_Id',
+            'employees.Full_Name',
+            'employees.Card_No',
+            'officials.DOJ',
+            'employees.Contact_No',
+            'employees.Official_Email',
+            'departments.Name as department_name',
+            'emp_imgs.img_url'
+        )
+            ->join('users', 'users.EID', '=', 'employees.id')
+            ->leftjoin('officials', 'officials.EID', '=', 'employees.id')
+            ->leftjoin('departments', 'officials.Department_Id', '=', 'departments.id')
+            ->leftjoin('emp_imgs', 'emp_imgs.EID', '=', 'employees.id')
+            ->where('users.active', '=', 1)
+            ->orderby('employees.Employee_Id', 'asc')
+            ->distinct('employees.id')
+            ->paginate(20);
+        return response()->json($employee);
+    }
+
+
+    public function withoutAccount()
+    {
+        $employee = official::select('officials.EID')->where('officials.Status', '=', 'N')->get()->pluck('EID')->toArray();
+        $users = User::select('users.EID')->where('users.active', '=', 1)->pluck('EID')->toArray();
+
+
+        $withoutAccount = array_diff($employee, $users);
+        $employee = employee::select(
+            'employees.id',
+            'employees.Employee_Id',
+            'employees.Full_Name',
+            'employees.Card_No',
+            'officials.DOJ',
+            'officials.DOL',
+            'employees.Contact_No',
+            'employees.Official_Email',
+            'departments.Name as department_name',
+            'emp_imgs.img_url'
+        )
+            ->leftjoin('officials', 'officials.EID', '=', 'employees.id')
+            ->leftjoin('departments', 'officials.Department_Id', '=', 'departments.id')
+            ->leftjoin('emp_imgs', 'emp_imgs.EID', '=', 'employees.id')
+            ->whereIn('employees.id', $withoutAccount)
+            ->orderby('employees.Employee_Id', 'asc')
+            ->distinct('employees.id')
+            ->paginate(20);
+        return response()->json($employee);
+    }
+
+
+    public function inactive()
+    {
+        $employee = employee::select(
+            'employees.id',
+            'employees.Employee_Id',
+            'employees.Full_Name',
+            'employees.Card_No',
+            'officials.DOJ',
+            'officials.DOL',
+            'employees.Contact_No',
+            'employees.Official_Email',
+            'departments.Name as department_name',
+            'emp_imgs.img_url'
+        )
+            ->leftjoin('officials', 'officials.EID', '=', 'employees.id')
+            ->leftjoin('departments', 'officials.Department_Id', '=', 'departments.id')
+            ->leftjoin('emp_imgs', 'emp_imgs.EID', '=', 'employees.id')
+            ->where('officials.Status', '=', 'Y')
+            ->orderby('employees.Employee_Id', 'asc')
+            ->distinct('employees.id')
+            ->paginate(20);
+        return response()->json($employee);
+    }
+
+
+    public function inactiveSearch(Request $request)
+    {
+        $query = $request->input('query');
+        $employee = employee::select(
+            'employees.id',
+            'employees.Employee_Id',
+            'employees.Full_Name',
+            'employees.Card_No',
+            'officials.DOJ',
+            'officials.DOL',
+            'employees.Contact_No',
+            'employees.Official_Email',
+            'departments.Name as department_name',
+            'emp_imgs.img_url'
+        )
+            ->leftjoin('officials', 'officials.EID', '=', 'employees.id')
+            ->leftjoin('departments', 'officials.Department_Id', '=', 'departments.id')
+            ->leftjoin('emp_imgs', 'emp_imgs.EID', '=', 'employees.id')
+            ->where(function ($q) use ($query) {
+                $q->where('employees.Full_Name', 'LIKE', "%{$query}%")
+                    ->orWhere('employees.Employee_Id', 'LIKE', "%{$query}%");
+            })
+            ->where('officials.Status', '=', 'Y')
+            ->distinct('employees.id')
+            ->orderby('employees.Full_Name', 'asc')
+            ->paginate(20);
+
+
+        return response()->json($employee);
+    }
+
+
+    public function withoutAccountSearch(Request $request)
+    {
+        $query = $request->input('query');
+        $employee = official::select('officials.EID')->where('officials.Status', '=', 'N')->get()->pluck('EID')->toArray();
+        $users = User::select('users.EID')->where('users.active', '=', 1)->pluck('EID')->toArray();
+
+
+        $withoutAccount = array_diff($employee, $users);
+
+
+        $employee = employee::select(
+            'employees.id',
+            'employees.Employee_Id',
+            'employees.Full_Name',
+            'employees.Card_No',
+            'officials.DOJ',
+            'officials.DOL',
+            'employees.Contact_No',
+            'employees.Official_Email',
+            'departments.Name as department_name',
+            'emp_imgs.img_url'
+        )
+            ->leftjoin('officials', 'officials.EID', '=', 'employees.id')
+            ->leftjoin('departments', 'officials.Department_Id', '=', 'departments.id')
+            ->leftjoin('emp_imgs', 'emp_imgs.EID', '=', 'employees.id')
+            ->where(function ($q) use ($query) {
+                $q->where('employees.Full_Name', 'LIKE', "%{$query}%")
+                    ->orWhere('employees.Employee_Id', 'LIKE', "%{$query}%");
+            })
+            ->whereIn('employees.id', $withoutAccount)
+            ->distinct('employees.id')
+            ->orderby('employees.Full_Name', 'asc')
+            ->paginate(20);
+
+
+        return response()->json($employee);
+    }
+    public function activeSearch(Request $request)
+    {
+        $query = $request->input('query');
+        $employee = employee::select(
+            'employees.id',
+            'employees.Employee_Id',
+            'employees.Full_Name',
+            'employees.Card_No',
+            'officials.DOJ',
+            'employees.Contact_No',
+            'employees.Official_Email',
+            'departments.Name as department_name',
+            'emp_imgs.img_url'
+        )
+            ->join('users', 'users.EID', '=', 'employees.id')
+            ->leftjoin('officials', 'officials.EID', '=', 'employees.id')
+            ->leftjoin('departments', 'officials.Department_Id', '=', 'departments.id')
+            ->leftjoin('emp_imgs', 'emp_imgs.EID', '=', 'employees.id')
+            ->where(function ($q) use ($query) {
+                $q->where('employees.Full_Name', 'LIKE', "%{$query}%")
+                    ->orWhere('employees.Employee_Id', 'LIKE', "%{$query}%");
+            })
+            ->where('users.active', '=', 1)
+            ->distinct('employees.id')
+            ->orderby('employees.Full_Name', 'asc')
+            ->paginate(20);
+
+
+        return response()->json($employee);
+    }
+
+
 
     public function EmployeeId()
     {
@@ -196,7 +397,7 @@ class EmployeeController extends Controller
     {
         $employee = employee::with([
             'company',
-            'blood', 
+            'blood',
             'religion',
             'academic',
             'training',

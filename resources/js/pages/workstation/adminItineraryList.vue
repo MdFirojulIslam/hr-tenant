@@ -98,7 +98,7 @@ const loadItinerary = async () => {
             itinerary_logs_id: d.itinerary_logs_id,
             date: d.updated_visit_date ?? d.visit_date,
             day: new Date(
-                d.updated_visit_date ?? d.visit_date
+                d.updated_visit_date ?? d.visit_date,
             ).toLocaleDateString("en-US", {
                 weekday: "long",
             }),
@@ -118,8 +118,6 @@ const loadItinerary = async () => {
         error.value = "Failed to load itinerary data.";
     }
 };
-
-console.log("itinerary status", log_status.value);
 
 // ----------------------
 // HELPER FUNCTIONS

@@ -4,19 +4,24 @@ import { Bootstrap4Pagination } from "laravel-vue-pagination";
 import api from "@/api";
 import Swal from "sweetalert2";
 import { useStore } from "vuex";
-
+import Multiselect from "vue-multiselect";
+import "vue-multiselect/dist/vue-multiselect.min.css";
 const store = useStore();
 const role_id = store.getters.getRoleId;
+const user = store.getters.getUser;
 
-const salaryComponent = defineAsyncComponent(() =>
-    import("./component/salarySetupForm.vue")
+const salaryComponent = defineAsyncComponent(
+    () => import("./component/salarySetupForm.vue"),
 );
 
 const isLoading = ref(true);
 const error = ref(null);
 
-const department = ref([]);
+const employee = ref([]);
 const employeeIDs = ref([]);
+const selectedEmployee = ref(null);
+
+const department = ref([]);
 const salaries = ref({});
 
 const searchDept = ref("");
@@ -28,11 +33,20 @@ const selectedStore = ref(null);
 const salaryId = ref(null);
 const heading = ref("");
 
+const onEmployeeSelect = (value) => {
+    selectedEmployee.value = value;
+    if (value) {
+        searchEmp.value = value.id;
+    } else {
+        searchEmp.value = "";
+    }
+};
+
 /* ---------------- FETCH DATA ---------------- */
 const getData = async (page = 1) => {
     try {
         const [deptRes, salaryRes] = await Promise.all([
-            api.get("/department"),
+            api.get(`/department-list/${user.id}`),
             api.get("/salary", {
                 params: {
                     page,
@@ -55,12 +69,21 @@ const getData = async (page = 1) => {
 /* ---------------- EMPLOYEE BY DEPT ---------------- */
 const getEmployee = async (deptID) => {
     if (!deptID) {
-        employeeIDs.value = [];
-        searchEmp.value = "";
+        employee.value = [];
+        selectedEmployee.value = null;
+        form.eid = "";
+        emp_img.value = null;
         return;
     }
-    const res = await api.get(`/emp/${deptID}`);
-    employeeIDs.value = res.data;
+    try {
+        const res = await api.get(`/emp/${deptID}`);
+        employee.value = res.data;
+        selectedEmployee.value = null;
+        form.eid = "";
+        emp_img.value = null;
+    } catch (err) {
+        console.error("Error fetching employees:", err);
+    }
 };
 
 /* ---------------- WATCH FILTERS ---------------- */
@@ -85,9 +108,19 @@ const salaryClose = () => {
 
 /* ---------------- ACTIONS ---------------- */
 const editsalary = (id) => {
-    selectedStore.value = salaries.value.data.find(
-        (item) => item.employee_id === id
-    );
+    if (!salaries.value.data || salaries.value.data.length === 0) {
+        console.warn("Salary data not loaded yet.");
+        return;
+    }
+
+    const store = salaries.value.data.find((item) => item.employee_id === id);
+
+    if (!store) {
+        console.warn("Selected employee not found in salaries.");
+        return;
+    }
+
+    selectedStore.value = store;
     salaryId.value = id;
     salaryOpen("Update");
 };
@@ -149,7 +182,7 @@ onMounted(() => getData());
                     <div class="col-lg-3 position-relative">
                         <label>Select Department</label>
                         <select
-                            class="form-control border-color"
+                            class="form-control border-color field-height"
                             v-model="searchDept"
                             @change="getEmployee(searchDept)"
                             style="font-weight: normal; background: transparent"
@@ -157,10 +190,10 @@ onMounted(() => getData());
                             <option value="" disabled>All Department</option>
                             <option
                                 v-for="dept in department"
-                                :key="dept.id"
-                                :value="dept.id"
+                                :key="dept.department_id"
+                                :value="dept.department_id"
                             >
-                                {{ dept.Name }}
+                                {{ dept.department_name }}
                             </option>
                         </select>
                         <button
@@ -178,26 +211,27 @@ onMounted(() => getData());
 
                     <!-- Employee -->
                     <div class="col-lg-3 position-relative">
-                        <label>Select Employee </label>
-                        <select
-                            class="form-control border-color"
-                            v-model="searchEmp"
-                            style="font-weight: normal; background: transparent"
-                        >
-                            <option value="" disabled>All Employee</option>
-                            <option
-                                v-for="emp in employeeIDs"
-                                :key="emp.id"
-                                :value="emp.id"
-                            >
-                                {{ emp.Full_Name }}
-                            </option>
-                        </select>
+                        <label for="">Select Employee</label>
+                        <Multiselect
+                            v-model="selectedEmployee"
+                            :options="employee"
+                            label="Full_Name"
+                            track-by="id"
+                            placeholder="Select or search employee"
+                            :searchable="true"
+                            :close-on-select="true"
+                            :allow-empty="true"
+                            @input="onEmployeeSelect"
+                            :clear-on-select="false"
+                            class="multiselect-design"
+                        />
+
+                        <!-- REMOVE this -->
                         <button
-                            v-if="searchEmp"
+                            v-if="selectedEmployee"
                             type="button"
-                            class="btn btn-sm btn-link position-absolute top-0 end-0 mt-4 me-1"
-                            @click="searchEmp = ''"
+                            class="btn btn-sm btn-link position-absolute top-0 end-0 mt-1 me-1"
+                            @click="selectedEmployee = ''"
                         >
                             <i class="fa fa-times"></i>
                         </button>
@@ -206,7 +240,7 @@ onMounted(() => getData());
                         <label>Search By Account/Official ID</label>
                         <input
                             type="text"
-                            class="form-control border-color"
+                            class="form-control border-color field-height"
                             v-model="searchQuery"
                             placeholder="Search By Account No or Official ID"
                             @input="searchemp"
@@ -287,7 +321,7 @@ onMounted(() => getData());
                                             title="View"
                                             @click="
                                                 openSalaryDetails(
-                                                    salary.employee_id
+                                                    salary.employee_id,
                                                 )
                                             "
                                         >
@@ -339,7 +373,9 @@ onMounted(() => getData());
 
 <style>
 .border-color {
-    border: 1.8px solid #059223d5;
     border-radius: none;
+}
+.field-height {
+    height: 38px;
 }
 </style>

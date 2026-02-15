@@ -8,6 +8,8 @@ const salaries = ref([]);
 const selectedMonth = ref(new Date().getMonth() + 1);
 const selectedYear = ref(new Date().getFullYear());
 const searchQuery = ref(""); // New ref for the search input
+const isDisbursed = ref(false);
+const netTotal = ref(0); // Add this
 
 const years = ref([
     "2022",
@@ -54,17 +56,53 @@ const getData = async () => {
                 month: selectedMonth.value,
             },
         });
-        salaries.value = response.data;
+        salaries.value = response.data.salaries;
+        netTotal.value = response.data.net_total;
+        isDisbursed.value =
+            salaries.value.length > 0 &&
+            String(salaries.value[0].disbursement_status).toUpperCase() ===
+                "COMPLETED";
     } catch (err) {
         if (err.response && err.response.status === 401) {
             // Assuming 'router' is defined elsewhere or passed as a prop
             // router.push({ name: "Login" });
             console.error(
-                "Authentication failed, redirect to login if router is available."
+                "Authentication failed, redirect to login if router is available.",
             );
         } else {
             error.value = err.message || "Error fetching data";
         }
+    }
+};
+
+const disburseSalary = async () => {
+    try {
+        const response = await api.post("/disburse-salary", {
+            year: selectedYear.value,
+            month: selectedMonth.value,
+        });
+
+        Swal.fire({
+            position: "center",
+            icon: "success",
+            title: response.data.message || "Salary disbursed successfully",
+            showConfirmButton: false,
+            timer: 1500,
+        });
+        isDisbursed.value = true;
+        getData();
+    } catch (error) {
+        console.error("Error disbursing salary:", error);
+
+        const errorMessage =
+            error.response?.data?.message ||
+            "Salary disbursement failed. Please try again.";
+
+        Swal.fire({
+            icon: "error",
+            title: "Disbursement failed!",
+            text: errorMessage,
+        });
     }
 };
 
@@ -194,16 +232,8 @@ onMounted(() => getData());
                         </option>
                     </select>
                 </div>
-                <div>
-                    <button
-                        class="btn btn-warning mt-4 mx-2"
-                        @click="generateSalary"
-                    >
-                        Generate Sheet
-                    </button>
-                </div>
 
-                <div class="ms-auto">
+                <div class="ms-3">
                     <input
                         type="text"
                         class="form-control mt-4 mx-7 border-color"
@@ -212,9 +242,38 @@ onMounted(() => getData());
                     />
                 </div>
 
+                <div class="ms-5" v-if="!isDisbursed">
+                    <button
+                        class="btn btn-warning mt-4 mx-2"
+                        @click="generateSalary"
+                    >
+                        Generate Sheet
+                    </button>
+                </div>
+
+                <div
+                    class="ms-auto justify-content-center align-items-center d-flex"
+                >
+                    <label class="net-total-lable">NET TOTAL :</label>
+                    <div class="total-class border rounded px-3 py-1 fw-medium">
+                        {{ netTotal }}
+                    </div>
+                </div>
+
+                <div class="ms-auto">
+                    <button
+                        class="btn mt-4"
+                        :class="isDisbursed ? 'btn-secondary' : 'btn-success'"
+                        :disabled="isDisbursed"
+                        @click="disburseSalary"
+                    >
+                        {{ isDisbursed ? "DISBURSED" : "DISBURSE SALARY" }}
+                    </button>
+                </div>
+
                 <div class="ms-3">
                     <button class="btn btn-info mt-4" @click="downloadSalary">
-                        Download Sheet
+                        DOWNLOAD SHEET
                     </button>
                 </div>
             </div>
@@ -310,5 +369,17 @@ onMounted(() => getData());
 .border-color {
     border: 1.8px solid #059223d5;
     border-radius: none;
+}
+.total-class {
+    background-color: #10d431b2;
+    margin-left: 10px;
+    font-size: 15px;
+    border-radius: none;
+}
+.net-total-lable {
+    font-size: 12px;
+    margin-bottom: 1px;
+    display: block;
+    font-weight: bold;
 }
 </style>

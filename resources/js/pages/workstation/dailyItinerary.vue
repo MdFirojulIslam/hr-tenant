@@ -52,8 +52,6 @@ const getData = async () => {
                 endTime: d.visit_end_time,
             };
         }
-
-        console.log("Form pre-filled:", form.value);
     } catch (err) {
         error.value = err?.message || "Error fetching data";
     }
@@ -82,8 +80,6 @@ const updateDay = (form) => {
 // Update button handler
 const updateItinerary = async () => {
     try {
-        console.log("Updating with data:", form.value);
-        // Replace with your API endpoint for update
         await api.put("/itinerary-daily-update", form.value);
 
         Swal.fire("Success", "Itinerary updated successfully", "success");

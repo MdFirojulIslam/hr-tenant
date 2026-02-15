@@ -28,12 +28,12 @@ const heading = ref(
     viewMode.value
         ? "View Itinerary"
         : itineraryId.value
-        ? "Edit Itinerary"
-        : "New Itinerary"
+          ? "Edit Itinerary"
+          : "New Itinerary",
 );
 
 const saveButtonText = computed(() =>
-    mode === "edit" ? "Save Changes" : "Save"
+    mode === "edit" ? "Save Changes" : "Save",
 );
 
 const years = ref([
@@ -76,7 +76,7 @@ const forms = ref([
     {
         date: "",
         day: "",
-        town: "",
+        town: null,
         location: "",
         visitWith: "",
         objective: "",
@@ -121,7 +121,7 @@ const loadItinerary = async () => {
             itinerary_logs_id: d.itinerary_logs_id,
             date: d.updated_visit_date ?? d.visit_date,
             day: new Date(
-                d.updated_visit_date ?? d.visit_date
+                d.updated_visit_date ?? d.visit_date,
             ).toLocaleDateString("en-US", {
                 weekday: "long",
             }),
@@ -174,7 +174,7 @@ const addRow = (index) => {
     const newRow = {
         date: "",
         day: "",
-        town: "",
+        town: null,
         location: "",
         visitWith: "",
         objective: "",

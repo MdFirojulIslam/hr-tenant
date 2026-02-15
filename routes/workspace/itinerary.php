@@ -27,3 +27,5 @@ Route::put('/itinerary/{id}', [ItineraryController::class, 'update']);
 Route::post('/itinerary/submit/{id}', [ItineraryController::class, 'submit']);
 Route::post('/itinerary/accept/{id}', [ItineraryController::class, 'accept']);
 Route::post('/itinerary/reject/{id}', [ItineraryController::class, 'reject']);
+
+Route::get('itinerary/monthly-report/{id}', [ItineraryController::class, 'monthlyReport']);

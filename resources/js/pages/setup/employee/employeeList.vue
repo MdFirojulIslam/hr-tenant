@@ -22,6 +22,39 @@ const getData = async (page = 1) => {
     }
 };
 
+const haveAccount = () => router.push(`/setup/employee/active-employee`);
+const withoutAccount = () => router.push(`/setup/employee/without-account`);
+const inactive = () => router.push(`/setup/employee/inactive`);
+
+// const haveAccount = async (page = 1) => {
+//     try {
+//         const accountHaveRes = await api.get(`/employee-have-account?page=${page}`);
+//         employees.value = accountHaveRes.data;
+
+//         console.log("Have Account Response:", accountHaveRes.data);
+//     } catch (err) {
+//         console.error("Error navigating to Have Account page:", err);
+//     }
+// };
+
+// const withoutAccount = async () => {
+//     try {
+//         const accountWithoutRes = await api.get(`/employee-without-account?page=${page}`);
+//         employees.value = accountWithoutRes.data;
+//     } catch (err) {
+//         console.error("Error navigating to Without Account page:", err);
+//     }
+// }
+
+// const inactive = async () => {
+//     try {
+//         const inactiveRes = await api.get(`/employee-inactive?page=${page}`);
+//         employees.value = inactiveRes.data;
+//     } catch (err) {
+//         console.error("Error navigating to Inactive page:", err);
+//     }
+// };
+
 const cvPdf = async (id) => {
     window.open(`/cv-pdf/${id}`, "_blank");
 };
@@ -88,7 +121,7 @@ onMounted(() => {
             <div class="card-body">
                 <div class="d-flex">
                     <div class="mr-auto p-1">
-                        <h4 class="card-title m-2">Employee List</h4>
+                        <h4 class="card-title m-2">All Employee List</h4>
                     </div>
                     <div class="p-2">
                         <Router-Link :to="{ name: 'Employee' }">
@@ -112,21 +145,40 @@ onMounted(() => {
                             @input="searchemp"
                         />
                     </div>
+
+                    <div class="ms-auto active-account button-hover">
+                        <button @click="haveAccount()">HAVE ACCOUNT</button>
+                    </div>
+                    <div class="ms-4 without-account button-hover">
+                        <button @click="withoutAccount()">
+                            WITHOUT ACCOUNT
+                        </button>
+                    </div>
+                    <div class="ms-4 inactive-account button-hover">
+                        <button @click="inactive()">INACTIVE</button>
+                    </div>
                 </div>
 
-                <div class="table-responsive">
-                    <table class="table">
-                        <thead>
-                            <tr>
+                <div class="d-flex align-items-center px-2 mt-5 fw-semibold">
+                    <span class="me-2">Total Employees:</span>
+                    <span class="bg-white border rounded px-3 fw-medium">{{
+                        employees.total + 1
+                    }}</span>
+                </div>
+                <div class="table-responsive shadow-sm bg-light mt-3">
+                    <table class="table table-bordered table-hover table-sm">
+                        <thead class="table-head">
+                            <tr class="thead-text">
                                 <th>S/N</th>
-                                <th>Photo</th>
-                                <th>Employee ID</th>
-                                <th>Full Name</th>
-                                <th>Date of Birth</th>
-                                <th>Contact</th>
-                                <th>Official Email</th>
-                                <th>Machine ID</th>
-                                <th>Operation</th>
+                                <th class="text-center">IMAGE</th>
+                                <th>ID</th>
+                                <th>NAME</th>
+                                <th>DEPARTMENT</th>
+                                <th class="text-center">DOB</th>
+                                <th class="text-center">CONTACT</th>
+                                <th>OFFICIAL MAIL</th>
+                                <th class="text-center">MACHINE ID</th>
+                                <th class="text-center">ACTION</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -135,9 +187,11 @@ onMounted(() => {
                                 v-for="(employee, index) in employees.data"
                                 :key="employee.id"
                             >
-                                <td>{{ employees.from + index }}</td>
+                                <td class="text-center">
+                                    {{ employees.from + index }}
+                                </td>
                                 <template v-if="employee.emp_img">
-                                    <td>
+                                    <td class="text-center">
                                         <img
                                             :src="employee.emp_img?.img_url"
                                             alt="Image"
@@ -148,20 +202,23 @@ onMounted(() => {
                                     </td>
                                 </template>
                                 <template v-else>
-                                    <td>No image</td>
+                                    <td class="text-center">No image</td>
                                 </template>
-                                <td>ABNB{{ employee.Employee_Id }}</td>
+                                <td>ABNB-{{ employee.Employee_Id }}</td>
                                 <td>{{ employee.Full_Name }}</td>
-                                <td>{{ employee.DOB }}</td>
-                                <td>{{ employee.Contact_No }}</td>
+                                <td>{{ employee.department_name }}</td>
+                                <td class="text-center">{{ employee.DOB }}</td>
+                                <td class="text-center" s>
+                                    {{ employee.Contact_No }}
+                                </td>
                                 <td>{{ employee.Official_Email }}</td>
-                                <td>{{ employee.id }}</td>
-                                <td>
+                                <td class="text-center">{{ employee.id }}</td>
+                                <td class="text-center">
                                     <button
                                         class="custom-btn btn-13 mx-1"
                                         @click="
                                             router.push(
-                                                `/setup/employee/empdetails/${employee.id}`
+                                                `/setup/employee/empdetails/${employee.id}`,
                                             )
                                         "
                                     >
@@ -201,7 +258,57 @@ onMounted(() => {
     </div>
 </template>
 
-<style>
+<style scoped>
+.thead-text {
+    color: white;
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.table thead th {
+    background-color: #4a784688;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    height: 30px;
+    padding: 6px 10px;
+    vertical-align: middle;
+}
+
+.table-hover tbody tr:hover td {
+    background-color: rgba(9, 71, 42, 0.5);
+    color: #ffffff;
+}
+
+.active-account button {
+    background-color: #4a784688;
+    border: 1.5px solid #70ff6388;
+    height: 30px;
+    border-radius: 5px;
+    gap: 10px;
+}
+
+.without-account button {
+    background-color: #f1f110;
+    border: 1.5px solid #70ff6388;
+    height: 30px;
+    border-radius: 5px;
+    gap: 10px;
+}
+
+.inactive-account button {
+    background-color: #ee0101e6;
+    border: 1.5px solid #70ff6388;
+    height: 30px;
+    border-radius: 5px;
+    gap: 10px;
+}
+
+.button-hover:hover {
+    transform: scale(1.05);
+    transition: transform 0.3s ease;
+}
+
 .table tr {
     height: 55px;
 }

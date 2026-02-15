@@ -15,8 +15,11 @@ use Maatwebsite\Excel\Concerns\{
     WithColumnFormatting
 };
 use Maatwebsite\Excel\Events\AfterSheet;
-use PhpOffice\PhpSpreadsheet\Style\Alignment;
-use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
+use PhpOffice\PhpSpreadsheet\Style\{
+    Alignment,
+    NumberFormat,
+    Border
+};
 
 class SalarySheetExport implements
     FromQuery,
@@ -36,7 +39,9 @@ class SalarySheetExport implements
     }
 
     /**
-     * ✅ DB-level query (high performance)
+     * =========================
+     * DB QUERY
+     * =========================
      */
     public function query(): Builder
     {
@@ -82,7 +87,9 @@ class SalarySheetExport implements
     }
 
     /**
-     * ✅ Row mapping
+     * =========================
+     * ROW MAPPING
+     * =========================
      */
     public function map($row): array
     {
@@ -90,7 +97,7 @@ class SalarySheetExport implements
             $row->employee_code,
             $row->Full_Name,
             $row->designation_name,
-            Carbon::parse($row->DOJ)->format('d M Y'),
+            $row->DOJ ? Carbon::parse($row->DOJ)->format('d M Y') : null,
             $row->absent_days,
             $row->gross_salary,
             $row->basic_salary,
@@ -114,21 +121,20 @@ class SalarySheetExport implements
             $row->monthly_loan_repayments,
             $row->net_pay,
             ucfirst($row->payment_method),
-
-            // 🔒 CRITICAL FIX
             (string) $row->bank_account_no,
         ];
     }
 
     /**
-     * ✅ Headings
+     * =========================
+     * HEADINGS (NO EMPTY ROW)
+     * =========================
      */
     public function headings(): array
     {
         return [
             ["Salary Sheet of " . date('F', mktime(0, 0, 0, $this->month)) . " {$this->year}"],
             ["Artisan Business Network Bangladesh"],
-            [],
             [
                 'EID',
                 'Name',
@@ -163,45 +169,82 @@ class SalarySheetExport implements
     }
 
     /**
-     * ✅ Force Excel column formatting
+     * =========================
+     * COLUMN FORMAT
+     * =========================
      */
     public function columnFormats(): array
     {
         return [
-            // Column AB = Bank Account No
-            'AB' => NumberFormat::FORMAT_TEXT,
+            'AB' => NumberFormat::FORMAT_TEXT, // Bank Account No
         ];
     }
 
     /**
-     * ✅ Styling & UX
+     * =========================
+     * STYLING & EVENTS
+     * =========================
      */
     public function registerEvents(): array
     {
         return [
             AfterSheet::class => function (AfterSheet $event) {
 
-                $lastColumn = $event->sheet->getHighestColumn();
+                $sheet      = $event->sheet;
+                $lastColumn = $sheet->getHighestColumn();
+                $lastRow    = $sheet->getHighestRow();
 
-                $event->sheet->mergeCells("A1:{$lastColumn}1");
-                $event->sheet->mergeCells("A2:{$lastColumn}2");
+                /* ===== Merge Titles ===== */
+                $sheet->mergeCells("A1:{$lastColumn}1");
+                $sheet->mergeCells("A2:{$lastColumn}2");
 
-                $event->sheet->getStyle('A1')->applyFromArray([
+                /* ===== Title Styles ===== */
+                $sheet->getStyle('A1')->applyFromArray([
                     'font' => ['bold' => true, 'size' => 14],
                     'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
                 ]);
 
-                $event->sheet->getStyle('A2')->applyFromArray([
+                $sheet->getStyle('A2')->applyFromArray([
                     'font' => ['size' => 12],
                     'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
                 ]);
 
-                $event->sheet->freezePane('A5');
+                /* ===== Header Row ===== */
+                $sheet->freezePane('A4');
 
-                $event->sheet
-                    ->getStyle("A4:{$lastColumn}4")
+                $sheet->getStyle("A3:{$lastColumn}3")->applyFromArray([
+                    'font' => ['bold' => true],
+                    'alignment' => [
+                        'horizontal' => Alignment::HORIZONTAL_CENTER,
+                        'vertical'   => Alignment::VERTICAL_CENTER,
+                        'textRotation' => 90,
+                    ],
+                ]);
+
+                /* ===== Total Net Pay ===== */
+                $netPayColumn = 'Z';
+                $totalRow = $lastRow + 1;
+
+                $sheet->setCellValue("Y{$totalRow}", 'Total');
+                $sheet->setCellValue(
+                    "{$netPayColumn}{$totalRow}",
+                    "=SUM({$netPayColumn}4:{$netPayColumn}{$lastRow})"
+                );
+
+                $sheet->getStyle("Y{$totalRow}:{$netPayColumn}{$totalRow}")
                     ->getFont()
                     ->setBold(true);
+
+                /* ===== Full Border (Header + Data + Total) ===== */
+                $sheet->getStyle("A3:{$lastColumn}{$totalRow}")
+                    ->applyFromArray([
+                        'borders' => [
+                            'allBorders' => [
+                                'borderStyle' => Border::BORDER_THIN,
+                                'color' => ['rgb' => '000000'],
+                            ],
+                        ],
+                    ]);
             },
         ];
     }

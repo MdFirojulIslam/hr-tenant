@@ -1,15 +1,27 @@
 <script setup>
-import { ref, onMounted, watch, computed } from "vue";
+import { ref, onMounted, computed, watch } from "vue";
 import api from "@/api";
 import Swal from "sweetalert2";
 
+/* ================= STATE ================= */
+const disburse = ref([]); // for salaries data
+const bankTotal = ref(0); // total for bank accounts
+const cashTotal = ref(0); // total for cash payments
+
 const error = ref([]);
-const disburse = ref([]);
+
+const monthStatus = ref("PENDING"); // Default
+
 const selectedMonth = ref(new Date().getMonth() + 1);
 const selectedYear = ref(new Date().getFullYear());
 const searchQuery = ref("");
 
-const years = ref([
+// Auto-download formats
+const bankFormat = ref("");
+const cashFormat = ref("");
+
+/* ================= STATIC DATA ================= */
+const years = [
     "2022",
     "2023",
     "2024",
@@ -24,9 +36,9 @@ const years = ref([
     "2033",
     "2034",
     "2035",
-]);
+];
 
-const months = ref([
+const months = [
     "January",
     "February",
     "March",
@@ -39,64 +51,114 @@ const months = ref([
     "October",
     "November",
     "December",
-]);
+];
 
-const changeDate = () => {
-    getData();
-};
+const selectedMonthName = computed(() => {
+    return months[selectedMonth.value - 1];
+});
 
-const getData = async () => {
-    try {
-        const reponse = await api.get(`/salary-disbursement`, {
-            params: {
+const setcomplete = async () => {
+    const result = await Swal.fire({
+        title: "Confirm Disbursement",
+        html: `
+            <p>
+                Are you sure you want to confirm disbursement for
+                <strong>${selectedMonthName.value} ${selectedYear.value}</strong>?
+            </p>
+        `,
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonText: "Yes, Confirm",
+        cancelButtonText: "Cancel",
+        confirmButtonColor: "#048a1fd5",
+        cancelButtonColor: "#bd360dd5",
+    });
+
+    if (result.isConfirmed) {
+        try {
+            await api.post("/salary-disbursement-complete", {
                 year: selectedYear.value,
                 month: selectedMonth.value,
-            },
-        });
-        disburse.value = reponse.data;
-        console.log("Disbursement data:", disburse.value);
-    } catch (err) {
-        if (err.response && err.response.status === 422) {
-            console.error(
-                "Authentication failed, redirect to login if router is available."
+            });
+
+            Swal.fire(
+                "Completed!",
+                `Disbursement for ${selectedMonthName.value} ${selectedYear.value} has been completed.`,
+                "success",
             );
-        } else {
-            error.value = err.message || "Error fetching data.";
+
+            getData();
+        } catch (err) {
+            Swal.fire("Error", "Failed to complete disbursement", "error");
         }
     }
 };
 
-const filteredDisbursement = computed(() => {
-    if (!searchQuery.value) {
-        return disburse.value;
+/* ================= FETCH DATA ================= */
+const getData = async () => {
+    try {
+        const response = await api.get("/salary-disbursement", {
+            params: {
+                year: selectedYear.value,
+                month: selectedMonth.value,
+            },
+        });
+
+        disburse.value = response.data.salaries;
+        bankTotal.value = response.data.bank_total;
+        cashTotal.value = response.data.cash_total;
+
+        // Determine month status (assume all rows share the same status)
+        if (disburse.value.length > 0) {
+            monthStatus.value = String(
+                disburse.value[0].disbursement_status,
+            ).toUpperCase();
+        } else {
+            monthStatus.value = "PENDING";
+        }
+    } catch (err) {
+        error.value = err.message || "Failed to load data";
     }
+};
+
+const changeDate = () => getData();
+
+/* ================= FILTER ================= */
+const filteredDisbursement = computed(() => {
+    if (!searchQuery.value) return disburse.value;
 
     const q = searchQuery.value.toLowerCase();
 
-    return disburse.value.filter((salary) => {
-        const name = (salary.full_name || "").toLowerCase();
-        const eid = (
-            salary.employee_id ? String(salary.employee_id) : ""
-        ).toLowerCase();
-        const officialId = (
-            salary.official_id ? String(salary.official_id) : ""
-        ).toLowerCase();
-        const bank = (
-            salary.bank_account_no ? String(salary.bank_account_no) : ""
-        ).toLowerCase();
-
-        return (
-            name.includes(q) ||
-            eid.includes(q) ||
-            officialId.includes(q) ||
-            bank.includes(q)
-        );
-    });
+    return disburse.value.filter(
+        (s) =>
+            (s.full_name || "").toLowerCase().includes(q) ||
+            String(s.employee_id || "").includes(q) ||
+            String(s.bank_account_no || "").includes(q),
+    );
 });
 
-const downloadBankDisbursement = async () => {
+/* ================= DOWNLOAD HELPER ================= */
+const downloadFile = (response, filename) => {
+    const blob = new Blob([response.data], {
+        type: response.headers["content-type"],
+    });
+
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+
+    document.body.appendChild(link);
+    link.click();
+
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(link);
+};
+
+/* ================= BANK DOWNLOAD ================= */
+const downloadBank = async (type) => {
     try {
-        const response = await api.get("/salary-disbursement-bank", {
+        const response = await api.get(`/salary-disbursement-bank-${type}`, {
             responseType: "blob",
             params: {
                 year: selectedYear.value,
@@ -104,25 +166,19 @@ const downloadBankDisbursement = async () => {
             },
         });
 
-        const url = window.URL.createObjectURL(new Blob([response.data]));
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = `salary_disbursement_${selectedYear.value}_${selectedMonth.value}.pdf`;
-        document.body.appendChild(link);
-        link.click();
-    } catch (error) {
-        console.error("Error downloading salary disbursement:", error);
-        Swal.fire({
-            icon: "error",
-            title: "Download failed!",
-            text: "Please try again.",
-        });
+        downloadFile(
+            response,
+            `Salary_Disbursement_Bank_${selectedYear.value}_${selectedMonth.value}.${type === "word" ? "docx" : type}`,
+        );
+    } catch {
+        Swal.fire("Download failed!", "Please try again.", "error");
     }
 };
 
-const downloadCashDisbursement = async () => {
+/* ================= CASH DOWNLOAD ================= */
+const downloadCash = async (type) => {
     try {
-        const response = await api.get("/salary-disbursement-cash", {
+        const response = await api.get(`/salary-disbursement-cash-${type}`, {
             responseType: "blob",
             params: {
                 year: selectedYear.value,
@@ -130,157 +186,210 @@ const downloadCashDisbursement = async () => {
             },
         });
 
-        const url = window.URL.createObjectURL(new Blob([response.data]));
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = `salary_disbursement_${selectedYear.value}_${selectedMonth.value}.pdf`;
-        document.body.appendChild(link);
-        link.click();
-    } catch (error) {
-        console.error("Error downloading salary disbursement:", error);
-        Swal.fire({
-            icon: "error",
-            title: "Download failed!",
-            text: "Please try again.",
-        });
+        downloadFile(
+            response,
+            `Salary_Disbursement_Cash_${selectedYear.value}_${selectedMonth.value}.${type === "word" ? "docx" : type}`,
+        );
+    } catch {
+        Swal.fire("Download failed!", "Please try again.", "error");
     }
 };
 
+/* ================= WATCHERS (AUTO DOWNLOAD) ================= */
+watch(bankFormat, (format) => {
+    if (!format) return;
+    downloadBank(format);
+    bankFormat.value = "";
+});
+
+watch(cashFormat, (format) => {
+    if (!format) return;
+    downloadCash(format);
+    cashFormat.value = "";
+});
+
+/* ================= INIT ================= */
 onMounted(() => getData());
 </script>
 
 <template>
-    <div
-        class="border rounded container-fluid h-100 d-flex flex-column p-0 m-0"
-    >
-        <div class="m-3">
-            <!-- Header -->
-            <div class="d-flex justify-content-between align-items-center py-3">
-                <h2 class="m-0">Monthly Salary Disbursement</h2>
-            </div>
+    <div class="border rounded container-fluid p-3">
+        <h2 class="mb-4">Monthly Salary Disbursement</h2>
 
-            <div class="d-flex justify-content-start">
-                <div class="form-group">
-                    <label>Salary Year</label>
-                    <select
-                        class="form-control border-color"
-                        v-model="selectedYear"
-                        @change="changeDate"
-                    >
-                        <option
-                            v-for="(year, index) in years"
-                            :key="year"
-                            :value="year"
-                        >
-                            {{ year }}
-                        </option>
-                    </select>
-                </div>
-                <div class="form-group mx-4">
-                    <label>Salary Month</label>
-                    <select
-                        class="form-control border-color border-color"
-                        v-model="selectedMonth"
-                        @change="changeDate"
-                    >
-                        <option
-                            v-for="(month, index) in months"
-                            :key="month"
-                            :value="index + 1"
-                        >
-                            {{ month }}
-                        </option>
-                    </select>
-                </div>
-
-                <div class="ms-auto">
-                    <input
-                        type="text"
-                        class="form-control mt-4 mx-7 border-color"
-                        placeholder="Name, ID, or Bank A/C"
-                        v-model="searchQuery"
-                    />
-                </div>
-
-                <div class="ms-3">
-                    <button
-                        class="btn btn-info mt-4"
-                        @click="downloadBankDisbursement"
-                    >
-                        Download Bank Disbursement
-                    </button>
-                </div>
-                <div class="ms-3">
-                    <button
-                        class="btn btn-info mt-4"
-                        @click="downloadCashDisbursement"
-                    >
-                        Download Cash Disbursement
-                    </button>
-                </div>
-            </div>
-
-            <div class="mt-5">
-                <!-- Total Employees Row -->
-                <div
-                    class="d-flex align-items-center px-2 py-2 fw-semibold border-bottom bg-light"
+        <div class="d-flex align-items-end flex-wrap">
+            <!-- YEAR -->
+            <div class="me-4">
+                <label class="label-class">Salary Year</label>
+                <select
+                    class="form-control border-color date-field"
+                    v-model="selectedYear"
+                    @change="changeDate"
                 >
-                    <span class="me-2">Total Employees:</span>
-                    <span class="bg-white border rounded px-3 py-1 fw-medium">
-                        {{ filteredDisbursement.length }}</span
-                    >
-                </div>
-
-                <div class="table-responsive shadow-sm bg-light">
-                    <table class="table table-bordered table-hover table-sm">
-                        <thead>
-                            <tr>
-                                <th>S/N</th>
-                                <th class="text-center">EMPLOYEE ID</th>
-                                <th>EMPLOYEE NAME</th>
-                                <th class="text-center">BANK ACCOUNT</th>
-                                <th class="text-center">NET SALARY</th>
-                            </tr>
-                        </thead>
-                        <!-- <pre>{{ filteredSalaries }}</pre> -->
-                        <tbody>
-                            <tr
-                                class="ver-align"
-                                v-for="(item, index) in filteredDisbursement"
-                                :key="index"
-                            >
-                                <td>{{ index + 1 }}</td>
-                                <td class="text-center">
-                                    ABNB-{{ item.employee_id }}
-                                </td>
-                                <td>
-                                    {{ item.full_name }}
-                                </td>
-                                <td class="text-center">
-                                    {{
-                                        item.bank_account_no === null
-                                            ? "Cash"
-                                            : item.bank_account_no
-                                    }}
-                                </td>
-                                <td class="text-center">{{ item.net_pay }}</td>
-                            </tr>
-                            <tr v-if="filteredDisbursement.length === 0">
-                                <td colspan="5" class="text-center">
-                                    No matching salaries found.
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
+                    <option v-for="y in years" :key="y" :value="y">
+                        {{ y }}
+                    </option>
+                </select>
             </div>
+
+            <!-- MONTH -->
+            <div>
+                <label class="label-class">Salary Month</label>
+                <select
+                    class="form-control border-color date-field"
+                    v-model="selectedMonth"
+                    @change="changeDate"
+                >
+                    <option v-for="(m, i) in months" :key="m" :value="i + 1">
+                        {{ m }}
+                    </option>
+                </select>
+            </div>
+
+            <!-- SEARCH -->
+            <div class="ms-3">
+                <label class="label-class">Search</label>
+                <input
+                    class="form-control border-color"
+                    placeholder="Name, ID, Bank A/C"
+                    v-model="searchQuery"
+                />
+            </div>
+
+            <div class="ms-5">
+                <label class="label-class">Bank Total</label>
+                <div class="total-amount fw-semibold">{{ bankTotal }}</div>
+            </div>
+            <div class="ms-3">
+                <label class="label-class">Cash Total</label>
+                <div class="total-amount fw-semibold">{{ cashTotal }}</div>
+            </div>
+
+            <!-- BANK DOWNLOAD -->
+            <div class="ms-auto me-2">
+                <label class="label-class">Download Bank </label>
+                <select
+                    class="form-control border-color selected-option"
+                    v-model="bankFormat"
+                >
+                    <option disabled value="" class="placeholder-text">
+                        -- Select Download Format --
+                    </option>
+                    <option value="pdf">PDF</option>
+                    <option value="xlsx">Excel</option>
+                    <option value="word">Word</option>
+                </select>
+            </div>
+
+            <!-- CASH DOWNLOAD -->
+            <div class="">
+                <label class="label-class">Download Cash</label>
+                <select
+                    class="form-control border-color selected-option"
+                    v-model="cashFormat"
+                >
+                    <option disabled value="">
+                        -- Select Download Format --
+                    </option>
+
+                    <option value="pdf">PDF</option>
+                    <option value="xlsx">Excel</option>
+                    <option value="word">Word</option>
+                </select>
+            </div>
+            <div class="ms-5" v-if="monthStatus === 'PENDING'">
+                <button class="set-button" @click="setcomplete()">
+                    RELEASE PAYMENT
+                </button>
+            </div>
+            <div class="ms-2" v-if="monthStatus === 'COMPLETED'">
+                <button class="completed-button">DISBURSE COMPLETED</button>
+            </div>
+        </div>
+
+        <!-- TABLE -->
+        <div class="mt-4 table-responsive">
+            <div class="mb-2 fw-semibold">
+                Total Employees: {{ filteredDisbursement.length }}
+            </div>
+
+            <table class="table table-bordered table-sm">
+                <thead>
+                    <tr>
+                        <th>S/N</th>
+                        <th>Employee ID</th>
+                        <th>Name</th>
+                        <th class="text-center">Bank / Cash</th>
+                        <th class="text-center">Net Salary</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr v-for="(item, i) in filteredDisbursement" :key="i">
+                        <td>{{ i + 1 }}</td>
+                        <td>ABNB-{{ item.employee_id }}</td>
+                        <td>{{ item.full_name }}</td>
+                        <td class="text-center">
+                            {{ item.bank_account_no ?? "Cash" }}
+                        </td>
+                        <td class="text-center">{{ item.net_pay }}</td>
+                    </tr>
+                    <tr v-if="filteredDisbursement.length === 0">
+                        <td colspan="5" class="text-center">No data found</td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
     </div>
 </template>
 
 <style>
+.set-button {
+    background-color: #bd360dd5;
+    color: #fff;
+    font-weight: 600;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+}
+.completed-button {
+    background-color: #048a1fd5;
+    color: #000;
+    font-weight: 600;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+}
+.selected-option {
+    background-color: #bfcec2d5; /* dropdown background */
+    color: #000; /* text color */
+    width: 200px;
+    font-weight: 600;
+}
+
+.total-amount {
+    background-color: rgba(45, 141, 64, 0.85);
+    color: #ffffff;
+    padding: 5px 10px;
+    border-radius: 4px;
+    border: 1px solid #1d2c20d5;
+    width: 70px;
+    text-align: center;
+}
+
+/* optional focus/hover */
+.selected-option:focus {
+    outline: none;
+    border: 2px solid #059223d5;
+}
+
 .border-color {
     border: 1.8px solid #059223d5;
-    border-radius: none;
+}
+.label-class {
+    font-weight: 600;
+    font-size: 13px;
+    padding-bottom: 5px;
+}
+.date-field {
+    width: 100px;
 }
 </style>

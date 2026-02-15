@@ -9,12 +9,16 @@ use App\Models\employee_salary_sheet;
 use App\Models\salaries;
 use Carbon\Carbon;
 use App\Models\salary_sheet;
+use App\Models\department;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Maatwebsite\Excel\Facades\Excel;
-
+use PhpOffice\PhpWord\PhpWord;
+use App\Exports\SalaryDisbursementExport;
+use App\Models\official;
+use App\Models\salary_disbursement;
 use Barryvdh\DomPDF\Facade\Pdf;
 
 class EmployeeSalaryController extends Controller
@@ -285,13 +289,22 @@ class EmployeeSalaryController extends Controller
         // All salaries
         $salaries = DB::table('salaries')
             ->join('employees', 'employees.id', '=', 'salaries.employee_id')
+            ->join('officials', 'officials.EID', '=', 'salaries.employee_id')
             ->select(
                 'employees.id as employee_id',
                 'employees.Employee_Id as official_id',
                 'salaries.*'
-            )->get();
+            )->where('officials.Status', '=', 'N')
+            ->whereDate('officials.DOJ', '<=', $month_end)
+            ->get();
 
+        $maxMonthlySalaryId = salary_sheet::max('monthly_salary_id') ?? 0;
 
+        if ($maxMonthlySalaryId == 0) {
+            $monthly_salary_id = 1;
+        } else {
+            $monthly_salary_id = $maxMonthlySalaryId + 1;
+        }
 
         foreach ($salaries as $salary) {
 
@@ -311,6 +324,7 @@ class EmployeeSalaryController extends Controller
                     'salary_date' => $monthString
                 ],
                 [
+                    'monthly_salary_id' => $monthly_salary_id,
                     //gross_salary	basic_salary	house_rent	conveyance
                     'gross_salary' => $salary->gross_salary,
                     'basic_salary' => $salary->basic,
@@ -366,10 +380,18 @@ class EmployeeSalaryController extends Controller
         $year = $request->year;
         $month = $request->month;
 
+        // Salary date for matching in salary_disbursement
+        $salaryDate = Carbon::createFromDate($year, $month, 1)->format('Y-m-d');
+
+        // Fetch salaries along with department and employee info
         $salaries = DB::table('salary_sheets')
             ->join('employees', 'employees.id', '=', 'salary_sheets.employee_id')
             ->join('officials', 'officials.EID', '=', 'salary_sheets.employee_id')
             ->join('departments', 'departments.id', '=', 'officials.Department_Id')
+            // Left join to get disbursement status
+            ->leftJoin('salary_disbursements as sd', function ($join) use ($salaryDate) {
+                $join->on('sd.salary_month', '=', DB::raw("'$salaryDate'"));
+            })
             ->whereYear('salary_sheets.salary_date', $year)
             ->whereMonth('salary_sheets.salary_date', $month)
             ->select(
@@ -381,13 +403,22 @@ class EmployeeSalaryController extends Controller
                 DB::raw('salary_sheets.deduction_adjustment + salary_sheets.provident_fund + salary_sheets.income_tax + salary_sheets.revenue_stamp AS total_deduction'),
                 'salary_sheets.monthly_loan_repayments',
                 'salary_sheets.bank_account_no',
-                'salary_sheets.net_pay'
+                'salary_sheets.net_pay',
+                'salary_sheets.disbursement_status',
+                DB::raw("COALESCE(sd.status, 'PENDING') as disbursement_status") // fetch status from salary_disbursement table
             )
             ->orderBy('departments.id')
             ->get();
 
-        return response()->json($salaries);
+        $net_total = $salaries->sum(fn($s) => (float) $s->net_pay);
+
+        return response()->json([
+            'salaries' => $salaries,
+            'net_total' => $net_total
+        ]);
     }
+
+
 
 
 
@@ -497,23 +528,47 @@ class EmployeeSalaryController extends Controller
         $year = $request->year;
         $month = $request->month;
 
+        // Fetch salaries already disbursed
         $salaries = DB::table('salary_sheets')
             ->join('employees', 'employees.id', '=', 'salary_sheets.employee_id')
+            ->join('salary_disbursements', function ($join) use ($year, $month) {
+                $join->on('salary_disbursements.salary_month', '=', DB::raw("DATE_FORMAT(salary_sheets.salary_date, '%Y-%m-01')"))
+                    ->whereYear('salary_disbursements.salary_month', $year)
+                    ->whereMonth('salary_disbursements.salary_month', $month);
+            })
             ->whereYear('salary_sheets.salary_date', $year)
             ->whereMonth('salary_sheets.salary_date', $month)
+            ->where('salary_sheets.disbursement_status', 1)
             ->select(
                 'employees.Employee_Id as employee_id',
                 'employees.Full_Name as full_name',
                 'salary_sheets.bank_account_no',
-                'salary_sheets.net_pay'
-            )->get();
+                'salary_sheets.net_pay',
+                'salary_disbursements.id as disbursement_id',
+                'salary_disbursements.status as disbursement_status'
+            )
+            ->get();
 
-        return response()->json($salaries);
+        // Calculate totals
+        $bankTotal = $salaries
+            ->whereNotNull('bank_account_no')   // only bank accounts
+            ->sum(fn($s) => (float) $s->net_pay);
+
+        $cashTotal = $salaries
+            ->whereNull('bank_account_no')      // only cash payments
+            ->sum(fn($s) => (float) $s->net_pay);
+
+        return response()->json([
+            'salaries' => $salaries,
+            'bank_total' => $bankTotal,
+            'cash_total' => $cashTotal,
+        ]);
     }
 
 
 
-    public function SalaryDisbursementBank(Request $request)
+
+    public function SalaryDisbursementBankPDF(Request $request)
     {
         $year = $request->year;
         $month = $request->month;
@@ -536,7 +591,7 @@ class EmployeeSalaryController extends Controller
             )->orderBy('departments.id')->get();
         $grandTotal = $salaries->sum('net_pay');
 
-        $pdf = Pdf::loadView('pdf.salary-disbursement-bank', [
+        $pdf = Pdf::loadView('pdf.salary-disbursement-bank-pdf', [
             'data' => $salaries,
             'year' => $year,
             'month' => $month,
@@ -550,7 +605,7 @@ class EmployeeSalaryController extends Controller
     }
 
 
-    public function SalaryDisbursementCash(Request $request)
+    public function SalaryDisbursementCashPDF(Request $request)
     {
         $year = $request->year;
         $month = $request->month;
@@ -575,7 +630,7 @@ class EmployeeSalaryController extends Controller
         // Calculate grand total
         $grandTotal = $salaries->sum('net_pay');
 
-        $pdf = Pdf::loadView('pdf.salary-disbursement-cash', [
+        $pdf = Pdf::loadView('pdf.salary-disbursement-cash-pdf', [
             'data' => $salaries,
             'year' => $year,
             'month' => $month,
@@ -586,5 +641,389 @@ class EmployeeSalaryController extends Controller
         $pdf->setPaper('A4', 'portrait');
 
         return $pdf->download("Salary_Disbursement_{$monthName}_{$year}.pdf");
+    }
+
+
+    public function SalaryDisbursementBankXLSX(Request $request)
+    {
+        $year = $request->year;
+        $month = $request->month;
+        $monthName = date('F', mktime(0, 0, 0, $month, 10));
+
+        $data = DB::table('salary_sheets')
+            ->join('employees', 'employees.id', '=', 'salary_sheets.employee_id')
+            ->join('officials', 'officials.EID', '=', 'salary_sheets.employee_id')
+            ->join('departments', 'departments.id', '=', 'officials.Department_Id')
+            ->where('salary_sheets.payment_method', 'bank')
+            ->whereYear('salary_sheets.salary_date', $year)
+            ->whereMonth('salary_sheets.salary_date', $month)
+            ->select(
+                'employees.Employee_Id as employee_id',
+                'employees.Full_Name as full_name',
+                'salary_sheets.bank_account_no',
+                'salary_sheets.net_pay'
+            )->orderBy('departments.id')
+            ->get();
+
+        $subtotal = $data->sum('net_pay');
+
+        return Excel::download(
+            new SalaryDisbursementExport($data, "Salary Disbursement (Bank)", "{$monthName} {$year}", $subtotal),
+            "Salary_Disbursement_Bank_{$monthName}_{$year}.xlsx"
+        );
+    }
+
+    public function SalaryDisbursementCashXLSX(Request $request)
+    {
+        $year = $request->year;
+        $month = $request->month;
+        $monthName = date('F', mktime(0, 0, 0, $month, 10));
+
+        $data = DB::table('salary_sheets')
+            ->join('employees', 'employees.id', '=', 'salary_sheets.employee_id')
+            ->join('officials', 'officials.EID', '=', 'salary_sheets.employee_id')
+            ->join('departments', 'departments.id', '=', 'officials.Department_Id')
+            ->where('salary_sheets.payment_method', 'cash')
+            ->whereYear('salary_sheets.salary_date', $year)
+            ->whereMonth('salary_sheets.salary_date', $month)
+            ->select(
+                'employees.Employee_Id as employee_id',
+                'employees.Full_Name as full_name',
+                DB::raw('"Cash" as bank_account_no'),
+                'salary_sheets.net_pay'
+            )->orderBy('departments.id')
+            ->get();
+
+        $subtotal = $data->sum('net_pay');
+
+        return Excel::download(
+            new SalaryDisbursementExport($data, "Salary Disbursement (Cash)", "{$monthName} {$year}", $subtotal),
+            "Salary_Disbursement_Cash_{$monthName}_{$year}.xlsx"
+        );
+    }
+
+
+
+
+
+    public function SalaryDisbursementBankWORD(Request $request)
+    {
+        $year = $request->year;
+        $month = $request->month;
+        $monthName = date('F', mktime(0, 0, 0, $month, 10));
+
+        $data = DB::table('salary_sheets')
+            ->join('employees', 'employees.id', '=', 'salary_sheets.employee_id')
+            ->join('officials', 'officials.EID', '=', 'salary_sheets.employee_id')
+            ->join('departments', 'departments.id', '=', 'officials.Department_Id')
+            ->where('salary_sheets.payment_method', 'bank')
+            ->whereYear('salary_sheets.salary_date', $year)
+            ->whereMonth('salary_sheets.salary_date', $month)
+            ->select(
+                'employees.Employee_Id',
+                'employees.Full_Name',
+                'salary_sheets.bank_account_no',
+                'salary_sheets.net_pay'
+            )->orderBy('departments.id')
+            ->get();
+
+        $grandTotal = $data->sum('net_pay');
+
+        $phpWord = new PhpWord();
+
+        // Add Section
+        $section = $phpWord->addSection([
+            'marginTop' => 600,
+            'marginBottom' => 600,
+            'marginLeft' => 600,
+            'marginRight' => 600,
+        ]);
+
+        // Add Title
+        $section->addText(
+            "Salary Disbursement (Bank) - {$monthName} {$year}",
+            ['bold' => true, 'size' => 16],
+            ['alignment' => \PhpOffice\PhpWord\SimpleType\Jc::CENTER]
+        );
+
+        $section->addTextBreak(1);
+
+        // Add Table
+        $tableStyle = [
+            'borderSize' => 6,
+            'borderColor' => '000000',
+            'cellMargin' => 80,
+        ];
+
+        $firstRowStyle = ['bgColor' => 'CCCCCC'];
+
+        $phpWord->addTableStyle('SalaryTable', $tableStyle, $firstRowStyle);
+        $table = $section->addTable('SalaryTable');
+
+        // Table Header
+        $table->addRow();
+        $table->addCell(1000)->addText('S/N', ['bold' => true]);
+        $table->addCell(2000)->addText('Employee ID', ['bold' => true]);
+        $table->addCell(4000)->addText('Employee Name', ['bold' => true]);
+        $table->addCell(3000)->addText('Bank Account', ['bold' => true]);
+        $table->addCell(2000)->addText('Net Salary', ['bold' => true]);
+
+        // Table Rows
+        foreach ($data as $index => $row) {
+            $table->addRow();
+            $table->addCell(1000)->addText($index + 1);
+            $table->addCell(2000)->addText($row->Employee_Id);
+            $table->addCell(4000)->addText($row->Full_Name);
+            $table->addCell(3000)->addText($row->bank_account_no ?? 'Cash');
+            $table->addCell(2000)->addText(number_format($row->net_pay, 2));
+        }
+
+        // Grand Total
+        $table->addRow();
+        $table->addCell(1000, ['gridSpan' => 4])->addText('Grand Total', ['bold' => true]);
+        $table->addCell(2000)->addText(number_format($grandTotal, 2), ['bold' => true]);
+
+        // Save File
+        $fileName = "Salary_Disbursement_Bank_{$monthName}_{$year}.docx";
+        $path = storage_path($fileName);
+
+        $phpWord->save($path, 'Word2007');
+
+        return response()->download($path)->deleteFileAfterSend(true);
+    }
+
+
+
+
+    public function SalaryDisbursementCashWORD(Request $request)
+    {
+        $year  = $request->year;
+        $month = $request->month;
+
+        // Month name (1 → January)
+        $monthName = date('F', mktime(0, 0, 0, $month, 10));
+
+        // Fetch CASH salary data
+        $salaries = DB::table('salary_sheets')
+            ->join('employees', 'employees.id', '=', 'salary_sheets.employee_id')
+            ->join('officials', 'officials.EID', '=', 'salary_sheets.employee_id')
+            ->join('departments', 'departments.id', '=', 'officials.Department_Id')
+            ->where('salary_sheets.payment_method', 'cash')
+            ->whereYear('salary_sheets.salary_date', $year)
+            ->whereMonth('salary_sheets.salary_date', $month)
+            ->select(
+                'employees.Employee_Id as employee_id',
+                'employees.Full_Name as full_name',
+                'salary_sheets.net_pay'
+            )
+            ->orderBy('departments.id')
+            ->get();
+
+        // Grand total
+        $grandTotal = $salaries->sum('net_pay');
+
+        // Create Word file
+        $phpWord = new PhpWord();
+        $section = $phpWord->addSection();
+
+        // Title
+        $section->addText(
+            "Salary Disbursement (Cash) - {$monthName} {$year}",
+            ['bold' => true, 'size' => 14]
+        );
+        $section->addTextBreak(1);
+
+        // Table style
+        $tableStyle = [
+            'borderSize' => 6,
+            'borderColor' => '000000',
+            'cellMargin' => 80,
+        ];
+        $phpWord->addTableStyle('CashTable', $tableStyle);
+
+        $table = $section->addTable('CashTable');
+
+        // Table header
+        $table->addRow();
+        $table->addCell(2000)->addText('Employee ID', ['bold' => true]);
+        $table->addCell(4000)->addText('Employee Name', ['bold' => true]);
+        $table->addCell(2000)->addText('Payment Method', ['bold' => true]);
+        $table->addCell(2000)->addText('Net Salary', ['bold' => true]);
+
+        // Table data
+        foreach ($salaries as $salary) {
+            $table->addRow();
+            $table->addCell(2000)->addText($salary->employee_id);
+            $table->addCell(4000)->addText($salary->full_name);
+            $table->addCell(2000)->addText('Cash');
+            $table->addCell(2000)->addText(number_format($salary->net_pay, 2));
+        }
+
+        // Grand total row
+        $table->addRow();
+        $table->addCell(8000, ['gridSpan' => 3])
+            ->addText('Grand Total', ['bold' => true]);
+        $table->addCell(2000)
+            ->addText(number_format($grandTotal, 2), ['bold' => true]);
+
+        // File name & path
+        $fileName = "Salary_Disbursement_Cash_{$monthName}_{$year}.docx";
+        $filePath = storage_path($fileName);
+
+        // Save Word file
+        $phpWord->save($filePath, 'Word2007');
+
+        // Download & auto delete
+        return response()->download($filePath)->deleteFileAfterSend(true);
+    }
+    public function salaryPayslip(Request $request, $id)
+    {
+        // Get year & month from query parameters
+        $year = $request->query('year');    // e.g. "2025"
+        $month = $request->query('month');  // numeric month, e.g. 12
+        // Ensure month is numeric
+        $month = (int) $month;
+        // Create first day of the month in YYYY-MM-DD format
+        $salaryDate = Carbon::createFromDate($year, $month, 1)->format('Y-m-d');
+        $salary = DB::table('salary_sheets')
+            ->join('employees', 'employees.id', '=', 'salary_sheets.employee_id')
+            ->join('officials', 'officials.EID', '=', 'salary_sheets.employee_id')
+            ->join('departments', 'departments.id', '=', 'officials.Department_Id')
+            ->join('designations', 'designations.id', '=', 'officials.Designation_Id')
+            ->join('salary_disbursements as sd', function ($join) use ($salaryDate) {
+                $join->on('sd.salary_month', '=', DB::raw("'$salaryDate'"))
+                    ->where('sd.status', 'COMPLETED')
+                    ->whereYear('sd.salary_month', Carbon::parse($salaryDate)->year)
+                    ->whereMonth('sd.salary_month', Carbon::parse($salaryDate)->month);
+            })
+            ->leftJoin('emp_imgs as employee_images', 'employee_images.EID', '=', 'employees.id')
+            ->where('employees.id', $id)
+            ->whereDate('salary_sheets.salary_date', $salaryDate) // exact first day of month
+            ->select(
+                'employees.Employee_Id',
+                'employees.Full_Name',
+                'employee_images.img_url',
+                'departments.Name as departmentName',
+                'designations.Name as designationName',
+                'salary_sheets.*'
+            )
+            ->first();
+        return response()->json($salary);
+    }
+
+    public function departmentList($id)
+    {
+        $role = Auth::user()->role_id;
+        if ($role == 1) {
+            $response = department::select('id as department_id', 'Name as department_name')->get();
+        } else {
+            $response = employee::select('departments.id as department_id', 'departments.Name as department_name')
+                ->join('officials', 'officials.EID', '=', 'employees.id')
+                ->join('departments', 'departments.id', '=', 'officials.Department_Id')
+                ->where('employees.id', $id)
+                ->get();
+        }
+        return response()->json($response);
+    }
+
+
+    public function getEmployees($dept_id)
+    {
+        $employee = employee::select('employees.id', 'employees.Full_Name')
+            ->join('officials', 'officials.EID', '=', 'employees.id')
+            ->join('departments', 'officials.Department_Id', '=', 'departments.id')
+            ->where('departments.id', '=', $dept_id)
+            ->where('officials.Status', '=', 'N')
+            ->orderby('employees.Full_Name', 'asc')
+            ->get();
+
+
+        if (!$employee) {
+            return response()->json(['message' => 'Employee not found'], 404);
+        }
+
+
+        return response()->json($employee);
+    }
+
+
+
+    public function completeSalaryDisbursement(Request $request)
+    {
+        $user_id = Auth::user()->EID;
+        $year = $request->input('year');
+        $month = (int) $request->input('month');
+
+        $salaryDate = Carbon::createFromDate($year, $month, 1)->format('Y-m-d');
+
+        // Check if the record exists for this month
+        $record = salary_disbursement::where('salary_month', $salaryDate)->first();
+
+        if (!$record) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No salary disbursement record found for this month.',
+                'data' => null
+            ], 404);
+        }
+
+        // Check if already completed
+        if ($record->status === 'COMPLETED') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Salary disbursement for this month already completed.',
+                'data' => null
+            ], 400);
+        }
+
+        // Update the status
+        $record->status = 'COMPLETED';
+        $record->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Salary disbursement marked as completed.',
+            'data' => $record
+        ]);
+    }
+
+
+    public function salaryDisburse(Request $request)
+    {
+        $user_id = Auth::user()->EID;
+        $year = $request->input('year');
+        $month = (int) $request->input('month');
+
+        $salaryDate = Carbon::createFromDate($year, $month, 1)->format('Y-m-d');
+
+        $monthly_salary_id = salary_sheet::where('salary_date', $salaryDate)
+            ->value('monthly_salary_id');
+
+        if (!$monthly_salary_id) {
+            return response()->json([
+                'message' => 'Salary sheet not found for selected month'
+            ], 404);
+        }
+
+        DB::transaction(function () use ($salaryDate, $monthly_salary_id, $user_id) {
+
+            salary_sheet::where('monthly_salary_id', $monthly_salary_id)
+                ->update(['disbursement_status' => 1]);
+
+            salary_disbursement::updateOrCreate(
+                [
+                    'salary_month' => $salaryDate,
+                    'salary_id' => $monthly_salary_id,
+                ],
+                [
+                    'status' => 'PENDING',
+                    'created_by' => $user_id,
+                ]
+            );
+        });
+        return response()->json([
+            'success' => true,
+            'message' => 'Salary disbursement initiated successfully'
+        ]);
     }
 }

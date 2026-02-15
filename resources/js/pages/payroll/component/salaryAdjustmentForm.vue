@@ -9,6 +9,16 @@ import {
 } from "vue";
 import Swal from "sweetalert2";
 import api from "@/api";
+import { useStore } from "vuex";
+import { useRouter } from "vue-router";
+import Multiselect from "vue-multiselect";
+import "vue-multiselect/dist/vue-multiselect.min.css";
+
+// ----------------------------
+// BASIC SETUP
+// ----------------------------
+const store = useStore();
+const user = store.getters.getUser;
 
 // Props
 const { isOpen, editStore, updateinfo } = defineProps([
@@ -26,10 +36,27 @@ const salaryAdjustment = ref([]);
 const earning_adjustments = ref([]);
 const deduction_adjustments = ref([]);
 
+const selectedEmployee = ref(null);
+
+const onEmployeeSelect = (emp) => {
+    if (!emp) {
+        form.eid = "";
+        emp_img.value = null;
+        console.log("Employee cleared");
+        return;
+    }
+
+    form.eid = emp.id;
+
+    getEmployeeImg(emp.id);
+};
+
 // Current year and month
 const selectedMonth = ref(new Date().getMonth() + 1);
 const selectedYear = ref(new Date().getFullYear());
 
+const today = new Date();
+const previousMonth = today.getMonth() === 0 ? 12 : today.getMonth(); // Jan হলে Dec
 // Years & months for dropdown
 const years = ref(Array.from({ length: 14 }, (_, i) => 2022 + i));
 const months = ref([
@@ -55,7 +82,7 @@ const form = reactive({
     department: "",
     eid: "",
     year: selectedYear.value,
-    month: selectedMonth.value,
+    month: previousMonth,
     earnings: [{ adjustment_type: "", amount: "", remarks: "" }],
     deductions: [{ adjustment_type: "", amount: "", remarks: "" }],
 });
@@ -80,7 +107,7 @@ const getData = async () => {
     try {
         const [departmentRes, adjustmentRes, adjustmentTypeRes] =
             await Promise.all([
-                api.get("/department"),
+                api.get(`/department-list/${user.id}`),
                 api.get("/salary-adjustment"),
                 api.get("/salary-adjustment-type"),
             ]);
@@ -93,15 +120,21 @@ const getData = async () => {
     }
 };
 
-// Fetch employees for a department
 const getEmployee = async (deptID) => {
     if (!deptID) {
         employee.value = [];
+        selectedEmployee.value = null;
+        form.eid = "";
+        emp_img.value = null;
         return;
     }
     try {
-        const res = await api.get(`/emp/${deptID}`);
+        const res = await api.get(`/adjustment-employees/${deptID}`);
         employee.value = res.data;
+
+        selectedEmployee.value = null;
+        form.eid = "";
+        emp_img.value = null;
     } catch (err) {
         console.error("Error fetching employees:", err);
     }
@@ -145,7 +178,7 @@ watch(
             resetForm();
         }
     },
-    { immediate: true }
+    { immediate: true },
 );
 
 // Reset form
@@ -330,41 +363,67 @@ onMounted(() => {
                                                 </option>
                                                 <option
                                                     v-for="dept in department"
-                                                    :key="dept.id"
-                                                    :value="dept.id"
+                                                    :key="dept.department_id"
+                                                    :value="dept.department_id"
                                                 >
-                                                    {{ dept.Name }}
+                                                    {{ dept.department_name }}
                                                 </option>
                                             </select>
                                         </div>
                                     </div>
 
                                     <!-- Employee Name -->
+                                    <!-- <div class="row mb-3 align-items-center">
+                                        <div class="col-3 d-flex">
+                                            <span class="flex-grow-1 me-2">Employee Name</span><span>:</span>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <select class="form-select border-color custom-input" v-model="form.eid"
+                                                @change="
+                                                    getEmployeeImg(form.eid)
+                                                    ">
+                                                <option value="" selected>
+                                                    Select Employee
+                                                </option>
+                                                <option v-for="emp in employee" :key="emp.id" :value="emp.id">
+                                                    {{ emp.Full_Name }}
+                                                </option>
+                                            </select>
+                                        </div>
+                                    </div> -->
+
                                     <div class="row mb-3 align-items-center">
                                         <div class="col-3 d-flex">
                                             <span class="flex-grow-1 me-2"
                                                 >Employee Name</span
                                             ><span>:</span>
                                         </div>
-                                        <div class="col-md-6">
-                                            <select
-                                                class="form-select border-color custom-input"
-                                                v-model="form.eid"
-                                                @change="
-                                                    getEmployeeImg(form.eid)
+                                        <div class="col-md-6 position-relative">
+                                            <Multiselect
+                                                v-model="selectedEmployee"
+                                                :options="employee"
+                                                label="Full_Name"
+                                                track-by="id"
+                                                placeholder="Select or search employee"
+                                                :searchable="true"
+                                                :close-on-select="true"
+                                                :allow-empty="true"
+                                                @update:modelValue="
+                                                    onEmployeeSelect
                                                 "
+                                                :clear-on-select="false"
+                                                class="multiselect-design"
+                                            />
+
+                                            <!-- REMOVE this -->
+                                            <button
+                                                v-if="selectedEmployee"
+                                                type="button"
+                                                class="btn btn-sm btn-link position-absolute top-0 end-0 mt-1 me-2"
+                                                @click="selectedEmployee = ''"
                                             >
-                                                <option value="" selected>
-                                                    Select Employee
-                                                </option>
-                                                <option
-                                                    v-for="emp in employee"
-                                                    :key="emp.id"
-                                                    :value="emp.id"
-                                                >
-                                                    {{ emp.Full_Name }}
-                                                </option>
-                                            </select>
+                                                <i class="fa fa-times"></i>
+                                            </button>
                                         </div>
                                     </div>
 
@@ -607,9 +666,11 @@ onMounted(() => {
         #02861fd5 100%
     );
 }
+
 .border-color {
     border: 1.8px solid #059223d5;
 }
+
 .gradient {
     background: linear-gradient(
         90deg,
@@ -618,9 +679,11 @@ onMounted(() => {
         rgb(7, 134, 24) 91%
     );
 }
+
 .modal {
     background-color: rgba(0, 0, 0, 0.5);
 }
+
 .modal-content label,
 .modal-content .card-header,
 .modal-content option,

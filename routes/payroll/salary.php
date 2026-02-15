@@ -11,11 +11,14 @@ Route::post('/salary-setup', [EmployeeSalaryController::class, 'create']);
 Route::put('/salary-update/{id}', [EmployeeSalaryController::class, 'update']);
 Route::get('/employee-salary-search', [EmployeeSalaryController::class, 'salarySearch']);
 
+Route::get('department-list/{id}', [EmployeeSalaryController::class, 'departmentList']);
+Route::get('adjustment-employees/{dept_id}', [EmployeeSalaryController::class, 'getEmployees']);
+
 Route::get('/generate-salary', [EmployeeSalaryController::class, 'generateSalary']);
 Route::get('/salary-sheet', [EmployeeSalaryController::class, 'salarySheet']);
 Route::get('/export-salary-sheet', [EmployeeSalaryController::class, 'exportSalarySheet']);
 
-Route::get('/salary-adjustment', [SalaryAdjustmentController::class, 'index']);
+Route::get('/salary-adjustment/{id}', [SalaryAdjustmentController::class, 'index']);
 Route::post('/salary-adjustment', [SalaryAdjustmentController::class, 'create']);
 Route::put('/salary-adjustment/{id}', [SalaryAdjustmentController::class, 'update']);
 
@@ -48,5 +51,17 @@ Route::get('/emp-info/{id}', [EmployeeSalaryController::class, 'getEmployeeInfo'
 //ended by firoj
 
 Route::get('/salary-disbursement', [EmployeeSalaryController::class, 'salaryDisbursement']);
-Route::get('/salary-disbursement-bank', [EmployeeSalaryController::class, 'SalaryDisbursementBank']);
-Route::get('/salary-disbursement-cash', [EmployeeSalaryController::class, 'SalaryDisbursementCash']);
+
+Route::get('/salary-disbursement-bank-pdf', [EmployeeSalaryController::class, 'SalaryDisbursementBankPDF']);
+Route::get('/salary-disbursement-cash-pdf', [EmployeeSalaryController::class, 'SalaryDisbursementCashPDF']);
+Route::get('/salary-disbursement-bank-xlsx', [EmployeeSalaryController::class, 'SalaryDisbursementBankXLSX']);
+Route::get('/salary-disbursement-cash-xlsx', [EmployeeSalaryController::class, 'SalaryDisbursementCashXLSX']);
+Route::get('/salary-disbursement-bank-word', [EmployeeSalaryController::class, 'SalaryDisbursementBankWORD']);
+Route::get('/salary-disbursement-cash-word', [EmployeeSalaryController::class, 'SalaryDisbursementCashWORD']);
+
+
+
+Route::get('/payslip/{id}', [EmployeeSalaryController::class, 'salaryPayslip']);
+Route::post('/salary-disbursement-complete', [EmployeeSalaryController::class, 'completeSalaryDisbursement']);
+
+Route::post('/disburse-salary', [EmployeeSalaryController::class, 'salaryDisburse']);

@@ -71,7 +71,7 @@ const formatMonthYear = (dateString) => {
 const getData = async (
     year = selectedYear.value,
     month = selectedMonth.value,
-    employee_id = searchEmp.value
+    employee_id = searchEmp.value,
 ) => {
     const res = await api.get("/itinerary-items", {
         params: { year, month, employee_id },
@@ -99,7 +99,7 @@ const visibleItineraries = computed(() =>
         if (isEmployee) return true;
         if (isSupervisor && item.status !== "SAVE") return true;
         return false;
-    })
+    }),
 );
 
 // ----------------------------
@@ -139,6 +139,34 @@ const acceptItems = async (id) => {
     await api.post(`/itinerary/accept/${id}`);
     Swal.fire({ icon: "success", title: "Accepted!", timer: 1500 });
     getData();
+};
+
+const monthlyReports = async (employee_id, submitted_date) => {
+    try {
+        if (!submitted_date) {
+            console.error("No date provided for the report");
+            return;
+        }
+
+        // Format date as YYYY-MM-DD (Jasper expects this)
+        const date = new Date(submitted_date).toISOString().split("T")[0];
+
+        // Construct URL with employee_id and date
+        const url = `/itinerary/monthly-report/${employee_id}?format=xlsx&date=${date}`;
+
+        // Create temporary link and trigger download
+        const link = document.createElement("a");
+        link.href = url;
+        link.setAttribute(
+            "download",
+            `Monthly_Report_${employee_id}_${date}.xlsx`,
+        );
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    } catch (error) {
+        console.error(error);
+    }
 };
 
 const rejectedItems = async (id) => {
@@ -303,7 +331,7 @@ onMounted(() => {
                                             class="btn btn-sm edit-btn me-1"
                                             @click="
                                                 editItems(
-                                                    item.itinerary_logs_id
+                                                    item.itinerary_logs_id,
                                                 )
                                             "
                                         >
@@ -314,7 +342,7 @@ onMounted(() => {
                                             class="btn btn-sm view-btn me-1"
                                             @click="
                                                 viewItems(
-                                                    item.itinerary_logs_id
+                                                    item.itinerary_logs_id,
                                                 )
                                             "
                                         >
@@ -324,7 +352,7 @@ onMounted(() => {
                                         <button
                                             v-if="
                                                 ['SAVE', 'REJECTED'].includes(
-                                                    item.status
+                                                    item.status,
                                                 ) &&
                                                 Number(item.employee_id) ===
                                                     Number(user.id)
@@ -332,7 +360,7 @@ onMounted(() => {
                                             class="btn btn-sm submit-btn me-1"
                                             @click="
                                                 saveItems(
-                                                    item.itinerary_logs_id
+                                                    item.itinerary_logs_id,
                                                 )
                                             "
                                         >
@@ -348,7 +376,7 @@ onMounted(() => {
                                             class="btn btn-sm accept-btn me-1"
                                             @click="
                                                 acceptItems(
-                                                    item.itinerary_logs_id
+                                                    item.itinerary_logs_id,
                                                 )
                                             "
                                         >
@@ -365,11 +393,26 @@ onMounted(() => {
                                             class="btn btn-sm reject-btn"
                                             @click="
                                                 rejectedItems(
-                                                    item.itinerary_logs_id
+                                                    item.itinerary_logs_id,
                                                 )
                                             "
                                         >
                                             Reject
+                                        </button>
+                                        <button
+                                            v-if="
+                                                Number(item.supervisor_id) ===
+                                                Number(user.id)
+                                            "
+                                            class="btn btn-sm report-btn ms-1"
+                                            @click="
+                                                monthlyReports(
+                                                    item.employee_id,
+                                                    item.submitted_date,
+                                                )
+                                            "
+                                        >
+                                            Report
                                         </button>
                                     </td>
                                 </tr>
@@ -413,6 +456,10 @@ onMounted(() => {
 
 .reject-btn {
     background-color: #dc3545 !important;
+    color: white !important;
+}
+.report-btn {
+    background-color: #0f9c5a !important;
     color: white !important;
 }
 </style>

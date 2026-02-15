@@ -10,6 +10,10 @@ import {
 import Swal from "sweetalert2";
 import api from "@/api";
 
+import { useStore } from "vuex";
+const store = useStore();
+const user = store.getters.getUser;
+
 const { isOpen, editStore, updateinfo, EID, salId } = defineProps([
     "EID",
     "editStore",
@@ -23,7 +27,7 @@ const employee = ref([]);
 const emp_img = ref([]);
 const selected_designation = ref("");
 
-const emp_info = ref([]);
+const emp_info = ref({});
 
 const error = ref([]);
 
@@ -56,6 +60,45 @@ const form = ref({
     bank_account_no: "",
 });
 
+import Multiselect from "vue-multiselect";
+import "vue-multiselect/dist/vue-multiselect.min.css";
+
+const selectedEmployee = ref(null);
+
+// When you fetch employees (getEmployee), map to id + Full_Name
+const getEmployee = async (deptID) => {
+    if (!deptID) {
+        employee.value = [];
+        selectedEmployee.value = null;
+        return;
+    }
+    try {
+        const res = await api.get(`/emp/${deptID}`);
+        employee.value = res.data.map((emp) => ({
+            id: emp.id, // must match track-by
+            Full_Name: emp.Full_Name,
+            img_url: emp.img_url || null,
+        }));
+
+        // For edit mode: prefill selectedEmployee
+        if (editStore && editStore.employee_id) {
+            selectedEmployee.value = employee.value.find(
+                (e) => e.id === editStore.employee_id,
+            );
+        }
+    } catch (err) {
+        console.error("Error fetching employees:", err);
+    }
+};
+console.log("Employee List:", form.value);
+// When Multiselect changes
+const onEmployeeSelect = (emp) => {
+    if (!emp) return;
+    form.value.eid = emp.id;
+    getEmployeeInfo(emp.id);
+    getEmployeeImg(emp.id);
+};
+
 const basic = computed(() => form.value.gross_salary * 0.5);
 watch(basic, (val) => (form.value.basic = val));
 
@@ -80,7 +123,7 @@ const total_payment = computed(
         Number(form.value.overtime) +
         Number(form.value.daily_allowance) +
         Number(form.value.mobile_bill) +
-        Number(form.value.other_allowance)
+        Number(form.value.other_allowance),
 );
 watch(total_payment, (val) => (form.value.total_payment = val));
 
@@ -91,60 +134,62 @@ const total_deduction = computed(
         Number(form.value.revenue_stamp) +
         Number(form.value.leave_without_pay) +
         Number(form.value.penalty_other_deduction) +
-        Number(form.value.advance)
+        Number(form.value.advance),
 );
 watch(total_deduction, (val) => (form.value.total_deduction = val));
 
 const net_pay = computed(
-    () => form.value.total_payment - form.value.total_deduction
+    () => form.value.total_payment - form.value.total_deduction,
 );
 watch(net_pay, (val) => (form.value.net_pay = val));
 
 const getData = async () => {
     try {
-        const response = await api.get("/department");
+        const response = await api.get(`/department-list/${user.id}`);
         department.value = response.data;
     } catch (err) {
         error.value = err.message || "Error fetching data";
     }
 };
 
-const getEmployee = async (deptID) => {
-    if (!deptID) {
-        employee.value = [];
-        return;
-    }
-    try {
-        const res = await api.get(`/emp/${deptID}`);
-        employee.value = res.data;
-    } catch (err) {
-        console.error("Error fetching employees:", err);
-    }
-};
+// const getEmployee = async (deptID) => {
+//     if (!deptID) {
+//         employee.value = [];
+//         return;
+//     }
+//     try {
+//         const res = await api.get(`/emp/${deptID}`);
+//         employee.value = res.data;
+//     } catch (err) {
+//         console.error("Error fetching employees:", err);
+//     }
+// };
 
 const getEmployeeInfo = async (id) => {
     try {
         const response = await api.get(`/emp-info/${id}`);
-        emp_info.value = response.data;
+        emp_info.value = response.data; // ✅ object
     } catch (error) {
         console.error("Error updating store:", error);
     }
 };
 
 watch(
-    () => editStore, // ✅ If editStore is a ref (ref())
+    () => editStore,
     async (item) => {
         if (item) {
             form.value.department = item.department_id || "";
             await getEmployee(item.department_id);
 
+            // Prefill selectedEmployee for Multiselect
+            selectedEmployee.value = employee.value.find(
+                (e) => e.id === item.employee_id,
+            );
+            await getEmployeeInfo(item.employee_id);
             form.value.eid = item.employee_id || "";
             await getEmployeeImg(item.employee_id);
 
-            emp_info.value = {
-                ...emp_info.value,
-                designation_name: item.designation_name || "",
-            };
+            // Fill other fields...
             form.value.gross_salary = item.gross_salary || "";
             form.value.house_rent = item.house_rent || "";
             form.value.conveyance = item.conveyance || "";
@@ -170,7 +215,7 @@ watch(
             form.value.bank_account_no = item.bank_account_no || "";
         }
     },
-    { immediate: true }
+    { immediate: true },
 );
 
 const getEmployeeImg = async (id) => {
@@ -389,7 +434,7 @@ onMounted(() => {
                                         </div>
                                         <div class="col-md-6">
                                             <select
-                                                class="form-select border-color custom-input"
+                                                class="form-select border-color custom-input field-height"
                                                 v-model="form.department"
                                                 @change="
                                                     getEmployee(form.department)
@@ -404,15 +449,16 @@ onMounted(() => {
                                                 </option>
                                                 <option
                                                     v-for="dept in department"
-                                                    :key="dept.id"
-                                                    :value="dept.id"
+                                                    :key="dept.department_id"
+                                                    :value="dept.department_id"
                                                 >
-                                                    {{ dept.Name }}
+                                                    {{ dept.department_name }}
                                                 </option>
                                             </select>
                                         </div>
                                     </div>
 
+                                    <!-- Employee Name -->
                                     <!-- Employee Name -->
                                     <div class="row mb-3 align-items-center">
                                         <div class="col-3 d-flex">
@@ -422,24 +468,30 @@ onMounted(() => {
                                             <span>:</span>
                                         </div>
                                         <div class="col-md-6">
-                                            <select
-                                                class="form-select border-color custom-input"
-                                                v-model="form.eid"
-                                                @change="
-                                                    getEmployeeInfo(form.eid)
+                                            <Multiselect
+                                                v-model="selectedEmployee"
+                                                :options="employee"
+                                                label="Full_Name"
+                                                track-by="id"
+                                                placeholder="Select or search employee"
+                                                :searchable="true"
+                                                :close-on-select="true"
+                                                :allow-empty="true"
+                                                @update:modelValue="
+                                                    onEmployeeSelect
                                                 "
+                                                :clear-on-select="false"
+                                                class="multiselect-design"
+                                            />
+
+                                            <button
+                                                v-if="selectedEmployee"
+                                                type="button"
+                                                class="btn btn-sm btn-link position-absolute top-0 end-0 mt-1 me-1"
+                                                @click="selectedEmployee = null"
                                             >
-                                                <option value="" selected>
-                                                    Select Employee
-                                                </option>
-                                                <option
-                                                    v-for="emp in employee"
-                                                    :key="emp.id"
-                                                    :value="emp.id"
-                                                >
-                                                    {{ emp.Full_Name }}
-                                                </option>
-                                            </select>
+                                                <i class="fa fa-times"></i>
+                                            </button>
                                         </div>
                                     </div>
 
@@ -454,7 +506,7 @@ onMounted(() => {
                                         <div class="col-md-6">
                                             <input
                                                 type="text"
-                                                class="form-control border-color custom-input"
+                                                class="form-control border-color custom-input field-height"
                                                 :value="
                                                     emp_info.designation_name
                                                 "
@@ -746,8 +798,10 @@ onMounted(() => {
 .modal {
     background-color: rgba(0, 0, 0, 0.5);
 }
+.field-height {
+    height: 38px;
+}
 
-/* ✅ Make all field names show with First Letter of Every Word Capitalized */
 .modal-content label,
 .modal-content .card-header,
 .modal-content option,

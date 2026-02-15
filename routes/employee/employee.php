@@ -21,6 +21,14 @@ Route::get('/employee/{id}', [EmployeeController::class, 'show']);
 Route::get('/employee/{id}/edit', [EmployeeController::class, 'edit']);
 Route::put('/employee/{id}', [EmployeeController::class, 'update']);
 
+Route::get('/employee-have-account', [EmployeeController::class, 'haveAccount']);
+Route::get('/employee-without-account', [EmployeeController::class, 'withoutAccount']);
+Route::get('/inactive-employee', [EmployeeController::class, 'inactive']);
+
+Route::get('/inactive-employee-search', [EmployeeController::class, 'inactiveSearch']);
+Route::get('/without-account-search', [EmployeeController::class, 'withoutAccountSearch']);
+Route::get('/active-employee-search', [EmployeeController::class, 'activeSearch']);
+
 Route::get('/emp/{id}', [EmployeeController::class, 'getEmployeeFromDept']);
 Route::get('/all-emp/{id}', [EmployeeController::class, 'getAllEmployeeFromDept']);
 Route::get('empEmail/{id}', [EmployeeController::class, 'getEmail']);

@@ -14,6 +14,7 @@ class salary_sheet extends Model
 
     // Mass assignable fields
     protected $fillable = [
+        'monthly_salary_id',
         'employee_id',
         'salary_date',
         'gross_salary',

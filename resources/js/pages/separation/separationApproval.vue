@@ -19,7 +19,6 @@ const getData = async () => {
     try {
         const response = await api.get(`/separation-info/${user.id}`);
         separation_info.value = response.data;
-        console.log("Separation Info:", separation_info.value);
     } catch (error) {
         console.error("Error fetching data:", error);
     }

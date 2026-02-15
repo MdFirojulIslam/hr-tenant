@@ -206,9 +206,6 @@ class EmployeeInformationController extends Controller
                 ->get();
         }
 
-
-
-
         // $pending_separation = separation_request::select(
         //     'separation_request.id as separation_request_id',
         //     'employees.Full_Name as employee_name',

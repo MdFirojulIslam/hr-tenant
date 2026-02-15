@@ -3,31 +3,54 @@ import { ref, onMounted, computed, defineAsyncComponent } from "vue";
 import { Bootstrap4Pagination } from "laravel-vue-pagination";
 import api from "@/api";
 import Swal from "sweetalert2";
+import { useStore } from "vuex";
+import { useRouter } from "vue-router";
+import Multiselect from "vue-multiselect";
+import "vue-multiselect/dist/vue-multiselect.min.css";
+
+// ----------------------------
+// BASIC SETUP
+// ----------------------------
+const store = useStore();
+const user = store.getters.getUser;
 
 // modal component
-const salaryAdjustmentComponent = defineAsyncComponent(() =>
-    import("@/pages/payroll/component/salaryAdjustmentEdit.vue")
+const salaryAdjustmentComponent = defineAsyncComponent(
+    () => import("@/pages/payroll/component/salaryAdjustmentEdit.vue"),
 );
 
-const salaryAdjustmentComponentNew = defineAsyncComponent(() =>
-    import("@/pages/payroll/component/salaryAdjustmentForm.vue")
+const salaryAdjustmentComponentNew = defineAsyncComponent(
+    () => import("@/pages/payroll/component/salaryAdjustmentForm.vue"),
 );
 // states
-const selectedMonth = ref(new Date().getMonth() + 1);
-const selectedYear = ref(new Date().getFullYear());
+const selectedMonth = ref(new Date().getMonth() + 1); // optional
+const selectedYear = ref(new Date().getFullYear()); // optional
 
-const adjustments = ref([]);
+// previous month (if current month is January, it becomes December)
+const today = new Date();
+const previousMonth = today.getMonth() === 0 ? 12 : today.getMonth(); // 0 = Jan
+const searchMonth = ref(previousMonth); // 1 = Jan, 12 = Dec
 
-const searchYear = ref("");
-const searchMonth = ref("");
 const searchDept = ref("");
 const searchEmp = ref("");
 
+const searchYear = ref("");
+
 const department = ref([]);
 const employeeIDs = ref([]);
+const employee = ref([]);
 
-const salaries = ref({}); // pagination object
-const salaryRecords = ref([]); // actual rows
+const adjustments = ref([]);
+const salaries = ref({});
+const salaryRecords = ref([]);
+const selectedEmployee = ref(null);
+
+const onEmployeeSelect = (emp) => {
+    if (!emp) return;
+    form.eid = emp.id;
+    searchEmp.value = emp.id; // if you use searchEmp for filtering
+    getEmployeeImg(emp.id);
+};
 
 // convert department full name to short name
 const getDeptShortName = (name) => {
@@ -91,17 +114,17 @@ const isLoading = ref(true);
 const error = ref(null);
 
 // fetch data with pagination
-const getData = async (page = 1) => {
+const getData = async () => {
+    isLoading.value = true;
     try {
         const [deptRes, adjustmentTypeRes, adjustmentRes] = await Promise.all([
-            api.get("/department"),
+            api.get(`/department-list/${user.id}`),
             api.get("/salary-adjustment-type"),
-            api.get(`/salary-adjustment?page=${page}`),
+            api.get(`/salary-adjustment/${user.id}`),
         ]);
         department.value = deptRes.data;
         adjustments.value = adjustmentTypeRes.data;
-        salaries.value = adjustmentRes.data; // full pagination object
-        salaryRecords.value = adjustmentRes.data.data; // rows
+        salaryRecords.value = adjustmentRes.data; // direct array
     } catch (err) {
         error.value = err.message || "Error fetching data";
     } finally {
@@ -112,11 +135,15 @@ const getData = async (page = 1) => {
 // get employees for department
 const getEmployee = async (deptID) => {
     if (!deptID) {
-        employeeIDs.value = [];
+        employee.value = [];
         return;
     }
-    const empIDs = await api.get(`/emp/${deptID}`);
-    employeeIDs.value = empIDs.data;
+    try {
+        const res = await api.get(`/adjustment-employees/${deptID}`);
+        employee.value = res.data;
+    } catch (err) {
+        console.error("Error fetching employees:", err);
+    }
 };
 
 // computed filtered data
@@ -125,7 +152,9 @@ const filteredData = computed(() => {
         const matchDept = searchDept.value
             ? item.dept_id == searchDept.value
             : true;
-        const matchEmp = searchEmp.value ? item.eid == searchEmp.value : true;
+        const matchEmp = selectedEmployee.value
+            ? item.eid == selectedEmployee.value.id
+            : true;
 
         const [year, month] = item.date ? item.date.split("-") : [null, null];
         const matchYear = searchYear.value ? searchYear.value == year : true;
@@ -224,7 +253,7 @@ onMounted(() => getData());
                     <!-- Department -->
                     <div class="col-lg-3 position-relative">
                         <select
-                            class="form-control border-color"
+                            class="form-control border-color field-height"
                             v-model="searchDept"
                             @change="getEmployee(searchDept)"
                             style="font-weight: normal; background: transparent"
@@ -232,10 +261,10 @@ onMounted(() => getData());
                             <option value="" disabled>Select Department</option>
                             <option
                                 v-for="dept in department"
-                                :key="dept.id"
-                                :value="dept.id"
+                                :key="dept.department_id"
+                                :value="dept.department_id"
                             >
-                                {{ dept.Name }}
+                                {{ dept.department_name }}
                             </option>
                         </select>
                         <button
@@ -252,37 +281,51 @@ onMounted(() => getData());
                     </div>
 
                     <!-- Employee -->
-                    <div class="col-lg-3 position-relative">
-                        <select
-                            class="form-control border-color"
-                            v-model="searchEmp"
-                            style="font-weight: normal; background: transparent"
-                        >
+                    <!-- <div class="col-lg-3 position-relative">
+                        <select class="form-control border-color" v-model="searchEmp"
+                            style="font-weight: normal; background: transparent">
                             <option value="" disabled>
                                 Select Employee Name
                             </option>
-                            <option
-                                v-for="emp in employeeIDs"
-                                :key="emp.id"
-                                :value="emp.id"
-                            >
+                            <option v-for="emp in employeeIDs" :key="emp.id" :value="emp.id">
                                 {{ emp.Full_Name }}
                             </option>
                         </select>
+                        <button v-if="searchEmp" type="button"
+                            class="btn btn-sm btn-link position-absolute top-0 end-0 mt-1 me-1" @click="searchEmp = ''">
+                            <i class="fa fa-times"></i>
+                        </button>
+                    </div> -->
+                    <div class="col-lg-3 position-relative">
+                        <Multiselect
+                            v-model="selectedEmployee"
+                            :options="employee"
+                            label="Full_Name"
+                            track-by="id"
+                            placeholder="Select or search employee"
+                            :searchable="true"
+                            :close-on-select="true"
+                            :allow-empty="true"
+                            @input="onEmployeeSelect"
+                            :clear-on-select="false"
+                            class="multiselect-design"
+                        />
+
+                        <!-- REMOVE this -->
                         <button
-                            v-if="searchEmp"
+                            v-if="selectedEmployee"
                             type="button"
                             class="btn btn-sm btn-link position-absolute top-0 end-0 mt-1 me-1"
-                            @click="searchEmp = ''"
+                            @click="selectedEmployee = ''"
                         >
                             <i class="fa fa-times"></i>
                         </button>
                     </div>
 
                     <!-- Year -->
-                    <div class="col-lg-2 position-relative">
+                    <div class="col-lg-2 position-relative ms-4">
                         <select
-                            class="form-control border-color"
+                            class="form-control border-color field-height"
                             v-model="searchYear"
                             style="font-weight: normal; background: transparent"
                         >
@@ -308,7 +351,7 @@ onMounted(() => getData());
                     <!-- Month -->
                     <div class="col-lg-2 position-relative">
                         <select
-                            class="form-control border-color"
+                            class="form-control border-color field-height"
                             v-model="searchMonth"
                             style="font-weight: normal; background: transparent"
                         >
@@ -333,15 +376,6 @@ onMounted(() => getData());
                 </div>
                 <!-- Salary Table -->
                 <div class="mt-5">
-                    <div
-                        class="d-flex align-items-center px-2 py-2 fw-semibold border-bottom bg-light"
-                    >
-                        <span class="me-2">Total:</span>
-                        <span
-                            class="bg-white border rounded px-3 py-1 fw-medium"
-                            >{{ salaries.total }}</span
-                        >
-                    </div>
                     <div class="table-responsive shadow-sm bg-light">
                         <table
                             class="table table-bordered table-hover table-sm"
@@ -392,7 +426,7 @@ onMounted(() => getData());
                                             @click="
                                                 editSalaryAdjustment(
                                                     item,
-                                                    item.eid
+                                                    item.eid,
                                                 )
                                             "
                                             class="custom-btn btn-15"
@@ -433,8 +467,12 @@ onMounted(() => getData());
 </template>
 
 <style>
-.border-color {
-    border: 1.8px solid #059223d5;
-    border-radius: none;
+.field-height {
+    height: 38px;
 }
+
+/* .border-color {
+    border: 1px solid #059223d5;
+    border-radius: none;
+} */
 </style>
