@@ -162,7 +162,7 @@ onMounted(() => {
                 <div class="d-flex align-items-center px-2 mt-5 fw-semibold">
                     <span class="me-2">Total Employees:</span>
                     <span class="bg-white border rounded px-3 fw-medium">{{
-                        employees.total + 1
+                        employees.total
                     }}</span>
                 </div>
                 <div class="table-responsive shadow-sm bg-light mt-3">

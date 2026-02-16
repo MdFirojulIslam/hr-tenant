@@ -25,6 +25,7 @@ class EmployeeSalaryController extends Controller
 {
     public function index(Request $request)
     {
+        // dd($request->all());
         $query = DB::table('salaries')
             ->join('employees', 'employees.id', '=', 'salaries.employee_id')
             ->join('officials', 'officials.EID', '=', 'salaries.employee_id')
@@ -701,8 +702,6 @@ class EmployeeSalaryController extends Controller
             "Salary_Disbursement_Cash_{$monthName}_{$year}.xlsx"
         );
     }
-
-
 
 
 

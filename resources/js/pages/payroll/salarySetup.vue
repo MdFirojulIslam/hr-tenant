@@ -34,6 +34,7 @@ const salaryId = ref(null);
 const heading = ref("");
 
 const onEmployeeSelect = (value) => {
+    console.log("Selected employee:", value);
     selectedEmployee.value = value;
     if (value) {
         searchEmp.value = value.id;
@@ -71,16 +72,15 @@ const getEmployee = async (deptID) => {
     if (!deptID) {
         employee.value = [];
         selectedEmployee.value = null;
-        form.eid = "";
-        emp_img.value = null;
+        searchEmp.value = "";
         return;
     }
+
     try {
         const res = await api.get(`/emp/${deptID}`);
         employee.value = res.data;
         selectedEmployee.value = null;
-        form.eid = "";
-        emp_img.value = null;
+        searchEmp.value = "";
     } catch (err) {
         console.error("Error fetching employees:", err);
     }
@@ -180,9 +180,9 @@ onMounted(() => getData());
                 <!-- Filters -->
                 <div class="row g-3 mb-3">
                     <div class="col-lg-3 position-relative">
-                        <label>Select Department</label>
+                        <label class="form-label">Select Department</label>
                         <select
-                            class="form-control border-color field-height"
+                            class="form-control field-height field-hover"
                             v-model="searchDept"
                             @change="getEmployee(searchDept)"
                             style="font-weight: normal; background: transparent"
@@ -199,7 +199,7 @@ onMounted(() => getData());
                         <button
                             v-if="searchDept"
                             type="button"
-                            class="btn btn-sm btn-link position-absolute top-0 end-0 mt-4 me-1"
+                            class="btn btn-sm btn-link position-absolute top-0 end-0 mt-5 me-3"
                             @click="
                                 searchDept = '';
                                 employeeIDs = [];
@@ -211,7 +211,7 @@ onMounted(() => getData());
 
                     <!-- Employee -->
                     <div class="col-lg-3 position-relative">
-                        <label for="">Select Employee</label>
+                        <label class="form-label">Select Employee</label>
                         <Multiselect
                             v-model="selectedEmployee"
                             :options="employee"
@@ -221,26 +221,30 @@ onMounted(() => getData());
                             :searchable="true"
                             :close-on-select="true"
                             :allow-empty="true"
-                            @input="onEmployeeSelect"
-                            :clear-on-select="false"
-                            class="multiselect-design"
+                            @update:modelValue="onEmployeeSelect"
+                            class="multiselect-design field-hover"
                         />
 
                         <!-- REMOVE this -->
                         <button
                             v-if="selectedEmployee"
                             type="button"
-                            class="btn btn-sm btn-link position-absolute top-0 end-0 mt-1 me-1"
-                            @click="selectedEmployee = ''"
+                            class="btn btn-sm btn-link position-absolute top-0 end-0 mt-5 me-5"
+                            @click="
+                                selectedEmployee = null;
+                                searchEmp = '';
+                            "
                         >
                             <i class="fa fa-times"></i>
                         </button>
                     </div>
                     <div class="col-lg-3 position-relative">
-                        <label>Search By Account/Official ID</label>
+                        <label class="form-label"
+                            >Search By Account/Official ID</label
+                        >
                         <input
                             type="text"
-                            class="form-control border-color field-height"
+                            class="form-control field-height field-hover"
                             v-model="searchQuery"
                             placeholder="Search By Account No or Official ID"
                             @input="searchemp"
@@ -252,18 +256,16 @@ onMounted(() => getData());
                 <div class="mt-5">
                     <!-- Total Employees Row -->
                     <div
-                        class="d-flex align-items-center px-2 py-2 fw-semibold border-bottom bg-light"
+                        class="d-flex align-items-center py-2 fw-semibold border-bottom bg-light"
                     >
                         <span class="me-2">Total Employees:</span>
                         <span
-                            class="bg-white border rounded px-3 py-1 fw-medium"
+                            class="bg-white border rounded px-2 py-1 fw-medium"
                             >{{ salaries.total }}</span
                         >
                     </div>
                     <div class="table-responsive shadow-sm bg-light">
-                        <table
-                            class="table table-bordered table-hover table-sm"
-                        >
+                        <table class="table table-bordered table-sm">
                             <thead class="table-light">
                                 <tr>
                                     <th width="2%">S/N</th>
@@ -271,11 +273,21 @@ onMounted(() => getData());
                                     <th width="15%">DEPARTMENT</th>
                                     <th width="18%">DESIGNATION NAME</th>
                                     <th width="12%">EMPLOYEE NAME</th>
-                                    <th width="7%">GROSS SALARY</th>
-                                    <th width="7%">EARNING</th>
-                                    <th width="10%">DEDUCTION</th>
-                                    <th width="7%">TOTAL PAY</th>
-                                    <th width="10%">BANK ACCOUNT</th>
+                                    <th class="text-center" width="7%">
+                                        GROSS SALARY
+                                    </th>
+                                    <th class="text-center" width="7%">
+                                        EARNING
+                                    </th>
+                                    <th class="text-center" width="10%">
+                                        DEDUCTION
+                                    </th>
+                                    <th class="text-center" width="7%">
+                                        TOTAL PAY
+                                    </th>
+                                    <th class="text-center" width="10%">
+                                        BANK ACCOUNT
+                                    </th>
                                     <th width="8%" class="text-center">
                                         ACTION
                                     </th>
@@ -292,23 +304,27 @@ onMounted(() => getData());
                                     <td>{{ salary.department_name }}</td>
                                     <td>{{ salary.designation_name }}</td>
                                     <td>{{ salary.full_name }}</td>
-                                    <td>{{ salary.gross_salary }}</td>
-                                    <td>
+                                    <td class="text-center">
+                                        {{ salary.gross_salary }}
+                                    </td>
+                                    <td class="text-center">
                                         {{
                                             salary.total_earning == 0
                                                 ? "-"
                                                 : salary.total_earning
                                         }}
                                     </td>
-                                    <td>
+                                    <td class="text-center">
                                         {{
                                             salary.total_deduction == 0
                                                 ? "-"
                                                 : salary.total_deduction
                                         }}
                                     </td>
-                                    <td>{{ salary.net_pay }}</td>
-                                    <td>
+                                    <td class="text-center">
+                                        {{ salary.net_pay }}
+                                    </td>
+                                    <td class="text-center">
                                         {{ salary.bank_account_no ?? "Cash" }}
                                     </td>
 
@@ -371,11 +387,33 @@ onMounted(() => getData());
     </div>
 </template>
 
-<style>
+<style scoped>
 .border-color {
     border-radius: none;
 }
+.form-label {
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    margin-left: 4px;
+}
 .field-height {
     height: 38px;
+}
+.field-hover:hover {
+    border-color: #80bdff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.table tbody tr:hover > td {
+    background-color: #717c73c7 !important;
+}
+
+.table thead th {
+    background-color: #4e4e4e;
+    font-weight: 700;
+    color: #fff;
+}
+.table thead {
+    height: 30px;
 }
 </style>

@@ -90,13 +90,18 @@ const getEmployee = async (deptID) => {
         console.error("Error fetching employees:", err);
     }
 };
-console.log("Employee List:", form.value);
-// When Multiselect changes
+
+const selectedEmployeeImg = ref(null);
+
 const onEmployeeSelect = (emp) => {
-    if (!emp) return;
+    if (!emp) {
+        form.value.eid = "";
+        selectedEmployeeImg.value = null;
+        return;
+    }
     form.value.eid = emp.id;
-    getEmployeeInfo(emp.id);
-    getEmployeeImg(emp.id);
+    selectedEmployeeImg.value = emp.img_url;
+    getEmployeeInfo(emp.id); // designation & other info
 };
 
 const basic = computed(() => form.value.gross_salary * 0.5);
@@ -220,7 +225,7 @@ watch(
 
 const getEmployeeImg = async (id) => {
     try {
-        const response = await api.get(`/emp-img/${id}`);
+        const response = await api.get(`/empimg/${id}`);
         emp_img.value = response.data;
     } catch (error) {
         console.error("Error fetching employee image:", error);
@@ -467,7 +472,7 @@ onMounted(() => {
                                             >
                                             <span>:</span>
                                         </div>
-                                        <div class="col-md-6">
+                                        <div class="col-md-6 position-relative">
                                             <Multiselect
                                                 v-model="selectedEmployee"
                                                 :options="employee"
@@ -484,14 +489,14 @@ onMounted(() => {
                                                 class="multiselect-design"
                                             />
 
-                                            <button
+                                            <!-- <button
                                                 v-if="selectedEmployee"
                                                 type="button"
-                                                class="btn btn-sm btn-link position-absolute top-0 end-0 mt-1 me-1"
+                                                class="btn btn-sm btn-link position-absolute top-0 end-0 mt-1 me-5"
                                                 @click="selectedEmployee = null"
                                             >
                                                 <i class="fa fa-times"></i>
-                                            </button>
+                                            </button> -->
                                         </div>
                                     </div>
 
@@ -515,19 +520,14 @@ onMounted(() => {
                                         </div>
                                     </div>
                                 </div>
-
-                                <!-- Employee Image -->
-                                <div
-                                    class="col-md-4"
-                                    v-for="(item, index) in employee"
-                                    :key="item.id"
-                                >
+                                <div class="col-md-4">
                                     <div
-                                        v-if="index === 0"
+                                        v-if="selectedEmployeeImg"
                                         class="about-avatar"
                                     >
                                         <img
-                                            :src="item.img_url"
+                                            :src="selectedEmployeeImg"
+                                            alt="Employee Image"
                                             class="img-fluid"
                                             style="
                                                 max-height: 150px;

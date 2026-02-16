@@ -241,11 +241,11 @@ onMounted(() => getData());
                         v-model="searchQuery"
                     />
                 </div>
-
-                <div class="ms-5" v-if="!isDisbursed">
+                <div class="ms-5">
                     <button
                         class="btn btn-warning mt-4 mx-2"
                         @click="generateSalary"
+                        :disabled="isDisbursed"
                     >
                         Generate Sheet
                     </button>
@@ -381,5 +381,39 @@ onMounted(() => getData());
     margin-bottom: 1px;
     display: block;
     font-weight: bold;
+}
+.field-hover:hover {
+    border-color: #80bdff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.table tbody tr:hover > td {
+    background-color: #717c73c7 !important;
+}
+
+.table thead th {
+    background-color: #4e4e4e;
+    font-weight: 700;
+    color: #fff;
+}
+.table thead {
+    height: 30px;
+}
+.field-hover:hover {
+    border-color: #80bdff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.table tbody tr:hover > td {
+    background-color: #717c73c7 !important;
+}
+
+.table thead th {
+    background-color: #4e4e4e;
+    font-weight: 700;
+    color: #fff;
+}
+.table thead {
+    height: 30px;
 }
 </style>

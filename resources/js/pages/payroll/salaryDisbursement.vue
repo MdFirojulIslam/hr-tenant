@@ -296,13 +296,19 @@ onMounted(() => getData());
                     <option value="word">Word</option>
                 </select>
             </div>
-            <div class="ms-5" v-if="monthStatus === 'PENDING'">
-                <button class="set-button" @click="setcomplete()">
+            <div class="ms-5">
+                <button
+                    class="set-button"
+                    @click="setcomplete()"
+                    :disabled="monthStatus === 'COMPLETED'"
+                >
                     RELEASE PAYMENT
                 </button>
             </div>
             <div class="ms-2" v-if="monthStatus === 'COMPLETED'">
-                <button class="completed-button">DISBURSE COMPLETED</button>
+                <button class="completed-button" disabled="">
+                    DISBURSE COMPLETED
+                </button>
             </div>
         </div>
 
