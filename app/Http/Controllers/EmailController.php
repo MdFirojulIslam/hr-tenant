@@ -25,8 +25,6 @@ class EmailController extends Controller
 {
     // added by firoj
 
-
-
     public function hrApprovalEmail($id)
     {
         $leave = leave::select('employees.Full_Name', 'users.email', 'leaves.from_date', 'leaves.to_date', 'leaves.status', 'leave_types.leave_name')
@@ -98,10 +96,6 @@ class EmailController extends Controller
         // Mail::to($toEmail)->send(new LeaveStatusEmail($from_date, $to_date, $status, $leave_type, $name));
         return response()->json(['message' => 'Email sent successfully']);
     }
-
-
-
-
 
 
     public function sendUserEmail(Request $request)

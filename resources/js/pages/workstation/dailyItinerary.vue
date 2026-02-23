@@ -102,7 +102,7 @@ onMounted(() => {
         </div>
 
         <!-- ================= DESKTOP VIEW ================= -->
-        <div class="mb-4 shadow-sm d-none d-md-block">
+        <div class="mb-4 shadow-sm d-none d-md-block table-wrapper">
             <table class="table table-hover table-sm table-bordered">
                 <thead class="table-light">
                     <tr class="text-center text-nowrap">

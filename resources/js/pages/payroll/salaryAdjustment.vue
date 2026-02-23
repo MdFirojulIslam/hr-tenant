@@ -408,7 +408,7 @@ onMounted(() => getData());
                                     </td>
                                     <td>{{ item.emp_name }}</td>
                                     <td>
-                                        {{ getDeptShortName(item.emp_dept) }}
+                                        {{ item.emp_dept }}
                                     </td>
                                     <td>
                                         {{

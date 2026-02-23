@@ -321,6 +321,46 @@ const recheckItems = async () => {
     }
 };
 
+const uploadExcel = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try {
+        const res = await api.post("/itinerary/upload-excel", formData, {
+            headers: { "Content-Type": "multipart/form-data" },
+        });
+
+        // backend returns JSON array of rows
+        forms.value = res.data.map((row) => ({
+            date: row.date,
+            day: row.date
+                ? new Date(row.date).toLocaleDateString("en-US", {
+                      weekday: "long",
+                  })
+                : "",
+            town: row.town_id,
+            location: row.location,
+            visitWith: row.visit_with,
+            objective: row.visit_objective,
+            meetingWith: row.meeting_with,
+            startTime: row.start_time,
+            endTime: row.end_time,
+            remarks: row.remarks || "",
+            marked: false,
+        }));
+
+        nextTick(() => resizeAllTextareas());
+    } catch (err) {
+        Swal.fire({
+            icon: "error",
+            text: err.response?.data?.message || err.message,
+        });
+    }
+};
+
 // ----------------------
 // ON MOUNT
 // ----------------------
@@ -335,7 +375,7 @@ onMounted(() => {
         <h3 class="mb-3">{{ heading }}</h3>
         <div v-if="!itineraryId" class="row g-3 mb-3">
             <div class="col-lg-1 position-relative">
-                <label> Select Year </label>
+                <label class="form-label"> Select Year </label>
                 <select
                     class="form-control border-color"
                     v-model="selectedYear"
@@ -347,7 +387,7 @@ onMounted(() => {
                 </select>
             </div>
             <div class="col-lg-1">
-                <label>Select Month</label>
+                <label class="form-label">Select Month</label>
                 <select
                     class="form-control border-color"
                     v-model="selectedMonth"
@@ -362,9 +402,20 @@ onMounted(() => {
                     </option>
                 </select>
             </div>
+            <div class="col-lg-3">
+                <label for="excelUpload" class="form-label"
+                    >Upload Excel File (If Have)</label
+                >
+                <input
+                    type="file"
+                    class="form-control border-color"
+                    @change="uploadExcel($event)"
+                    accept=".xls,.xlsx"
+                />
+            </div>
         </div>
 
-        <div class="card mb-3 shadow-sm">
+        <div class="card mb-3 shadow-sm mt-5 table-wrapper">
             <table class="table table-hover table-sm table-bordered">
                 <thead class="table-light">
                     <tr class="text-center text-nowrap">
@@ -587,5 +638,25 @@ onMounted(() => {
     min-width: 80px;
     width: 100%;
     box-sizing: border-box;
+}
+
+.table tbody tr:hover > td {
+    background-color: #717c73c7 !important;
+}
+
+.table thead th {
+    background-color: #4e4e4e;
+    font-weight: 700;
+    color: #fff;
+}
+.table thead {
+    height: 30px;
+}
+.table-wrapper {
+    overflow-x: auto;
+}
+
+.table-wrapper table {
+    min-width: 1400px; /* adjust based on your columns */
 }
 </style>

@@ -33,6 +33,8 @@ const selectedStore = ref(null);
 const salaryId = ref(null);
 const heading = ref("");
 
+const currentPage = ref(1);
+
 const onEmployeeSelect = (value) => {
     console.log("Selected employee:", value);
     selectedEmployee.value = value;
@@ -45,6 +47,7 @@ const onEmployeeSelect = (value) => {
 
 /* ---------------- FETCH DATA ---------------- */
 const getData = async (page = 1) => {
+    currentPage.value = page;
     try {
         const [deptRes, salaryRes] = await Promise.all([
             api.get(`/department-list/${user.id}`),
@@ -103,7 +106,7 @@ const salaryOpen = (title) => {
 
 const salaryClose = () => {
     salaryModel.value = false;
-    getData();
+    getData(currentPage.value);
 };
 
 /* ---------------- ACTIONS ---------------- */
@@ -399,6 +402,7 @@ onMounted(() => getData());
 .field-height {
     height: 38px;
 }
+
 .field-hover:hover {
     border-color: #80bdff;
     box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);

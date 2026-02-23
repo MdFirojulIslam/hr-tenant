@@ -370,18 +370,21 @@ onMounted(() => getData());
     border: 1.8px solid #059223d5;
     border-radius: none;
 }
+
 .total-class {
     background-color: #10d431b2;
     margin-left: 10px;
     font-size: 15px;
     border-radius: none;
 }
+
 .net-total-lable {
     font-size: 12px;
     margin-bottom: 1px;
     display: block;
     font-weight: bold;
 }
+
 .field-hover:hover {
     border-color: #80bdff;
     box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
@@ -396,9 +399,11 @@ onMounted(() => getData());
     font-weight: 700;
     color: #fff;
 }
+
 .table thead {
     height: 30px;
 }
+
 .field-hover:hover {
     border-color: #80bdff;
     box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
@@ -413,6 +418,7 @@ onMounted(() => getData());
     font-weight: 700;
     color: #fff;
 }
+
 .table thead {
     height: 30px;
 }

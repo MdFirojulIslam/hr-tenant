@@ -97,7 +97,7 @@ class SalarySheetExport implements
             $row->employee_code,
             $row->Full_Name,
             $row->designation_name,
-            $row->DOJ ? Carbon::parse($row->DOJ)->format('d M Y') : null,
+            $row->DOJ,
             $row->absent_days,
             $row->gross_salary,
             $row->basic_salary,

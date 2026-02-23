@@ -126,7 +126,7 @@ onMounted(() => {
         </div>
 
         <!-- Table -->
-        <div class="table-responsive shadow-sm">
+        <div class="table-responsive shadow-sm table-wrapper">
             <table class="table table-bordered table-hover table-sm">
                 <thead class="table-light">
                     <tr>
@@ -177,7 +177,7 @@ onMounted(() => {
     </div>
 </template>
 
-<style>
+<style scopped>
 .design-input {
     width: 300px;
 }
@@ -192,5 +192,25 @@ onMounted(() => {
     border-color: #3e925e;
     box-shadow: 0 0 0 0.2rem rgba(6, 158, 87, 0.678);
     outline: none;
+}
+
+.table tbody tr:hover > td {
+    background-color: #717c73c7 !important;
+}
+
+.table thead th {
+    background-color: #4e4e4e;
+    font-weight: 700;
+    color: #fff;
+}
+.table thead {
+    height: 30px;
+}
+.table-wrapper {
+    overflow-x: auto;
+}
+
+.table-wrapper table {
+    min-width: 1400px; /* adjust based on your columns */
 }
 </style>

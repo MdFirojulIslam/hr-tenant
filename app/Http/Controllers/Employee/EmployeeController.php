@@ -31,15 +31,15 @@ class EmployeeController extends Controller
             'employees.Contact_No',
             'employees.Official_Email',
             'departments.Name as department_name',
-            'emp_imgs.img_url'
+            DB::raw("CONCAT('" . url('/') . "', emp_imgs.img_url) as img_url")
         )
-            ->leftjoin('officials', 'officials.EID', '=', 'employees.id')
-            ->leftjoin('departments', 'officials.Department_Id', '=', 'departments.id')
-            ->leftjoin('emp_imgs', 'emp_imgs.EID', '=', 'employees.id')
+            ->leftJoin('officials', 'officials.EID', '=', 'employees.id')
+            ->leftJoin('departments', 'officials.Department_Id', '=', 'departments.id')
+            ->leftJoin('emp_imgs', 'emp_imgs.EID', '=', 'employees.id')
             ->distinct('employees.id')
-            // ->where('employees.status', '=', 1)
-            ->orderby('employees.Employee_Id', 'asc')
+            ->orderBy('employees.Employee_Id', 'asc')
             ->paginate(20);
+
         return response()->json($employee);
     }
 
@@ -55,7 +55,7 @@ class EmployeeController extends Controller
             'employees.Contact_No',
             'employees.Official_Email',
             'departments.Name as department_name',
-            'emp_imgs.img_url'
+            DB::raw("CONCAT('" . url('/') . "', emp_imgs.img_url) as img_url")
         )
             ->join('users', 'users.EID', '=', 'employees.id')
             ->leftjoin('officials', 'officials.EID', '=', 'employees.id')
@@ -86,7 +86,7 @@ class EmployeeController extends Controller
             'employees.Contact_No',
             'employees.Official_Email',
             'departments.Name as department_name',
-            'emp_imgs.img_url'
+            DB::raw("CONCAT('" . url('/') . "', emp_imgs.img_url) as img_url")
         )
             ->leftjoin('officials', 'officials.EID', '=', 'employees.id')
             ->leftjoin('departments', 'officials.Department_Id', '=', 'departments.id')
@@ -111,7 +111,7 @@ class EmployeeController extends Controller
             'employees.Contact_No',
             'employees.Official_Email',
             'departments.Name as department_name',
-            'emp_imgs.img_url'
+            DB::raw("CONCAT('" . url('/') . "', emp_imgs.img_url) as img_url")
         )
             ->leftjoin('officials', 'officials.EID', '=', 'employees.id')
             ->leftjoin('departments', 'officials.Department_Id', '=', 'departments.id')
@@ -137,7 +137,7 @@ class EmployeeController extends Controller
             'employees.Contact_No',
             'employees.Official_Email',
             'departments.Name as department_name',
-            'emp_imgs.img_url'
+            DB::raw("CONCAT('" . url('/') . "', emp_imgs.img_url) as img_url")
         )
             ->leftjoin('officials', 'officials.EID', '=', 'employees.id')
             ->leftjoin('departments', 'officials.Department_Id', '=', 'departments.id')
@@ -176,7 +176,7 @@ class EmployeeController extends Controller
             'employees.Contact_No',
             'employees.Official_Email',
             'departments.Name as department_name',
-            'emp_imgs.img_url'
+            DB::raw("CONCAT('" . url('/') . "', emp_imgs.img_url) as img_url")
         )
             ->leftjoin('officials', 'officials.EID', '=', 'employees.id')
             ->leftjoin('departments', 'officials.Department_Id', '=', 'departments.id')
@@ -193,6 +193,7 @@ class EmployeeController extends Controller
 
         return response()->json($employee);
     }
+
     public function activeSearch(Request $request)
     {
         $query = $request->input('query');
@@ -205,7 +206,7 @@ class EmployeeController extends Controller
             'employees.Contact_No',
             'employees.Official_Email',
             'departments.Name as department_name',
-            'emp_imgs.img_url'
+            DB::raw("CONCAT('" . url('/') . "', emp_imgs.img_url) as img_url")
         )
             ->join('users', 'users.EID', '=', 'employees.id')
             ->leftjoin('officials', 'officials.EID', '=', 'employees.id')
@@ -243,12 +244,28 @@ class EmployeeController extends Controller
     public function search(Request $request)
     {
         $query = $request->input('query');
-        $results = employee::with('empImg')->where('Full_Name', 'LIKE', "%{$query}%")
-            ->orWhere('Employee_Id', 'LIKE', "%{$query}%")
-            ->paginate(12);
-
-
-        return response()->json($results);
+        $employee = employee::select(
+            'employees.id',
+            'employees.Employee_Id',
+            'employees.Full_Name',
+            'employees.Card_No',
+            'employees.DOB',
+            'employees.Contact_No',
+            'employees.Official_Email',
+            'departments.Name as department_name',
+            DB::raw("CONCAT('" . url('/') . "', emp_imgs.img_url) as img_url")
+        )
+            ->leftJoin('officials', 'officials.EID', '=', 'employees.id')
+            ->leftJoin('departments', 'officials.Department_Id', '=', 'departments.id')
+            ->leftJoin('emp_imgs', 'emp_imgs.EID', '=', 'employees.id')
+            ->where(function ($q) use ($query) {
+                $q->where('employees.Full_Name', 'LIKE', "%{$query}%")
+                    ->orWhere('employees.Employee_Id', 'LIKE', "%{$query}%");
+            })
+            ->distinct('employees.id')
+            ->orderby('employees.Full_Name', 'asc')
+            ->paginate(20);
+        return response()->json($employee);
     }
 
 
@@ -433,7 +450,7 @@ class EmployeeController extends Controller
             ->join('departments', 'officials.Department_Id', '=', 'departments.id')
             ->join('designations', 'officials.Designation_Id', '=', 'designations.id')
             ->where('departments.id', '=', $id)
-            ->where('officials.Status', '=', 'N')
+            // ->where('officials.Status', '=', 'N')
             ->orderby('employees.Full_Name', 'asc')
             ->get();
 

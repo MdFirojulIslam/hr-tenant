@@ -146,9 +146,16 @@ onMounted(() => {
                         />
                     </div>
 
-                    <div class="ms-auto active-account button-hover">
+                    <div class="ms-auto all-employee">
+                        <button @click="haveAccount()" disabled>
+                            All EMPLOYEE
+                        </button>
+                    </div>
+
+                    <div class="ms-4 active-account button-hover">
                         <button @click="haveAccount()">HAVE ACCOUNT</button>
                     </div>
+
                     <div class="ms-4 without-account button-hover">
                         <button @click="withoutAccount()">
                             WITHOUT ACCOUNT
@@ -190,13 +197,12 @@ onMounted(() => {
                                 <td class="text-center">
                                     {{ employees.from + index }}
                                 </td>
-                                <template v-if="employee.emp_img">
+                                <template v-if="employee.img_url">
                                     <td class="text-center">
                                         <img
-                                            :src="employee.emp_img?.img_url"
-                                            alt="Image"
-                                            height="40px"
-                                            width="40px"
+                                            :src="employee.img_url"
+                                            height="40"
+                                            width="40"
                                             style="border-radius: 50%"
                                         />
                                     </td>
@@ -282,26 +288,43 @@ onMounted(() => {
 
 .active-account button {
     background-color: #4a784688;
-    border: 1.5px solid #70ff6388;
-    height: 30px;
+    border: 1.5px solid #00000088;
     border-radius: 5px;
-    gap: 10px;
+    height: 30px;
+    /* color: #ffffff; */
+    letter-spacing: 1.5px;
+    font-weight: 800;
 }
 
 .without-account button {
     background-color: #f1f110;
-    border: 1.5px solid #70ff6388;
-    height: 30px;
+    border: 1.5px solid #00000088;
     border-radius: 5px;
-    gap: 10px;
+    height: 30px;
+    /* color: #ffffff; */
+    letter-spacing: 1.5px;
+    font-weight: 800;
 }
 
 .inactive-account button {
     background-color: #ee0101e6;
-    border: 1.5px solid #70ff6388;
-    height: 30px;
+    border: 1.5px solid #00000088;
     border-radius: 5px;
-    gap: 10px;
+    height: 30px;
+    /* color: #ffffff; */
+    letter-spacing: 1.5px;
+    font-weight: 800;
+}
+
+.all-employee button {
+    background-color: rgba(0, 128, 0, 0.5);
+    border: 1.5px solid #00000088;
+    border-radius: 5px;
+    height: 30px;
+    /* color: #ffffff; */
+    cursor: not-allowed;
+    letter-spacing: 1.5px;
+    font-weight: 800;
 }
 
 .button-hover:hover {

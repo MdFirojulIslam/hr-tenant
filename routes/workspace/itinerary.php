@@ -29,3 +29,6 @@ Route::post('/itinerary/accept/{id}', [ItineraryController::class, 'accept']);
 Route::post('/itinerary/reject/{id}', [ItineraryController::class, 'reject']);
 
 Route::get('itinerary/monthly-report/{id}', [ItineraryController::class, 'monthlyReport']);
+
+// routes/api.php
+Route::post('/itinerary/upload-excel', [ItineraryController::class, 'uploadExcel']);

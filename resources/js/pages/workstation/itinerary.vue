@@ -425,7 +425,7 @@ onMounted(() => {
     </div>
 </template>
 
-<style>
+<style scoped>
 .border-color {
     border: 1px solid #059223d5;
 }
@@ -461,5 +461,24 @@ onMounted(() => {
 .report-btn {
     background-color: #0f9c5a !important;
     color: white !important;
+}
+.table tbody tr:hover > td {
+    background-color: #717c73c7 !important;
+}
+
+.table thead th {
+    background-color: #4e4e4e;
+    font-weight: 700;
+    color: #fff;
+}
+.table thead {
+    height: 30px;
+}
+.table-wrapper {
+    overflow-x: auto;
+}
+
+.table-wrapper table {
+    min-width: 1400px; /* adjust based on your columns */
 }
 </style>

@@ -12,6 +12,9 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
+use PhpOffice\PhpSpreadsheet\IOFactory;
+use Exception;
+use PhpOffice\PhpSpreadsheet\Shared\Date as ExcelDate;
 
 class ItineraryController extends Controller
 {
@@ -547,11 +550,6 @@ class ItineraryController extends Controller
         }
     }
 
-
-
-
-
-
     public function getDailyAllItems(Request $request)
     {
         $date = $request->query('date', Carbon::today()->toDateString());
@@ -608,5 +606,89 @@ class ItineraryController extends Controller
             })
             ->get();
         return response()->json($items);
+    }
+
+    public function uploadExcel(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|file|mimes:xls,xlsx|max:5120',
+        ]);
+
+        try {
+
+            $path = $request->file('file')->getRealPath();
+            $spreadsheet = IOFactory::load($path);
+            $sheet = $spreadsheet->getActiveSheet();
+            $rows = $sheet->toArray(null, true, true, true);
+
+            if (count($rows) < 2) {
+                return response()->json([
+                    'message' => 'Excel file is empty.'
+                ], 422);
+            }
+            $headers = array_shift($rows);
+
+            $data = [];
+
+            foreach ($rows as $index => $row) {
+
+                if (empty(array_filter($row))) {
+                    continue;
+                }
+
+                $rawDate = $row['A'] ?? null;
+                $visitDate = null;
+
+                if ($rawDate) {
+
+                    if (is_numeric($rawDate)) {
+                        $visitDate = ExcelDate::excelToDateTimeObject($rawDate)
+                            ->format('Y-m-d');
+                    } else {
+                        $visitDate = Carbon::parse($rawDate)
+                            ->format('Y-m-d');
+                    }
+                }
+
+                $startTime = $this->formatTime($row['G'] ?? null);
+                $endTime   = $this->formatTime($row['H'] ?? null);
+
+                $data[] = [
+                    'date'            => $visitDate,
+                    'town_id'         => $row['B'] ?? null,
+                    'location'        => $row['C'] ?? '',
+                    'visit_with'      => $row['D'] ?? '',
+                    'visit_objective' => $row['E'] ?? '',
+                    'meeting_with'    => $row['F'] ?? '',
+                    'start_time'      => $startTime,
+                    'end_time'        => $endTime,
+                    'remarks'         => $row['I'] ?? '',
+                ];
+            }
+
+            return response()->json($data);
+        } catch (Exception $e) {
+
+            return response()->json([
+                'message' => 'Failed to process Excel file.',
+                'error'   => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    private function formatTime($time)
+    {
+        if (!$time) return null;
+
+        try {
+            if (is_numeric($time)) {
+                return ExcelDate::excelToDateTimeObject($time)
+                    ->format('H:i');
+            }
+
+            return Carbon::parse($time)->format('H:i');
+        } catch (Exception $e) {
+            return null;
+        }
     }
 }

@@ -257,6 +257,8 @@ class EmployeeSalaryController extends Controller
         $user_id = Auth::user()->EID;
 
         $monthString = $request->year . '-' . str_pad($request->month, 2, '0', STR_PAD_LEFT) . '-01';
+        salary_sheet::where('salary_date', $monthString)->delete();
+
         $month_start = Carbon::parse($monthString)->startOfMonth()->toDateString();
         $month_end   = Carbon::parse($monthString)->endOfMonth()->toDateString();
 
@@ -702,8 +704,6 @@ class EmployeeSalaryController extends Controller
             "Salary_Disbursement_Cash_{$monthName}_{$year}.xlsx"
         );
     }
-
-
 
     public function SalaryDisbursementBankWORD(Request $request)
     {
