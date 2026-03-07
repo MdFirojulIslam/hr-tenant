@@ -570,7 +570,7 @@ class EmplooyeeExpenseController extends Controller
             );
 
         // Special case for specific user IDs
-        if ($user->role_id == 1 || $user->role_id == 2) {
+        if ($user->role_id == 1 || $user->role_id == 2 || $user->role_id == 4) {
             $expenses = $query->get();
         } else {
             $expenses = $query->whereIn('emplooyee_expenses.EID', $allSubordinateIds)->get();

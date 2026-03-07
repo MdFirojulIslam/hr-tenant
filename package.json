@@ -22,6 +22,7 @@
         "datatables.net-bs5": "^2.0.8",
         "datatables.net-responsive-bs5": "^3.0.2",
         "datatables.net-vue3": "^3.0.1",
+        "file-saver": "^2.0.5",
         "handsontable": "^14.4.0",
         "laravel-vue-pagination": "^4.1.3",
         "nprogress": "^0.2.0",
@@ -33,6 +34,7 @@
         "vue2-google-maps": "^0.10.7",
         "vue3-apexcharts": "^1.8.0",
         "vuex": "^4.0.2",
-        "webpack": "^5.94.0"
+        "webpack": "^5.94.0",
+        "xlsx": "^0.18.5"
     }
 }

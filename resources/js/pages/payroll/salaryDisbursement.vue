@@ -377,7 +377,7 @@ onMounted(() => getData());
     padding: 5px 10px;
     border-radius: 4px;
     border: 1px solid #1d2c20d5;
-    width: 70px;
+    width: 80px;
     text-align: center;
 }
 

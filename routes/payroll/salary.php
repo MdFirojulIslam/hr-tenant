@@ -3,6 +3,7 @@
 use App\Http\Controllers\payroll\EmployeeSalaryController;
 use App\Http\Controllers\payroll\LoanController;
 use App\Http\Controllers\payroll\SalaryAdjustmentController;
+use App\Http\Controllers\payroll\BonusSheetController;
 use Illuminate\Support\Facades\Route;
 
 
@@ -61,7 +62,31 @@ Route::get('/salary-disbursement-cash-word', [EmployeeSalaryController::class, '
 
 
 
-Route::get('/payslip/{id}', [EmployeeSalaryController::class, 'salaryPayslip']);
+Route::get('/payslip/{id?}', [EmployeeSalaryController::class, 'salaryPayslip']);
+
 Route::post('/salary-disbursement-complete', [EmployeeSalaryController::class, 'completeSalaryDisbursement']);
 
 Route::post('/disburse-salary', [EmployeeSalaryController::class, 'salaryDisburse']);
+
+
+Route::get('/bonus-sheet', [BonusSheetController::class, 'bonusSheet']);
+Route::get('/generate-bonus', [BonusSheetController::class, 'generateBonus']);
+Route::post('/update-bonus-percentage', [BonusSheetController::class, 'updatePercentage']);
+
+
+Route::get('/export-bonus-sheet', [BonusSheetController::class, 'exportBonusSheet']);
+
+Route::post('/bonus-disbursement-complete', [BonusSheetController::class, 'completeBonusDisbursement']);
+
+Route::get('/bonus-disbursement', [BonusSheetController::class, 'bonusDisbursement']);
+
+Route::get('/bonus-disbursement-bank-pdf', [BonusSheetController::class, 'BonusDisbursementBankPDF']);
+Route::get('/bonus-disbursement-cash-pdf', [BonusSheetController::class, 'BonusDisbursementCashPDF']);
+Route::get('/bonus-disbursement-bank-xlsx', [BonusSheetController::class, 'BonusDisbursementBankXLSX']);
+Route::get('/bonus-disbursement-cash-xlsx', [BonusSheetController::class, 'BonusDisbursementCashXLSX']);
+Route::get('/bonus-disbursement-bank-word', [BonusSheetController::class, 'BonusDisbursementBankWORD']);
+Route::get('/bonus-disbursement-cash-word', [BonusSheetController::class, 'BonusDisbursementCashWORD']);
+
+Route::post('/disburse-bonus', [BonusSheetController::class, 'bonusDisburse']);
+
+Route::get('/payslip-print-view/{id}', [EmployeeSalaryController::class, 'printPayslip']);

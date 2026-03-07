@@ -209,7 +209,7 @@ onMounted(() => getData());
         <div
             class="d-flex justify-content-between align-items-center py-2 px-3"
         >
-            <h2 class="m-0">Salary Adjustment List</h2>
+            <h2 class="m-0 header-design">Salary Adjustment List</h2>
             <div>
                 <button
                     @click="salaryAdjustmentNew('Save')"
@@ -253,12 +253,15 @@ onMounted(() => getData());
                     <!-- Department -->
                     <div class="col-lg-3 position-relative">
                         <select
-                            class="form-control border-color field-height"
+                            class="form-control field-height field-background-colour"
                             v-model="searchDept"
+                            :class="{ 'placeholder-text': !searchDept }"
                             @change="getEmployee(searchDept)"
-                            style="font-weight: normal; background: transparent"
                         >
                             <option value="" disabled>Select Department</option>
+                            <!-- <option class="default-selection" value="" disabled>
+                                Select Department
+                            </option> -->
                             <option
                                 v-for="dept in department"
                                 :key="dept.department_id"
@@ -270,7 +273,7 @@ onMounted(() => getData());
                         <button
                             v-if="searchDept"
                             type="button"
-                            class="btn btn-sm btn-link position-absolute top-0 end-0 mt-1 me-1"
+                            class="btn btn-sm btn-link position-absolute top-0 end-0 mt-2 me-3"
                             @click="
                                 searchDept = '';
                                 employeeIDs = [];
@@ -312,22 +315,22 @@ onMounted(() => getData());
                         />
 
                         <!-- REMOVE this -->
-                        <button
+                        <!-- <button
                             v-if="selectedEmployee"
                             type="button"
-                            class="btn btn-sm btn-link position-absolute top-0 end-0 mt-1 me-1"
+                            class="btn btn-sm btn-link position-absolute top-0 end-0 mt-2 me-3"
                             @click="selectedEmployee = ''"
                         >
                             <i class="fa fa-times"></i>
-                        </button>
+                        </button> -->
                     </div>
 
                     <!-- Year -->
-                    <div class="col-lg-2 position-relative ms-4">
+                    <div class="col-lg-2 position-relative">
                         <select
-                            class="form-control border-color field-height"
+                            class="form-control field-height field-background-colour"
+                            :class="{ 'placeholder-text': !searchYear }"
                             v-model="searchYear"
-                            style="font-weight: normal; background: transparent"
                         >
                             <option value="" disabled>Select Year</option>
                             <option
@@ -341,7 +344,7 @@ onMounted(() => getData());
                         <button
                             v-if="searchYear"
                             type="button"
-                            class="btn btn-sm btn-link position-absolute top-0 end-0 mt-1 me-1"
+                            class="btn btn-sm btn-link position-absolute top-0 end-0 mt-2 me-3"
                             @click="searchYear = ''"
                         >
                             <i class="fa fa-times"></i>
@@ -351,11 +354,12 @@ onMounted(() => getData());
                     <!-- Month -->
                     <div class="col-lg-2 position-relative">
                         <select
-                            class="form-control border-color field-height"
+                            class="form-control field-height field-background-colour"
                             v-model="searchMonth"
-                            style="font-weight: normal; background: transparent"
                         >
-                            <option value="" disabled>Select Month</option>
+                            <option class="default-selection" disabled>
+                                Select Month
+                            </option>
                             <option
                                 v-for="(month, index) in months"
                                 :key="month"
@@ -367,7 +371,7 @@ onMounted(() => getData());
                         <button
                             v-if="searchMonth"
                             type="button"
-                            class="btn btn-sm btn-link position-absolute top-0 end-0 mt-1 me-1"
+                            class="btn btn-sm btn-link position-absolute top-0 end-0 mt-2 me-3"
                             @click="searchMonth = ''"
                         >
                             <i class="fa fa-times"></i>
@@ -375,21 +379,33 @@ onMounted(() => getData());
                     </div>
                 </div>
                 <!-- Salary Table -->
-                <div class="mt-5">
-                    <div class="table-responsive shadow-sm bg-light">
+                <div class="mt-4">
+                    <div class="table-responsive shadow-sm">
                         <table
                             class="table table-bordered table-hover table-sm"
                         >
                             <thead class="table-light">
                                 <tr class="text-nowrap fw-bold">
-                                    <th style="width: 3%">S/N</th>
-                                    <th style="width: 8%">EMPLOYEE ID</th>
+                                    <th class="text-center" style="width: 3%">
+                                        S/N
+                                    </th>
+                                    <th class="text-center" style="width: 8%">
+                                        EMPLOYEE ID
+                                    </th>
                                     <th style="width: 16%">EMPLOYEE NAME</th>
                                     <th style="width: 13%">DEPARTMENT</th>
-                                    <th style="width: 10%">ADJUSTMENT TYPE</th>
-                                    <th style="width: 14%">ADJUSTMENT NAME</th>
-                                    <th style="width: 10%">DATE</th>
-                                    <th style="width: 10%">AMOUNT</th>
+                                    <th class="text-center" style="width: 10%">
+                                        ADJUSTMENT TYPE
+                                    </th>
+                                    <th class="text-center" style="width: 14%">
+                                        ADJUSTMENT NAME
+                                    </th>
+                                    <th class="text-center" style="width: 10%">
+                                        DATE
+                                    </th>
+                                    <th class="text-center" style="width: 10%">
+                                        AMOUNT
+                                    </th>
                                     <th style="width: 10%">REMARKS</th>
                                     <th class="text-center" style="width: 6%">
                                         ACTION
@@ -403,23 +419,29 @@ onMounted(() => getData());
                                     :key="index"
                                 >
                                     <td>{{ index + 1 }}</td>
-                                    <td>
+                                    <td class="text-center">
                                         ANBN-{{ item.employee_official_id }}
                                     </td>
                                     <td>{{ item.emp_name }}</td>
                                     <td>
                                         {{ item.emp_dept }}
                                     </td>
-                                    <td>
+                                    <td class="text-center">
                                         {{
                                             item.type == "earning"
                                                 ? "Earning"
                                                 : "Deduction"
                                         }}
                                     </td>
-                                    <td>{{ item.adjustment_name }}</td>
-                                    <td>{{ formatMonthYear(item.date) }}</td>
-                                    <td>{{ item.amount }}</td>
+                                    <td class="text-center">
+                                        {{ item.adjustment_name }}
+                                    </td>
+                                    <td class="text-center">
+                                        {{ formatMonthYear(item.date) }}
+                                    </td>
+                                    <td class="text-center">
+                                        {{ item.amount }}
+                                    </td>
                                     <td>{{ item.remarks }}</td>
                                     <td class="text-center">
                                         <button
@@ -467,12 +489,87 @@ onMounted(() => getData());
 </template>
 
 <style>
-.field-height {
-    height: 38px;
+.table-responsive .table,
+.table-responsive .table tbody,
+.table-responsive .table tr,
+.table-responsive .table td {
+    /* background-color: rgba(234, 236, 234, 0.2) !important; */
+    background: #ffffffd5 !important;
+    color: #000000;
+    border: 0.8px solid #7e7c7c63;
+    letter-spacing: 0.3px;
 }
 
-/* .border-color {
-    border: 1px solid #059223d5;
-    border-radius: none;
-} */
+.field-hover:hover {
+    border-color: #80bdff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.table tbody tr:hover > td {
+    background-color: #717c73c7 !important;
+}
+
+.table thead th {
+    background-color: #4e4e4e;
+    font-weight: 700;
+    color: #fff;
+}
+
+.table thead {
+    height: 30px;
+}
+
+.field-height {
+    height: 35px;
+}
+.placeholder-text {
+    color: #999; /* faded text for placeholder */
+    font-size: 14px;
+}
+.multiselect-design .multiselect__placeholder {
+    color: #999;
+    font-size: 14px;
+    margin-bottom: 0px;
+    align-items: center;
+}
+
+.multiselect-design .multiselect__tags {
+    min-height: 35px !important; /* override default min-height */
+    height: 35px; /* exact height */
+    padding: 0 8px; /* adjust left/right padding */
+    border-radius: 5px;
+    border: 0.8px solid #b3a9a963;
+    background: #c4c2c250;
+    display: flex; /* align input vertically */
+    align-items: center;
+    font-size: 14px;
+}
+
+/* Input inside the multiselect */
+.multiselect-design .multiselect__input,
+.multiselect-design .multiselect__single {
+    height: 100%; /* fill the tags container height */
+    line-height: 35px; /* match container for vertical centering */
+    padding: 0; /* remove extra padding */
+    margin: 0;
+    background: transparent; /* match container bg */
+    border: 0; /* remove default border */
+    flex: 1; /* grow to fill remaining space */
+}
+
+.multiselect-design .multiselect__select {
+    height: 35px;
+}
+
+.field-background-colour {
+    background: #c4c2c250;
+    border: 0.8px solid #b3a9a963;
+}
+.header-design {
+    letter-spacing: 1px;
+    padding-top: 5px;
+    /* background-color: #d6d6d6f5;
+
+    border-radius: 5px; */
+}
 </style>

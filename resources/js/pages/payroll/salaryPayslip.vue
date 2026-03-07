@@ -1,26 +1,15 @@
 <script setup>
-import { ref, watch, computed } from "vue";
+import { ref, computed, watch, onMounted } from "vue";
 import { useStore } from "vuex";
 import api from "@/api";
+import Multiselect from "vue-multiselect";
+import "vue-multiselect/dist/vue-multiselect.min.css";
+
 const store = useStore();
+const role_id = store.getters.getRoleId;
 const user = store.getters.getUser;
-// Year & Month
-const years = ref([
-    "2022",
-    "2023",
-    "2024",
-    "2025",
-    "2026",
-    "2027",
-    "2028",
-    "2029",
-    "2030",
-    "2031",
-    "2032",
-    "2033",
-    "2034",
-    "2035",
-]);
+
+const years = ref(["2022", "2023", "2024", "2025", "2026"]);
 const months = ref([
     "January",
     "February",
@@ -35,255 +24,451 @@ const months = ref([
     "November",
     "December",
 ]);
+
 const selectedYear = ref(new Date().getFullYear().toString());
 const selectedMonth = ref(months.value[new Date().getMonth()]);
-// Payslip Data
-const payslip = ref(null);
+
+const searchDept = ref(""); // Department filter
+const searchEmp = ref(""); // Employee filter
+const department = ref([]);
+const employee = ref([]);
+const selectedEmployee = ref(null);
+const payslip = ref([]);
 const loading = ref(false);
 const error = ref(null);
-// Convert month name to number
+const check = ref([]);
+
 const monthNumber = computed(
     () => months.value.indexOf(selectedMonth.value) + 1,
 );
-// Fetch Payslip
-const fetchPayslip = async () => {
-    loading.value = true;
-    error.value = null;
+
+const printFormate = async () => {
+    const idToFetch = searchEmp.value || user.id;
+
     try {
-        const res = await api.get(`/payslip/${user.id}`, {
+        const res = await api.get(`/payslip-print-view/${idToFetch}`, {
             params: {
                 year: selectedYear.value,
-                month: monthNumber.value, // Send numeric month
+                month: monthNumber.value,
+            },
+
+            headers: {
+                Accept: "text/html",
             },
         });
-        if (res.data) {
-            payslip.value = res.data;
-        } else {
-            payslip.value = null;
-            error.value = "No payslip found for this month.";
-        }
+        const printWindow = window.open("", "_blank", "width=1000,height=650");
+
+        printWindow.document.write(res.data);
+
+        printWindow.document.close();
+        printWindow.focus();
+
+        printWindow.print();
+        check.value = res.data;
     } catch (err) {
-        console.error("API Error:", err.response || err);
+        console.error("Failed to fetch payslip:", err);
+        alert("Failed to load payslip for printing");
+    }
+};
+
+// const printFormate = async () => {
+//     const idToFetch = searchEmp.value || user.id;
+
+//     try {
+//         const res = await api.get(`/payslip-print-view/${idToFetch}`, {
+//             params: {
+//                 year: selectedYear.value,
+//                 month: monthNumber.value,
+//             },
+//             headers: {
+//                 Accept: "text/html",
+//             },
+//         });
+
+//         const printWindow = window.open("", "_blank", "width=900,height=650");
+
+//         printWindow.document.write(res.data);
+
+//         printWindow.document.close();
+//         printWindow.focus();
+
+//         printWindow.print();
+//     } catch (err) {
+//         console.error("Failed to fetch payslip:", err);
+//         alert("Failed to load payslip for printing");
+//     }
+// };
+
+// ---------------- Fetch Departments ----------------
+const getDepartments = async () => {
+    try {
+        const res = await api.get(`/department-list/${user.id}`);
+        department.value = res.data;
+    } catch (err) {
+        console.error(err);
+    }
+};
+
+// ---------------- Fetch Employees by Department ----------------
+const getEmployee = async (deptID) => {
+    if (!deptID) {
+        employee.value = [];
+        selectedEmployee.value = null;
+        searchEmp.value = "";
+        return;
+    }
+    try {
+        const res = await api.get(`/emp/${deptID}`);
+        employee.value = res.data;
+        selectedEmployee.value = null;
+        searchEmp.value = "";
+    } catch (err) {
+        console.error(err);
+    }
+};
+
+// ---------------- Employee Select ----------------
+const onEmployeeSelect = (value) => {
+    selectedEmployee.value = value;
+    searchEmp.value = value ? value.id : "";
+    getData(); // fetch payslip for selected employee
+};
+
+// ---------------- Fetch Payslip ----------------
+const getData = async (employeeId = null) => {
+    loading.value = true;
+    error.value = null;
+
+    const idToFetch = employeeId || searchEmp.value || user.id;
+
+    try {
+        const res = await api.get(`/payslip/${idToFetch}`, {
+            params: {
+                year: selectedYear.value,
+                month: monthNumber.value,
+            },
+        });
+        // <-- assign array directly, don't wrap in []
+        payslip.value = res.data || [];
+    } catch (err) {
+        console.error(err);
         error.value = "Failed to load payslip";
-        payslip.value = null;
+        payslip.value = [];
     } finally {
         loading.value = false;
     }
 };
-// Fetch initially
-fetchPayslip();
-// Watch for changes
-watch([selectedYear, selectedMonth], fetchPayslip);
+
+// ---------------- Watch Filters ----------------
+watch([selectedYear, selectedMonth], () => getData());
+
+// ---------------- Initial Load ----------------
+onMounted(async () => {
+    await getDepartments();
+    getData(user.id); // load logged-in user's payslip on page load
+});
 </script>
+
 <template>
-    <div class="container card payslip mt-2 p-3" v-if="payslip">
-        <!-- Header -->
-        <div class="payslip-header text-center">
-            <h3>Salary Payslip</h3>
-            <!-- Year & Month Inputs -->
-            <div
-                class="d-flex justify-content-center align-items-center gap-2 mt-2"
-            >
-                <p class="text-muted mb-0">Salary Month :</p>
+    <div class="container mt-2 p-3">
+        <div class="row mb-3">
+            <!-- Department Filter -->
+            <div class="col-lg-3 position-relative" v-if="role_id == 1">
+                <label class="form-label">Select Department</label>
                 <select
-                    v-model="selectedYear"
-                    class="form-select w-auto no-arrow"
+                    v-model="searchDept"
+                    @change="getEmployee(searchDept)"
+                    class="form-control field-height field-hover"
                 >
-                    <option v-for="year in years" :key="year" :value="year">
-                        {{ year }}
+                    <option value="">All Department</option>
+                    <option
+                        v-for="dept in department"
+                        :key="dept.department_id"
+                        :value="dept.department_id"
+                    >
+                        {{ dept.department_name }}
                     </option>
                 </select>
-                <select
-                    v-model="selectedMonth"
-                    class="form-select w-auto no-arrow"
+                <button
+                    v-if="searchDept"
+                    type="button"
+                    class="btn btn-sm btn-link position-absolute top-0 end-0 mt-5 me-3"
+                    @click="
+                        searchDept = '';
+                        employee = [];
+                        selectedEmployee = null;
+                    "
                 >
-                    <option v-for="month in months" :key="month" :value="month">
-                        {{ month }}
-                    </option>
-                </select>
+                    <i class="fa fa-times"></i>
+                </button>
             </div>
-        </div>
-        <!-- Employee Info -->
-        <div class="row mb-3 info">
-            <div class="col-md-6">
-                <div class="label-row">
-                    <span class="label-basic">Employee ID</span>:
-                    <span class="value ms-1">{{ payslip.Employee_Id }}</span>
-                </div>
-                <div class="label-row">
-                    <span class="label-basic">Full Name</span>:
-                    <span class="value ms-1">{{ payslip.Full_Name }}</span>
-                </div>
-                <div class="label-row">
-                    <span class="label-basic">Department</span>:
-                    <span class="value ms-1">{{ payslip.departmentName }}</span>
-                </div>
-                <div class="label-row">
-                    <span class="label-basic">Designation</span>:
-                    <span class="value ms-1">{{
-                        payslip.designationName
-                    }}</span>
-                </div>
+
+            <!-- Employee Filter -->
+            <div class="col-lg-3 position-relative me-3" v-if="role_id == 1">
+                <label class="form-label">Select Employee</label>
+                <Multiselect
+                    v-model="selectedEmployee"
+                    :options="employee"
+                    label="Full_Name"
+                    track-by="id"
+                    placeholder="Select or search employee"
+                    @update:modelValue="onEmployeeSelect"
+                />
+                <button
+                    v-if="selectedEmployee"
+                    type="button"
+                    class="btn btn-sm btn-link position-absolute top-0 end-0 mt-5 me-5"
+                    @click="
+                        selectedEmployee = null;
+                        searchEmp = '';
+                    "
+                >
+                    <i class="fa fa-times"></i>
+                </button>
             </div>
-            <div class="col-md-6">
-                <div class="label-row">
-                    <span class="label-info">Salary Date</span>:
-                    <span class="value ms-1">{{ payslip.salary_date }}</span>
+
+            <!-- Year & Month -->
+            <div class="col-lg-4 d-flex align-items-end gap-2">
+                <div class="col-lg-6">
+                    <label class="form-label"> Select Year </label>
+                    <select
+                        v-model="selectedYear"
+                        class="form-control field-height field-hover"
+                    >
+                        <option v-for="year in years" :key="year" :value="year">
+                            {{ year }}
+                        </option>
+                    </select>
                 </div>
-                <div class="label-row">
-                    <span class="label-info">Payment Method</span>:
-                    <span class="value ms-1">{{ payslip.payment_method }}</span>
+                <div class="col-lg-6">
+                    <label class="form-label"> Select Month </label>
+                    <select
+                        v-model="selectedMonth"
+                        class="form-control field-height field-hover"
+                    >
+                        <option
+                            v-for="month in months"
+                            :key="month"
+                            :value="month"
+                        >
+                            {{ month }}
+                        </option>
+                    </select>
                 </div>
-                <div class="label-row">
-                    <span class="label-info">Bank Account</span>:
-                    <span class="value ms-1">{{
-                        payslip.bank_account_no
-                    }}</span>
-                </div>
-                <div class="label-row">
-                    <span class="label-info">Status</span>:
-                    <span class="value ms-1">{{ payslip.salary_status }}</span>
-                </div>
-            </div>
-        </div>
-        <!-- Earnings & Deductions -->
-        <div class="row">
-            <!-- Earnings -->
-            <div class="col-md-6">
-                <div class="card section">
-                    <h4 class="section-title">Earnings</h4>
-                    <table class="table table-bordered">
-                        <tbody>
-                            <tr>
-                                <td>Basic Salary</td>
-                                <td class="text-end">
-                                    {{ payslip.basic_salary }}
-                                </td>
-                            </tr>
-                            <tr>
-                                <td>House Rent</td>
-                                <td class="text-end">
-                                    {{ payslip.house_rent }}
-                                </td>
-                            </tr>
-                            <tr>
-                                <td>Conveyance</td>
-                                <td class="text-end">
-                                    {{ payslip.conveyance }}
-                                </td>
-                            </tr>
-                            <tr>
-                                <td>Medical Allowance</td>
-                                <td class="text-end">
-                                    {{ payslip.medical_allowance }}
-                                </td>
-                            </tr>
-                            <tr>
-                                <td>Travel Allowance</td>
-                                <td class="text-end">
-                                    {{ payslip.travel_allowance }}
-                                </td>
-                            </tr>
-                            <tr>
-                                <td>Daily Allowance</td>
-                                <td class="text-end">
-                                    {{ payslip.daily_allowance }}
-                                </td>
-                            </tr>
-                            <tr>
-                                <td>Mobile Bill</td>
-                                <td class="text-end">
-                                    {{ payslip.mobile_bill }}
-                                </td>
-                            </tr>
-                            <tr>
-                                <td>Other Allowance</td>
-                                <td class="text-end">
-                                    {{ payslip.other_allowance }}
-                                </td>
-                            </tr>
-                            <tr>
-                                <td>Earning Adjustment</td>
-                                <td class="text-end">
-                                    {{ payslip.earning_adjustment }}
-                                </td>
-                            </tr>
-                            <tr class="fw-bold table-light">
-                                <td>Total Earnings</td>
-                                <td class="text-end">
-                                    {{ payslip.total_payment }}
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-            <!-- Deductions -->
-            <div class="col-md-6">
-                <div class="card section">
-                    <h4 class="section-title">Deductions</h4>
-                    <table class="table table-bordered">
-                        <tbody>
-                            <tr>
-                                <td>Provident Fund</td>
-                                <td class="text-end">
-                                    {{ payslip.provident_fund }}
-                                </td>
-                            </tr>
-                            <tr>
-                                <td>Income Tax</td>
-                                <td class="text-end">
-                                    {{ payslip.income_tax }}
-                                </td>
-                            </tr>
-                            <tr>
-                                <td>Revenue Stamp</td>
-                                <td class="text-end">
-                                    {{ payslip.revenue_stamp }}
-                                </td>
-                            </tr>
-                            <tr>
-                                <td>Loan Repayment</td>
-                                <td class="text-end">
-                                    {{ payslip.monthly_loan_repayments }}
-                                </td>
-                            </tr>
-                            <tr>
-                                <td>Deduction Adjustment</td>
-                                <td class="text-end">
-                                    {{ payslip.deduction_adjustment }}
-                                </td>
-                            </tr>
-                            <tr class="fw-bold table-light">
-                                <td>Total Deductions</td>
-                                <td class="text-end">
-                                    {{ payslip.total_deduction }}
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-                <div class="net-pay text-center card mt-3">
-                    <h3>
-                        Net Pay:
-                        <span class="amount">{{ payslip.net_pay }}</span>
-                    </h3>
+                <div class="col-lg-1 ms-auto">
+                    <button class="print-button" @click="printFormate()">
+                        PRINT
+                    </button>
                 </div>
             </div>
         </div>
-        <!-- Net Pay -->
-        <!-- Footer -->
-        <!-- <div class="footer text-center mt-4">
-           <p>This is a system generated payslip</p>
-           <p>Generated on: {{ new Date().toLocaleDateString() }}</p>
-       </div> -->
-    </div>
-    <div v-else class="text-center mt-5">
-        <p v-if="loading">Loading payslip...</p>
-        <p v-else-if="error">{{ error }}</p>
-        <p v-else>No payslip found for this month.</p>
+
+        <!-- Payslip Cards -->
+        <div v-if="payslip.length">
+            <div v-for="p in payslip" :key="p.id" class="card mb-4 p-3 payslip">
+                <!-- Header -->
+                <div class="payslip-header text-center">
+                    <h3>Salary Payslip</h3>
+                </div>
+
+                <!-- Employee Info -->
+                <div class="row mb-3 info">
+                    <div class="col-md-6">
+                        <div class="label-row">
+                            <span class="label-basic">Employee ID</span>:
+                            <span class="value ms-1">{{ p.Employee_Id }}</span>
+                        </div>
+                        <div class="label-row">
+                            <span class="label-basic">Full Name</span>:
+                            <span class="value ms-1">{{ p.Full_Name }}</span>
+                        </div>
+                        <div class="label-row">
+                            <span class="label-basic">Department</span>:
+                            <span class="value ms-1">{{
+                                p.departmentName
+                            }}</span>
+                        </div>
+                        <div class="label-row">
+                            <span class="label-basic">Designation</span>:
+                            <span class="value ms-1">{{
+                                p.designationName
+                            }}</span>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="label-row">
+                            <span class="label-info">Salary Date</span>:
+                            <span class="value ms-1">{{ p.salary_date }}</span>
+                        </div>
+                        <div class="label-row">
+                            <span class="label-info">Payment Method</span>:
+                            <span class="value ms-1">{{
+                                p.payment_method
+                            }}</span>
+                        </div>
+                        <div class="label-row">
+                            <span class="label-info">Bank Account</span>:
+                            <span class="value ms-1">{{
+                                p.bank_account_no
+                            }}</span>
+                        </div>
+                        <div class="label-row">
+                            <span class="label-info">Status</span>:
+                            <span class="value ms-1">{{
+                                p.salary_status
+                            }}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Earnings & Deductions -->
+                <div class="row">
+                    <!-- Earnings -->
+                    <div class="col-md-6">
+                        <div class="card section">
+                            <h4 class="section-title">Earnings</h4>
+                            <table class="table table-bordered">
+                                <tbody>
+                                    <tr>
+                                        <td>Basic Salary</td>
+                                        <td class="text-end">
+                                            {{ p.basic_salary }}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>House Rent</td>
+                                        <td class="text-end">
+                                            {{ p.house_rent }}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Conveyance</td>
+                                        <td class="text-end">
+                                            {{ p.conveyance }}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Medical Allowance</td>
+                                        <td class="text-end">
+                                            {{ p.medical_allowance }}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Travel Allowance</td>
+                                        <td class="text-end">
+                                            {{ p.travel_allowance }}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Daily Allowance</td>
+                                        <td class="text-end">
+                                            {{ p.daily_allowance }}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Mobile Bill</td>
+                                        <td class="text-end">
+                                            {{ p.mobile_bill }}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Other Allowance</td>
+                                        <td class="text-end">
+                                            {{ p.other_allowance }}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Earning Adjustment</td>
+                                        <td class="text-end">
+                                            {{ p.earning_adjustment }}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Bonus Amount</td>
+                                        <td class="text-end">
+                                            {{ p.bonus_amounts }}
+                                        </td>
+                                    </tr>
+                                    <tr class="fw-bold table-light">
+                                        <td>Total Earnings</td>
+                                        <td class="text-end">
+                                            {{
+                                                Number(p.total_payment) +
+                                                Number(p.bonus_amounts)
+                                            }}
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Deductions -->
+                    <div class="col-md-6">
+                        <div class="card section">
+                            <h4 class="section-title">Deductions</h4>
+                            <table class="table table-bordered">
+                                <tbody>
+                                    <tr>
+                                        <td>Provident Fund</td>
+                                        <td class="text-end">
+                                            {{ p.provident_fund }}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Income Tax</td>
+                                        <td class="text-end">
+                                            {{ p.income_tax }}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Revenue Stamp</td>
+                                        <td class="text-end">
+                                            {{ p.revenue_stamp }}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Loan Repayment</td>
+                                        <td class="text-end">
+                                            {{ p.monthly_loan_repayments }}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>Deduction Adjustment</td>
+                                        <td class="text-end">
+                                            {{ p.deduction_adjustment }}
+                                        </td>
+                                    </tr>
+                                    <tr class="fw-bold table-light">
+                                        <td>Total Deductions</td>
+                                        <td class="text-end">
+                                            {{ p.total_deduction }}
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="net-pay text-center card mt-3">
+                            <h3>
+                                Net Pay:
+                                <span class="amount">{{
+                                    Number(p.net_pay) + Number(p.bonus_amounts)
+                                }}</span>
+                            </h3>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div v-else class="text-center mt-5">
+            <p v-if="loading">Loading payslip...</p>
+            <p v-else-if="error">{{ error }}</p>
+            <p v-else>No payslip found for this month.</p>
+        </div>
     </div>
 </template>
+
 <style scoped>
 .label-row {
     display: flex;
@@ -294,6 +479,25 @@ watch([selectedYear, selectedMonth], fetchPayslip);
     font-weight: 600;
     width: 90px;
 }
+
+.field-height {
+    height: 38px;
+}
+
+.print-button {
+    height: 38px;
+    background-color: rgb(3, 102, 28);
+    letter-spacing: 2px;
+    color: white;
+    border-radius: 5px;
+    font-weight: 400;
+}
+
+.field-hover:hover {
+    border-color: #80bdff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
 .label-info {
     margin-left: 170px;
     font-weight: 600;
@@ -304,10 +508,7 @@ watch([selectedYear, selectedMonth], fetchPayslip);
     font-family: "Segoe UI", sans-serif;
     color: #333;
 }
-/* Hide default arrow */
 .no-arrow {
-    -webkit-appearance: none;
-    -moz-appearance: none;
     appearance: none;
     background: transparent;
     padding-right: 0.75rem;
@@ -316,23 +517,6 @@ watch([selectedYear, selectedMonth], fetchPayslip);
     border-bottom: 2px solid #000;
     padding-bottom: 10px;
     margin-bottom: 15px;
-}
-/* Label:Value alignment */
-/* .label-row {
-   display: flex;
-   margin-bottom: 4px;
-   align-items: center;
-}
-.label-row .label {
-   display: inline-block;
-   width: 150px;
-   font-weight: 600;
-}
-.label-row .value {
-   flex: 1;
-} */
-.info p {
-    margin-bottom: 4px;
 }
 .section {
     padding: 12px;
@@ -353,31 +537,13 @@ watch([selectedYear, selectedMonth], fetchPayslip);
     font-weight: bold;
     font-size: 21px;
 }
-.footer {
-    font-size: 12px;
-    color: #777;
-}
-@media print {
-    .container {
-        margin: 0;
-        padding: 0;
-    }
-    .label-info {
-        margin-left: none;
-    }
-    .card {
-        border: none;
-    }
-}
 @media (max-width: 768px) {
     .label-info {
         margin-left: 10px;
-        font-weight: 600;
         width: 90px;
     }
     .label-row {
         flex-wrap: wrap;
-        /* label and value stack on small screens */
     }
 }
 </style>

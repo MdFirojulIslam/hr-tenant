@@ -20,6 +20,49 @@ const props = defineProps({
     viewMode: { type: Boolean, default: false },
 });
 
+import * as XLSX from "xlsx";
+import { saveAs } from "file-saver";
+
+// ----------------------
+// DOWNLOAD EXCEL TEMPLATE
+// ----------------------
+const downloadFormate = () => {
+    // Define headers and sample row
+    const data = [
+        [
+            "VISIT DATE",
+            "TOWN NAME",
+            "LOCATION",
+            "VISIT WITH",
+            "VISIT OBJECTIVE",
+            "MEETING WITH",
+            "VISIT START TIME",
+            "VISIT END TIME",
+        ],
+        [
+            "12/31/2025-DEMO",
+            "magura-DEMO",
+            "New so-DEMO",
+            "Chitagon road-DEMO",
+            "Primary & secondary sale's-DEMO",
+            "Manager-DEMO",
+            "9:00-DEMO",
+            "10:00-DEMO",
+        ],
+    ];
+
+    // Create worksheet
+    const ws = XLSX.utils.aoa_to_sheet(data);
+
+    // Create workbook and append worksheet
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Itinerary_Template");
+
+    // Export workbook
+    const wbout = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+    const blob = new Blob([wbout], { type: "application/octet-stream" });
+    saveAs(blob, "Itinerary_Template.xlsx");
+};
 const itineraryId = ref(props.itineraryId || route.params.id || null);
 const viewMode = ref(props.viewMode);
 const mode = viewMode.value ? "view" : itineraryId.value ? "edit" : "new";
@@ -333,24 +376,32 @@ const uploadExcel = async (event) => {
             headers: { "Content-Type": "multipart/form-data" },
         });
 
-        // backend returns JSON array of rows
-        forms.value = res.data.map((row) => ({
-            date: row.date,
-            day: row.date
-                ? new Date(row.date).toLocaleDateString("en-US", {
-                      weekday: "long",
-                  })
-                : "",
-            town: row.town_id,
-            location: row.location,
-            visitWith: row.visit_with,
-            objective: row.visit_objective,
-            meetingWith: row.meeting_with,
-            startTime: row.start_time,
-            endTime: row.end_time,
-            remarks: row.remarks || "",
-            marked: false,
-        }));
+        forms.value = res.data.map((row) => {
+            // find town_id by name
+            const townObj = town_options.value.find(
+                (t) =>
+                    t.town_name.toLowerCase() ===
+                    (row.town_id || "").toLowerCase(),
+            );
+
+            return {
+                date: row.date,
+                day: row.date
+                    ? new Date(row.date).toLocaleDateString("en-US", {
+                          weekday: "long",
+                      })
+                    : "",
+                town: townObj ? townObj.town_id : null, // must assign numeric ID
+                location: row.location,
+                visitWith: row.visit_with,
+                objective: row.visit_objective,
+                meetingWith: row.meeting_with,
+                startTime: row.start_time,
+                endTime: row.end_time,
+                remarks: row.remarks || "",
+                marked: false,
+            };
+        });
 
         nextTick(() => resizeAllTextareas());
     } catch (err) {
@@ -404,7 +455,7 @@ onMounted(() => {
             </div>
             <div class="col-lg-3">
                 <label for="excelUpload" class="form-label"
-                    >Upload Excel File (If Have)</label
+                    >Upload Excel Here (If Have)</label
                 >
                 <input
                     type="file"
@@ -412,6 +463,12 @@ onMounted(() => {
                     @change="uploadExcel($event)"
                     accept=".xls,.xlsx"
                 />
+            </div>
+            <div class="col-lg-3">
+                <label class="form-label">Download Excel Template</label>
+                <button class="btn btn-primary w-100" @click="downloadFormate">
+                    Download Template
+                </button>
             </div>
         </div>
 

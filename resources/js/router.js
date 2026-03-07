@@ -445,7 +445,24 @@ const routes = [
             pageId: 57,
         },
     },
-
+    {
+        path: "/payroll/bonus_sheet",
+        name: "BonusSheet",
+        component: () => import("./pages/payroll/bonusSheet.vue"),
+        meta: {
+            requireAuth: true,
+            pageId: 58,
+        },
+    },
+    {
+        path: "/payroll/bonus-disbursement",
+        name: "BonusDisbursement",
+        component: () => import("./pages/payroll/bonusDisbursement.vue"),
+        meta: {
+            requireAuth: true,
+            pageId: 59,
+        },
+    },
     {
         path: "/separation/separation-request",
         name: "SeparationRequest",

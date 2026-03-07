@@ -335,7 +335,7 @@ onMounted(() => getData());
                                         v-if="role_id == 1 || role_id == 2"
                                         class="text-center text-nowrap"
                                     >
-                                        <button
+                                        <!-- <button
                                             class="btn btn-sm btn-light border me-1"
                                             title="View"
                                             @click="
@@ -347,7 +347,7 @@ onMounted(() => getData());
                                             <i
                                                 class="fa-regular fa-user text-primary"
                                             ></i>
-                                        </button>
+                                        </button> -->
                                         <button
                                             class="btn btn-sm btn-light border me-1"
                                             title="Edit"

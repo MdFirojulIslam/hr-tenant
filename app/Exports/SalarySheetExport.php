@@ -119,7 +119,7 @@ class SalarySheetExport implements
             $row->deduction_adjustment,
             $row->total_deduction,
             $row->monthly_loan_repayments,
-            $row->net_pay,
+            (float) $row->net_pay,
             ucfirst($row->payment_method),
             (string) $row->bank_account_no,
         ];

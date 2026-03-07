@@ -362,7 +362,6 @@ class EmployeeSalaryController extends Controller
                     'bank_account_no' => $salary->bank_account_no,
                     'net_pay' => $net_salary,
                     'created_by' => $user_id,
-
                 ]
             );
         }
@@ -408,7 +407,7 @@ class EmployeeSalaryController extends Controller
                 'salary_sheets.bank_account_no',
                 'salary_sheets.net_pay',
                 'salary_sheets.disbursement_status',
-                DB::raw("COALESCE(sd.status, 'PENDING') as disbursement_status") // fetch status from salary_disbursement table
+                DB::raw("COALESCE(sd.status, 'PENDING') as disbursement_status")
             )
             ->orderBy('departments.id')
             ->get();
@@ -420,9 +419,6 @@ class EmployeeSalaryController extends Controller
             'net_total' => $net_total
         ]);
     }
-
-
-
 
 
     public function exportSalarySheet(Request $request)
@@ -719,7 +715,7 @@ class EmployeeSalaryController extends Controller
             ->whereYear('salary_sheets.salary_date', $year)
             ->whereMonth('salary_sheets.salary_date', $month)
             ->select(
-                'employees.Employee_Id',
+                DB::raw("CONCAT('ABNB', employees.Employee_Id) as employee_id"),
                 'employees.Full_Name',
                 'salary_sheets.bank_account_no',
                 'salary_sheets.net_pay'
@@ -771,7 +767,7 @@ class EmployeeSalaryController extends Controller
         foreach ($data as $index => $row) {
             $table->addRow();
             $table->addCell(1000)->addText($index + 1);
-            $table->addCell(2000)->addText($row->Employee_Id);
+            $table->addCell(2000)->addText($row->employee_id);
             $table->addCell(4000)->addText($row->Full_Name);
             $table->addCell(3000)->addText($row->bank_account_no ?? 'Cash');
             $table->addCell(2000)->addText(number_format($row->net_pay, 2));
@@ -811,7 +807,7 @@ class EmployeeSalaryController extends Controller
             ->whereYear('salary_sheets.salary_date', $year)
             ->whereMonth('salary_sheets.salary_date', $month)
             ->select(
-                'employees.Employee_Id as employee_id',
+                DB::raw("CONCAT('ABNB', employees.Employee_Id) as employee_id"),
                 'employees.Full_Name as full_name',
                 'salary_sheets.net_pay'
             )
@@ -875,39 +871,87 @@ class EmployeeSalaryController extends Controller
         // Download & auto delete
         return response()->download($filePath)->deleteFileAfterSend(true);
     }
-    public function salaryPayslip(Request $request, $id)
+
+
+    public function salaryPayslip(Request $request, $id = null)
     {
-        // Get year & month from query parameters
-        $year = $request->query('year');    // e.g. "2025"
-        $month = $request->query('month');  // numeric month, e.g. 12
-        // Ensure month is numeric
-        $month = (int) $month;
-        // Create first day of the month in YYYY-MM-DD format
+        $year = $request->query('year');
+        $month = (int) $request->query('month');
+        $department_id = $request->query('department_id');
+        $employee_id = $request->query('employee_id');
+        $query = $request->query('query');
+
         $salaryDate = Carbon::createFromDate($year, $month, 1)->format('Y-m-d');
-        $salary = DB::table('salary_sheets')
+
+        // Subquery: total completed bonuses per employee for the given month
+        $bonusSubquery = DB::table('bonus_sheets')
+            ->join('bonus_disbursements as bd', 'bd.bonus_id', '=', 'bonus_sheets.bonus_id')
+            ->where('bd.status', 'COMPLETED')
+            ->whereYear('bonus_sheets.bonus_date', $year)
+            ->whereMonth('bonus_sheets.bonus_date', $month)
+            ->select(
+                'bonus_sheets.employee_id',
+                DB::raw('SUM(bonus_sheets.bonus_amounts) as total_bonus')
+            )
+            ->groupBy('bonus_sheets.employee_id');
+
+        $salaryQuery = DB::table('salary_sheets')
             ->join('employees', 'employees.id', '=', 'salary_sheets.employee_id')
             ->join('officials', 'officials.EID', '=', 'salary_sheets.employee_id')
             ->join('departments', 'departments.id', '=', 'officials.Department_Id')
             ->join('designations', 'designations.id', '=', 'officials.Designation_Id')
-            ->join('salary_disbursements as sd', function ($join) use ($salaryDate) {
-                $join->on('sd.salary_month', '=', DB::raw("'$salaryDate'"))
-                    ->where('sd.status', 'COMPLETED')
-                    ->whereYear('sd.salary_month', Carbon::parse($salaryDate)->year)
-                    ->whereMonth('sd.salary_month', Carbon::parse($salaryDate)->month);
+
+            // Salary disbursement (LEFT JOIN to check completed salaries)
+            ->leftJoin('salary_disbursements as sd', function ($join) {
+                $join->on('sd.salary_month', '=', 'salary_sheets.salary_date')
+                    ->where('sd.status', 'COMPLETED');
             })
-            ->leftJoin('emp_imgs as employee_images', 'employee_images.EID', '=', 'employees.id')
-            ->where('employees.id', $id)
-            ->whereDate('salary_sheets.salary_date', $salaryDate) // exact first day of month
+
+            // Join the aggregated bonuses
+            ->leftJoinSub($bonusSubquery, 'bonus_summary', function ($join) {
+                $join->on('bonus_summary.employee_id', '=', 'salary_sheets.employee_id');
+            })
+
+
+            // Salary month filter
+            ->whereYear('salary_sheets.salary_date', $year)
+            ->whereMonth('salary_sheets.salary_date', $month)
+
+            // Select desired fields
             ->select(
+                'employees.id',
                 'employees.Employee_Id',
                 'employees.Full_Name',
-                'employee_images.img_url',
                 'departments.Name as departmentName',
                 'designations.Name as designationName',
-                'salary_sheets.*'
-            )
-            ->first();
-        return response()->json($salary);
+                'salary_sheets.*',
+                'bonus_summary.total_bonus as bonus_amounts'
+            );
+
+        // Filter by employee
+        if ($employee_id) {
+            $salaryQuery->where('employees.id', $employee_id);
+        } elseif ($id) {
+            $salaryQuery->where('employees.id', $id);
+        }
+
+        // Filter by department
+        if ($department_id) {
+            $salaryQuery->where('departments.id', $department_id);
+        }
+
+        // Optional search query
+        if ($query) {
+            $salaryQuery->where(function ($q) use ($query) {
+                $q->where('employees.id', 'like', "%$query%")
+                    ->orWhere('employees.Full_Name', 'like', "%$query%");
+            });
+        }
+
+        // Fetch the results
+        $salaries = $salaryQuery->get();
+
+        return response()->json($salaries);
     }
 
     public function departmentList($id)
@@ -1023,6 +1067,68 @@ class EmployeeSalaryController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Salary disbursement initiated successfully'
+        ]);
+    }
+
+
+    public function printPayslip(Request $request, $id)
+    {
+        $year  = $request->year;
+        $month = $request->month;
+
+        $monthName = date('F', mktime(0, 0, 0, $month, 10));
+
+        $salaryDate = Carbon::createFromDate($year, $month, 1)->format('Y-m-d');
+
+        $bonusSubquery = DB::table('bonus_sheets')
+            ->join('bonus_disbursements as bd', 'bd.bonus_id', '=', 'bonus_sheets.bonus_id')
+            ->where('bd.status', 'COMPLETED')
+            ->whereYear('bonus_sheets.bonus_date', $year)
+            ->whereMonth('bonus_sheets.bonus_date', $month)
+            ->select(
+                'bonus_sheets.employee_id',
+                DB::raw('SUM(bonus_sheets.bonus_amounts) as total_bonus')
+            )
+            ->groupBy('bonus_sheets.employee_id');
+
+        $payslip = DB::table('salary_sheets')
+            ->join('employees', 'employees.id', '=', 'salary_sheets.employee_id')
+            ->join('officials', 'officials.EID', '=', 'salary_sheets.employee_id')
+            ->join('departments', 'departments.id', '=', 'officials.Department_Id')
+            ->join('designations', 'designations.id', '=', 'officials.Designation_Id')
+
+            // Salary Disbursement check
+            ->leftJoin('salary_disbursements as sd', function ($join) {
+                $join->on('sd.salary_month', '=', 'salary_sheets.salary_date')
+                    ->where('sd.status', 'COMPLETED');
+            })
+
+            // Bonus Join
+            ->leftJoinSub($bonusSubquery, 'bonus_summary', function ($join) {
+                $join->on('bonus_summary.employee_id', '=', 'salary_sheets.employee_id');
+            })
+
+            ->where('salary_sheets.employee_id', $id)
+            ->whereYear('salary_sheets.salary_date', $year)
+            ->whereMonth('salary_sheets.salary_date', $month)
+
+            ->select(
+                'employees.id',
+                'employees.Employee_Id',
+                'employees.Full_Name',
+                'departments.Name as departmentName',
+                'designations.Name as designationName',
+                'salary_sheets.*',
+                DB::raw('COALESCE(bonus_summary.total_bonus,0) as bonus_amounts')
+            )
+
+            ->first();
+
+
+        return view('payroll.payslip-print', [
+            'payslip' => $payslip,
+            'year' => $year,
+            'monthName' => $monthName
         ]);
     }
 }

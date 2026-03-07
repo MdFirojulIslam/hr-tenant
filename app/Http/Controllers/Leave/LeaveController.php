@@ -377,23 +377,22 @@ class LeaveController extends Controller
     {
         $currentYear = now()->year;
 
-        // Get leave type info as array
         $official_leave_info = leave_type::all()->toArray();
 
-        // Check if employee has any 'in' attendance records
         $attendanceEmployeeIds = app_attendance::where('status', 'in')
             ->distinct()
             ->pluck('EID')
             ->toArray();
 
-        $hasAttendance = in_array($id, $attendanceEmployeeIds);
+        $hasAttendance = in_array($id, $attendanceEmployeeIds); //returns only true or false
 
-        // Calculate used leave for this employee
         $usedLeaveRecords = Leave::where('employee_id', $id)
             ->whereYear('from_date', $currentYear)
             ->where('status', 'Approved')
             ->get()
             ->toArray();
+
+
 
         $usedLeave = [
             'casual' => 0,
@@ -406,6 +405,7 @@ class LeaveController extends Controller
             $to = new DateTime($leave['to_date']);
 
             $diffDays = $to->diff($from)->days + 1;
+
             if ($leave['leave_type_id'] == 1) {
                 $usedLeave['casual'] += $diffDays;
             } elseif ($leave['leave_type_id'] == 2) {
@@ -414,12 +414,13 @@ class LeaveController extends Controller
                 $usedLeave['earned'] += $diffDays;
             }
         }
+
+
         if ($hasAttendance) {
-            $attendanceCount = attendence::where('EID', $id)
+            $attendanceCount = app_attendance::where('EID', $id)
                 ->where('status', 'in')
                 ->whereYear('created_at', $currentYear)
                 ->count();
-
             $earnedLeave = (int) floor($attendanceCount / 18);
         } else {
             $attendanceCount = DB::table('attendences')
@@ -427,9 +428,9 @@ class LeaveController extends Controller
                 ->where('employees.id', $id)
                 ->whereIn('attendences.Status', ['P', 'L'])
                 ->whereYear('attendences.Date', $currentYear)
-                ->select(DB::raw('DATE(attendences.created_at)'))
+
                 ->distinct()
-                ->count();
+                ->count(DB::raw('DATE(attendences.Date)'));
 
             $earnedLeave = (int) floor($attendanceCount / 18);
         }
@@ -440,7 +441,6 @@ class LeaveController extends Controller
             'earned' => $earnedLeave,
         ];
 
-        // Final result: first entitled, then used
         $result = [
             'entitled_leave' => $entitledLeave,
             'used_leave' => $usedLeave,

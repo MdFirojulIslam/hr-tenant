@@ -322,10 +322,8 @@ class ItineraryController extends Controller
                 ];
 
                 if ($current && $current->status === 'PLAN') {
-                    // Update PLAN
                     DB::table('itineraries_updates')->where('id', $current->id)->update($data);
                 } else {
-                    // Create new PLAN
                     DB::table('itineraries_updates')->insert(
                         $data + [
                             'itineraries_id' => $row['itinerary_id'],
@@ -479,7 +477,23 @@ class ItineraryController extends Controller
                     'created_at'        => now(),
                     'updated_at'        => now(),
                 ]);
-        } else if ($status === 'PLAN' || empty($status)) {
+        } else if ($status === 'PLAN') {
+            DB::table('itineraries_updates')->insert([
+                'itineraries_id'   => $request->input('itinerary_id') ?? null,
+                'employee_id'      => $user_id,
+                'status'           => 'ACTUAL',
+                'visit_date'        => $request->input('date') ?? null,
+                'town_id'           => $request->input('town') ?? null,
+                'location'          => $request->input('location') ?? null,
+                'visit_with'        => $request->input('visitWith') ?? null,
+                'visit_objective'   => $request->input('objective') ?? null,
+                'meeting_with'      => $request->input('meetingWith') ?? null,
+                'visit_start_time'  => $request->input('startTime') ?? null,
+                'visit_end_time'    => $request->input('endTime') ?? null,
+                'created_at'        => now(),
+                'updated_at'        => now(),
+            ]);
+        } else {
             DB::table('itineraries_updates')->insert([
                 'itineraries_id'   => $request->input('itinerary_id') ?? null,
                 'employee_id'      => $user_id,
@@ -500,13 +514,10 @@ class ItineraryController extends Controller
 
     public function monthlyReport($employee_id, Request $request)
     {
-        // XLSX only
         $format = 'xlsx';
 
-        // Get the single date from query string
-        $date = $request->query('date', now()->toDateString()); // fallback today
+        $date = $request->query('date', now()->toDateString());
 
-        // Jasper file path
         $jasperFile = storage_path('jasper/monthly_itinerary_reports.jasper');
 
         if (!file_exists($jasperFile)) {
@@ -517,15 +528,14 @@ class ItineraryController extends Controller
         }
 
         try {
-            // Generate Jasper report in memory
             $output = app('jasper')
                 ->process(
                     $jasperFile,
-                    false,        // output in memory
-                    [$format],    // XLSX only
+                    false,
+                    [$format],
                     [
-                        'emp'  => $employee_id, // your query expects $P{emp}
-                        'date' => $date         // your query expects $P{date}
+                        'emp'  => $employee_id,
+                        'date' => $date
                     ],
                     config('database.connections.mysql')
                 )
@@ -533,9 +543,8 @@ class ItineraryController extends Controller
 
             $fileName = "Monthly_Report_{$employee_id}_{$date}.xlsx";
 
-            // Stream XLSX correctly
             return response()->streamDownload(function () use ($output) {
-                echo $output; // raw binary
+                echo $output;
             }, $fileName, [
                 'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
                 'Cache-Control' => 'no-store',
@@ -575,13 +584,11 @@ class ItineraryController extends Controller
             ->select(
                 'i.id as itinerary_id',
 
-                // date priority
                 DB::raw('COALESCE(ua.visit_date, up.visit_date, i.visit_date) as visit_date'),
 
                 'employees.Full_Name as employee_name',
                 'towns.Name as town_name',
 
-                // field priority
                 DB::raw('COALESCE(ua.location, up.location, i.location) as location'),
                 DB::raw('COALESCE(ua.visit_with, up.visit_with, i.visit_with) as visit_with'),
                 DB::raw('COALESCE(ua.visit_objective, up.visit_objective, i.visit_objective) as visit_objective'),
@@ -589,7 +596,6 @@ class ItineraryController extends Controller
                 DB::raw('COALESCE(ua.visit_start_time, up.visit_start_time, i.visit_start_time) as visit_start_time'),
                 DB::raw('COALESCE(ua.visit_end_time, up.visit_end_time, i.visit_end_time) as visit_end_time'),
 
-                // which source was used
                 DB::raw("
             CASE
                 WHEN ua.id IS NOT NULL THEN 'ACTUAL'
