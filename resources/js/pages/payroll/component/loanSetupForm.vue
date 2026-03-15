@@ -2,8 +2,14 @@
 import { ref, defineProps, watch, onMounted } from "vue";
 import Swal from "sweetalert2";
 import api from "@/api";
+import Multiselect from "vue-multiselect";
+import "vue-multiselect/dist/vue-multiselect.min.css";
+import { useStore } from "vuex";
 
-// Props from parent
+const store = useStore();
+const user = store.getters.getUser;
+
+// Props
 const { isOpen, editStore, updateinfo, roleId } = defineProps([
     "isOpen",
     "editStore",
@@ -11,10 +17,10 @@ const { isOpen, editStore, updateinfo, roleId } = defineProps([
     "roleId",
 ]);
 
-// Emits for parent communication
+// Emits
 const emit = defineEmits(["modal-close", "refresh-list"]);
 
-// Form state
+// Form
 const form = ref({
     department_id: "",
     employee_id: "",
@@ -25,61 +31,115 @@ const form = ref({
     remarks: "",
 });
 
-// Department & Employee data
-const departmentInfo = ref([]);
-const employeeByDept = ref([]);
-const emp_img = ref(null);
+// Data
+const department = ref([]);
+const employees = ref([]);
+const selectedEmployee = ref(null);
+const emp_img = ref("");
 
 // -------------------------
-// 🔹 Fetch departments
+// Fetch Departments
 // -------------------------
 const getData = async () => {
     try {
-        const res = await api.get("department");
-        departmentInfo.value = res.data;
+        const res = await api.get(`/department-list/${user.id}`);
+        department.value = res.data;
     } catch (error) {
         console.error("Error fetching departments:", error);
     }
 };
 
 // -------------------------
-// 🔹 Fetch employees by department
+// Fetch Employees
 // -------------------------
 const getEmployee = async (deptID) => {
     if (!deptID) {
-        employeeByDept.value = [];
+        employees.value = [];
+        selectedEmployee.value = null;
+        form.value.employee_id = "";
+        emp_img.value = "";
         return;
     }
+
     try {
         const res = await api.get(`/emp/${deptID}`);
-        employeeByDept.value = res.data;
-    } catch (error) {
-        console.error("Error fetching employees:", error);
+        employees.value = res.data;
+
+        selectedEmployee.value = null;
+        form.value.employee_id = "";
+        emp_img.value = "";
+    } catch (err) {
+        console.error("Error fetching employees:", err);
     }
 };
 
 // -------------------------
-// 🔹 Auto-calculate installment
+// Fetch Employee Image
 // -------------------------
-watch(
-    () => [form.value.principal_amount, form.value.tenure_month],
-    ([newPrincipal, newTenure]) => {
-        if (newPrincipal && newTenure) {
-            form.value.installment_amount = (newPrincipal / newTenure).toFixed(
-                2
-            );
-        } else {
-            form.value.installment_amount = "";
-        }
+const getEmployeeImg = async (eid) => {
+    try {
+        const res = await api.get(`/empimg/${eid}`);
+        emp_img.value = res.data?.img_url || "";
+    } catch (err) {
+        console.error("Error fetching employee image:", err);
     }
-);
+};
 
 // -------------------------
-// 🔹 Create Loan
+// Employee Select
+// -------------------------
+const onEmployeeSelect = async (emp) => {
+    if (!emp) {
+        form.value.employee_id = "";
+        emp_img.value = "";
+        return;
+    }
+
+    form.value.employee_id = emp.id;
+
+    // Load image
+    await getEmployeeImg(emp.id);
+};
+
+// -------------------------
+// Auto Installment
+// -------------------------
+// watch(
+//     () => [form.value.principal_amount, form.value.tenure_month],
+//     ([principal, tenure]) => {
+//         if (principal && tenure) {
+//             form.value.installment_amount = (principal / tenure).toFixed(2);
+//         } else {
+//             form.value.installment_amount = "";
+//         }
+//     },
+// );
+const isCalculating = ref(false);
+
+const calculateInstallment = () => {
+    const principal = Number(form.value.principal_amount);
+    const tenure = Number(form.value.tenure_month);
+
+    if (principal && tenure) {
+        form.value.installment_amount = (principal / tenure).toFixed(2);
+    }
+};
+
+const calculateTenure = () => {
+    const principal = Number(form.value.principal_amount);
+    const installment = Number(form.value.installment_amount);
+
+    if (principal && installment) {
+        form.value.tenure_month = Math.ceil(principal / installment);
+    }
+};
+// -------------------------
+// Create Loan
 // -------------------------
 const create = async () => {
     try {
         const response = await api.post(`/employee-loan`, form.value);
+
         if (response.data.success) {
             Swal.fire({
                 icon: "success",
@@ -87,6 +147,7 @@ const create = async () => {
                 showConfirmButton: false,
                 timer: 1500,
             });
+
             resetForm();
             emit("refresh-list");
             closeModal();
@@ -94,7 +155,6 @@ const create = async () => {
             Swal.fire({
                 icon: "error",
                 title: response.data.message,
-                showConfirmButton: true,
             });
         }
     } catch (err) {
@@ -103,14 +163,15 @@ const create = async () => {
 };
 
 // -------------------------
-// 🔹 Update Loan
+// Update Loan
 // -------------------------
 const update = async () => {
     try {
         const response = await api.put(
             `/employee-loan/${editStore.loan_id}`,
-            form.value
+            form.value,
         );
+
         if (response.data.success) {
             Swal.fire({
                 icon: "success",
@@ -118,6 +179,7 @@ const update = async () => {
                 showConfirmButton: false,
                 timer: 1500,
             });
+
             resetForm();
             emit("refresh-list");
             closeModal();
@@ -125,7 +187,6 @@ const update = async () => {
             Swal.fire({
                 icon: "error",
                 title: response.data.message,
-                showConfirmButton: true,
             });
         }
     } catch (err) {
@@ -134,7 +195,7 @@ const update = async () => {
 };
 
 // -------------------------
-// 🔹 Reset Form
+// Reset Form
 // -------------------------
 const resetForm = () => {
     form.value = {
@@ -146,57 +207,64 @@ const resetForm = () => {
         installment_amount: "",
         remarks: "",
     };
-    emp_img.value = null;
+
+    selectedEmployee.value = null;
+    emp_img.value = "";
 };
 
 // -------------------------
-// 🔹 Close Modal
+// Close Modal
 // -------------------------
 const closeModal = () => {
     emit("modal-close");
 };
 
 // -------------------------
-// 🔹 Prefill form on edit
+// Edit Mode
 // -------------------------
 watch(
     () => editStore,
     async (item) => {
         if (item) {
             form.value.department_id = item.deptID || "";
+
             await getEmployee(form.value.department_id);
+
             form.value.employee_id = item.eid || "";
-            emp_img.value =
-                employeeByDept.value.find(
-                    (emp) => emp.id === form.value.employee_id
-                ) || null;
+
+            selectedEmployee.value = employees.value.find(
+                (emp) => emp.id === form.value.employee_id,
+            );
+
+            if (form.value.employee_id) {
+                await getEmployeeImg(form.value.employee_id);
+            }
+
             form.value.principal_amount = item.principal_amounts || "";
             form.value.tenure_month = item.tenure_months || "";
             form.value.first_installment_date = item.installment_dates || "";
-            form.value.installment_amount = item.installment_amount || "";
+            form.value.installment_amount = item.monthly_installments || "";
             form.value.remarks = item.remarks || "";
         } else {
             resetForm();
         }
     },
-    { immediate: true }
+    { immediate: true },
 );
 
 // -------------------------
-// 🔹 Submit handler
+// Submit
 // -------------------------
 const submit = () => {
     if (updateinfo === "Save") {
         create();
-    } else if (updateinfo === "Update") {
-        update();
     } else {
-        console.error("Invalid updateinfo value:", updateinfo);
+        update();
     }
 };
 
 // -------------------------
-// 🔹 On Mounted
+// Enable Drag
 // -------------------------
 const enableDrag = () => {
     const dialog = document.querySelector(".modal-dialog");
@@ -207,35 +275,23 @@ const enableDrag = () => {
     let isDragging = false;
     let offsetX = 0;
     let offsetY = 0;
-    let originalWidth = 0;
 
     header.style.cursor = "move";
 
     header.addEventListener("mousedown", (e) => {
         isDragging = true;
 
-        // lock width
-        originalWidth = dialog.offsetWidth;
-        dialog.style.width = originalWidth + "px";
-
         const rect = dialog.getBoundingClientRect();
 
-        // SAVE CURRENT POSITION BEFORE REMOVING transform
-        const currentLeft = rect.left;
-        const currentTop = rect.top;
-
-        // remove bootstrap centering
         dialog.style.transform = "none";
         dialog.style.margin = 0;
         dialog.style.position = "absolute";
 
-        // SET EXPLICIT LEFT + TOP so modal does NOT jump
-        dialog.style.left = currentLeft + "px";
-        dialog.style.top = currentTop + "px";
+        dialog.style.left = rect.left + "px";
+        dialog.style.top = rect.top + "px";
 
-        // mouse offsets
-        offsetX = e.clientX - currentLeft;
-        offsetY = e.clientY - currentTop;
+        offsetX = e.clientX - rect.left;
+        offsetY = e.clientY - rect.top;
     });
 
     document.addEventListener("mousemove", (e) => {
@@ -307,19 +363,24 @@ onMounted(() => {
                                                 v-model="form.department_id"
                                                 @change="
                                                     getEmployee(
-                                                        form.department_id
+                                                        form.department_id,
                                                     )
                                                 "
                                             >
-                                                <option value="">
+                                                <option value="" disabled>
                                                     Select Department
                                                 </option>
+
                                                 <option
-                                                    v-for="dept in departmentInfo"
-                                                    :key="dept.id"
-                                                    :value="dept.id"
+                                                    v-for="dept in department"
+                                                    :key="dept.department_id"
+                                                    :value="
+                                                        Number(
+                                                            dept.department_id,
+                                                        )
+                                                    "
                                                 >
-                                                    {{ dept.Name }}
+                                                    {{ dept.department_name }}
                                                 </option>
                                             </select>
                                         </div>
@@ -334,21 +395,19 @@ onMounted(() => {
                                             <span>:</span>
                                         </div>
                                         <div class="col-md-6">
-                                            <select
-                                                class="form-select border-color custom-input"
-                                                v-model="form.employee_id"
-                                            >
-                                                <option value="">
-                                                    Select Employee
-                                                </option>
-                                                <option
-                                                    v-for="emp in employeeByDept"
-                                                    :key="emp.id"
-                                                    :value="emp.id"
-                                                >
-                                                    {{ emp.Full_Name }}
-                                                </option>
-                                            </select>
+                                            <Multiselect
+                                                v-model="selectedEmployee"
+                                                :options="employees"
+                                                label="Full_Name"
+                                                track-by="id"
+                                                placeholder="Select or search employee"
+                                                :searchable="true"
+                                                :close-on-select="true"
+                                                :allow-empty="true"
+                                                @update:modelValue="
+                                                    onEmployeeSelect
+                                                "
+                                            />
                                         </div>
                                     </div>
                                 </div>
@@ -356,7 +415,8 @@ onMounted(() => {
                                 <!-- Employee Image -->
                                 <div class="col-md-3 text-center">
                                     <img
-                                        :src="emp_img?.img_url || ''"
+                                        v-if="emp_img"
+                                        :src="emp_img"
                                         alt="Employee"
                                         class="rounded border"
                                         height="110"
@@ -394,7 +454,7 @@ onMounted(() => {
                                         type="number"
                                         class="form-control border-color custom-input"
                                         v-model="form.tenure_month"
-                                        placeholder="Tenure in Months"
+                                        @input="calculateInstallment"
                                     />
                                 </div>
 
@@ -415,10 +475,10 @@ onMounted(() => {
                                     >
                                     <input
                                         type="number"
-                                        step="any"
+                                        step="0.01"
                                         class="form-control border-color custom-input"
                                         v-model="form.installment_amount"
-                                        placeholder="Installment Amount"
+                                        @input="calculateTenure"
                                     />
                                 </div>
 

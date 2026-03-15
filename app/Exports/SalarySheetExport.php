@@ -78,7 +78,7 @@ class SalarySheetExport implements
             )
             ->join('employees', 'salary_sheets.employee_id', '=', 'employees.id')
             ->join('officials', 'officials.EID', '=', 'employees.id')
-            ->join('departments', 'officials.Department_ID', '=', 'departments.id')
+            ->join('departments', 'officials.Department_Id', '=', 'departments.id')
             ->join('designations', 'officials.Designation_Id', '=', 'designations.id')
             ->whereYear('salary_date', $this->year)
             ->whereMonth('salary_date', $this->month)

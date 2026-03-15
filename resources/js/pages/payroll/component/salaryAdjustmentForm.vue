@@ -42,7 +42,6 @@ const onEmployeeSelect = (emp) => {
     if (!emp) {
         form.eid = "";
         emp_img.value = null;
-        console.log("Employee cleared");
         return;
     }
 
@@ -58,7 +57,7 @@ const selectedYear = ref(new Date().getFullYear());
 const today = new Date();
 const previousMonth = today.getMonth() === 0 ? 12 : today.getMonth(); // Jan হলে Dec
 // Years & months for dropdown
-const years = ref(Array.from({ length: 14 }, (_, i) => 2022 + i));
+const years = ref(Array.from({ length: 8 }, (_, i) => 2022 + i));
 const months = ref([
     "January",
     "February",

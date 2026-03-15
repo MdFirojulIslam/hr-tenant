@@ -24,7 +24,7 @@ const { isOpen, editStore, updateinfo, EID, salId } = defineProps([
 
 const department = ref([]);
 const employee = ref([]);
-const emp_img = ref([]);
+// const emp_img = ref([]);
 const selected_designation = ref("");
 
 const emp_info = ref({});
@@ -99,9 +99,17 @@ const onEmployeeSelect = (emp) => {
         selectedEmployeeImg.value = null;
         return;
     }
+
     form.value.eid = emp.id;
-    selectedEmployeeImg.value = emp.img_url;
-    getEmployeeInfo(emp.id); // designation & other info
+
+    // if API already sent img_url
+    if (emp.img_url) {
+        selectedEmployeeImg.value = emp.img_url;
+    } else {
+        getEmployeeImg(emp.id);
+    }
+
+    getEmployeeInfo(emp.id);
 };
 
 const basic = computed(() => form.value.gross_salary * 0.5);
@@ -226,9 +234,10 @@ watch(
 const getEmployeeImg = async (id) => {
     try {
         const response = await api.get(`/empimg/${id}`);
-        emp_img.value = response.data;
+        selectedEmployeeImg.value = response.data?.img_url || response.data;
     } catch (error) {
         console.error("Error fetching employee image:", error);
+        selectedEmployeeImg.value = null;
     }
 };
 const instance = getCurrentInstance();
@@ -520,6 +529,7 @@ onMounted(() => {
                                         </div>
                                     </div>
                                 </div>
+
                                 <div class="col-md-4">
                                     <div
                                         v-if="selectedEmployeeImg"

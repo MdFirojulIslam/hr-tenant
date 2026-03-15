@@ -4,12 +4,12 @@ import api from "@/api";
 import Swal from "sweetalert2";
 
 // Props and emits
-const props = defineProps({
-    isOpen: Boolean,
-    editStore: Object,
-    roleId: Number,
-    updateinfo: String,
-});
+const { isOpen, editStore, updateinfo, roleId } = defineProps([
+    "isOpen",
+    "editStore",
+    "updateinfo",
+    "roleId",
+]);
 
 const emit = defineEmits(["modal-close", "refresh-list"]);
 
@@ -23,17 +23,18 @@ const form = ref({
     tenure_months: "",
     total_installment: "",
     installment_status: "Pending",
+    repayment_id: "",
 });
 
 // Other states
 const emp_img = ref(null);
 const error = ref("");
-const loading = ref(false);
 const departmentInfo = ref([]);
 const employeeByDept = ref([]);
-const loanAmount = ref(0);
 
-// Fetch department data
+// -------------------------
+// FETCH DEPARTMENTS
+// -------------------------
 const getData = async () => {
     try {
         const res = await api.get("/department");
@@ -43,93 +44,81 @@ const getData = async () => {
     }
 };
 
-// Fetch employees based on department
+// -------------------------
+// FETCH EMPLOYEES BY DEPARTMENT
+// -------------------------
 const getEmployee = async (deptID) => {
     if (!deptID) {
         employeeByDept.value = [];
+        form.value.employee_id = "";
+        emp_img.value = null;
         return;
     }
     try {
         const res = await api.get(`/emp/${deptID}`);
         employeeByDept.value = res.data;
+        form.value.employee_id = "";
+        emp_img.value = null;
     } catch (err) {
         console.error("Error fetching employees:", err);
     }
 };
 
-// Fetch loan data for employee
-const getLoanAmount = async (empID) => {
+// -------------------------
+// FETCH EMPLOYEE IMAGE
+// -------------------------
+const getEmployeeImg = async (empID) => {
     if (!empID) {
-        form.value.principal_amount = "";
-        form.value.tenure_months = "";
-        form.value.total_installment = "";
-        form.value.installment_amount = "";
+        emp_img.value = null;
         return;
     }
-
     try {
-        const res = await api.get(`/get-loan-amount/${empID}`);
-        // console.log("Loan Amount Response:", res.data);
-        const data = res.data;
-
-        if (data.success) {
-            form.value.principal_amount = data.principal_amount;
-            form.value.tenure_months = data.tenure_months;
-            form.value.total_installment = data.total_installments;
-
-            const remaining = data.principal_amount - data.total_installments;
-            form.value.installment_amount = data.tenure_months
-                ? (data.principal_amount / data.tenure_months).toFixed(2)
-                : 0;
-        }
+        const res = await api.get(`/empimg/${empID}`);
+        emp_img.value = res.data?.img_url || null;
     } catch (err) {
-        console.error("Error fetching loan amount:", err);
-        form.value.principal_amount = "";
-        form.value.tenure_months = "";
-        form.value.total_installment = "";
-        form.value.installment_amount = "";
+        console.error("Error fetching employee image:", err);
+        emp_img.value = null;
     }
 };
 
-// Watch employee selection
+// -------------------------
+// WATCH EMPLOYEE CHANGE
+// -------------------------
 watch(
     () => form.value.employee_id,
-    (newEmpID) => {
-        getLoanAmount(newEmpID);
+    (newID) => {
+        getEmployeeImg(newID);
     },
 );
 
-// Watch editStore for edit mode
+// -------------------------
+// PREFILL FORM ON EDIT
+// -------------------------
 watch(
-    () => props.editStore,
-    async (newVal) => {
-        if (newVal && newVal.installment && newVal.item) {
-            const loan = newVal.item;
+    () => editStore,
+    (newVal) => {
+        if (!newVal) return;
 
-            form.value.department_id = loan.deptID || "";
+        form.value.department_id = newVal.department_id || "";
+        form.value.employee_id = newVal.employee_id || "";
+        form.value.principal_amount = newVal.principal_amounts || "";
+        form.value.tenure_months = newVal.tenure_months || "";
+        form.value.installment_amount = newVal.installment_amounts || "";
+        form.value.total_installment = newVal.total_installments || "";
+        form.value.installment_date = newVal.paid_on_dates || "";
+        form.value.installment_status = "Pending";
+        form.value.repayment_id = newVal.loan_repayment_id || "";
 
-            // MUST BE LOADED BEFORE SETTING employee_id
-            await getEmployee(form.value.department_id);
-
-            form.value.employee_id = loan.eid || "";
-            form.value.principal_amount = loan.principal_amounts || "";
-            form.value.tenure_months = loan.tenure_months || "";
-            form.value.total_installment = loan.monthly_installments || "";
-
-            const ins = newVal.installment;
-
-            form.value.installment_date = ins.installment_dates || "";
-            form.value.installment_amount = ins.installment_amounts || "";
-            form.value.installment_status =
-                ins.paid_status?.toLowerCase() || "pending";
-
-            emp_img.value = loan.emp_img || null;
-        }
+        // Load employees and image for this department
+        getEmployee(newVal.department_id);
+        getEmployeeImg(newVal.employee_id);
     },
     { immediate: true },
 );
 
-// Reset form
+// -------------------------
+// RESET FORM
+// -------------------------
 const resetForm = () => {
     form.value = {
         department_id: "",
@@ -140,12 +129,15 @@ const resetForm = () => {
         tenure_months: "",
         total_installment: "",
         installment_status: "Pending",
+        repayment_id: "",
     };
     emp_img.value = null;
     error.value = "";
 };
 
-// Close modal
+// -------------------------
+// CLOSE MODAL
+// -------------------------
 const closeModal = () => {
     const dialog = document.querySelector(".modal-dialog");
     if (dialog) {
@@ -154,49 +146,48 @@ const closeModal = () => {
         dialog.style.top = "";
         dialog.style.margin = "";
         dialog.style.transform = "";
-        dialog.style.width = ""; // reset width
+        dialog.style.width = "";
     }
     emit("modal-close");
 };
 
-// Save repayment
+// -------------------------
+// SAVE REPAYMENT
+// -------------------------
 const saveRepayment = async () => {
-    if (!form.value.installment_date || !form.value.installment_amount) {
-        error.value = "Installment date and amount are required.";
-        return;
-    }
-
     try {
-        // const response = await api.post(`/employee-loan`, form.value);
-        const response = await api.post("/loan-repayment", form.value);
+        const response = await api.put(
+            `/loan-repayment/${form.value.repayment_id}`,
+            form.value,
+        );
 
         if (response.data.success) {
             Swal.fire({
                 icon: "success",
                 title: response.data.message,
-                showConfirmButton: false,
                 timer: 1500,
+                showConfirmButton: false,
             });
-            resetForm();
-            emit("refresh-list");
-            closeModal();
-        } else {
-            Swal.fire({
-                icon: "error",
-                title: response.data.message,
-                showConfirmButton: true,
+
+            emit("refresh-list", {
+                repayment_id: form.value.repayment_id,
+                installment_amounts: form.value.installment_amount,
+                paid_on_dates: form.value.installment_date,
             });
+
+            emit("modal-close");
         }
-        closeModal();
     } catch (err) {
         error.value = err.response?.data?.message || err.message;
     }
 };
 
+// -------------------------
+// ENABLE DRAG MODAL
+// -------------------------
 const enableDrag = () => {
     const dialog = document.querySelector(".modal-dialog");
     const header = document.querySelector(".modal-header");
-
     if (!dialog || !header) return;
 
     let isDragging = false;
@@ -208,34 +199,22 @@ const enableDrag = () => {
 
     header.addEventListener("mousedown", (e) => {
         isDragging = true;
-
-        // lock width
         originalWidth = dialog.offsetWidth;
         dialog.style.width = originalWidth + "px";
 
         const rect = dialog.getBoundingClientRect();
-
-        // SAVE CURRENT POSITION BEFORE REMOVING transform
-        const currentLeft = rect.left;
-        const currentTop = rect.top;
-
-        // remove bootstrap centering
-        dialog.style.transform = "none";
-        dialog.style.margin = 0;
         dialog.style.position = "absolute";
+        dialog.style.left = rect.left + "px";
+        dialog.style.top = rect.top + "px";
+        dialog.style.margin = 0;
+        dialog.style.transform = "none";
 
-        // SET EXPLICIT LEFT + TOP so modal does NOT jump
-        dialog.style.left = currentLeft + "px";
-        dialog.style.top = currentTop + "px";
-
-        // mouse offsets
-        offsetX = e.clientX - currentLeft;
-        offsetY = e.clientY - currentTop;
+        offsetX = e.clientX - rect.left;
+        offsetY = e.clientY - rect.top;
     });
 
     document.addEventListener("mousemove", (e) => {
         if (!isDragging) return;
-
         dialog.style.left = e.clientX - offsetX + "px";
         dialog.style.top = e.clientY - offsetY + "px";
     });
@@ -245,7 +224,9 @@ const enableDrag = () => {
     });
 };
 
-// Mounted
+// -------------------------
+// ON MOUNT
+// -------------------------
 onMounted(() => {
     getData();
     enableDrag();
@@ -253,18 +234,14 @@ onMounted(() => {
 </script>
 
 <template>
-    <div
-        v-if="isOpen"
-        class="modal fade show d-block"
-        tabindex="-1"
-        role="dialog"
-    >
+    <div v-if="isOpen" class="modal fade show d-block" tabindex="-1">
         <div class="modal-dialog modal-lg modal-dialog-centered">
             <div class="modal-content shadow-lg">
                 <!-- Header -->
                 <div class="modal-header gradient text-white">
                     <h5 class="modal-title">
-                        <i class="bi bi-cash-coin me-2"></i>Loan Repayment Setup
+                        <i class="bi bi-cash-coin me-2"></i> Loan Repayment
+                        Setup
                     </h5>
                     <button
                         type="button"
@@ -288,9 +265,7 @@ onMounted(() => {
                                         <div
                                             class="col-md-3 d-flex align-items-center"
                                         >
-                                            <span class="flex-grow-1 me-2"
-                                                >Department Name</span
-                                            ><span>:</span>
+                                            Department Name:
                                         </div>
                                         <div class="col-md-6">
                                             <select
@@ -321,9 +296,7 @@ onMounted(() => {
                                         <div
                                             class="col-md-3 d-flex align-items-center"
                                         >
-                                            <span class="flex-grow-1 me-2"
-                                                >Employee Name</span
-                                            ><span>:</span>
+                                            Employee Name:
                                         </div>
                                         <div class="col-md-6">
                                             <select
@@ -345,9 +318,10 @@ onMounted(() => {
                                     </div>
                                 </div>
 
+                                <!-- Employee Image -->
                                 <div class="col-md-3 text-center">
                                     <img
-                                        :src="emp_img?.img_url || ''"
+                                        :src="emp_img || ''"
                                         alt="Employee"
                                         class="rounded border"
                                         height="110"
@@ -358,55 +332,6 @@ onMounted(() => {
                         </div>
                     </div>
 
-                    <div class="card mb-3 shadow-sm">
-                        <div class="card-header bg-light fw-bold">
-                            LOAN DETAILS
-                        </div>
-                        <div class="card-body">
-                            <div class="row g-3">
-                                <div class="col-md-4">
-                                    <label class="form-label mb-1"
-                                        >Principal Amount</label
-                                    >
-                                    <input
-                                        type="number"
-                                        class="form-control border-color custom-input"
-                                        v-model="form.principal_amount"
-                                        placeholder="Principal Amount"
-                                    />
-                                </div>
-
-                                <div class="col-md-4">
-                                    <label class="form-label mb-1"
-                                        >Tenure (Months)</label
-                                    >
-                                    <input
-                                        type="number"
-                                        class="form-control border-color custom-input"
-                                        v-model="form.tenure_months"
-                                        placeholder="Tenure in Months"
-                                    />
-                                </div>
-                                <div class="col-md-4">
-                                    <label class="form-label mb-1"
-                                        >Total Installment Paid</label
-                                    >
-                                    <input
-                                        type="number"
-                                        class="form-control border-color custom-input"
-                                        v-model="form.total_installment"
-                                        readonly
-                                    />
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <!-- Principal / Tenure -->
-
-                    <!-- Total Installment -->
-
-                    <!-- Employee Image -->
-
                     <!-- Installment Form -->
                     <form @submit.prevent="saveRepayment">
                         <div class="card mb-3 shadow-sm">
@@ -416,9 +341,9 @@ onMounted(() => {
                             <div class="card-body">
                                 <div class="row g-3">
                                     <div class="col-md-4">
-                                        <label class="form-label mb-1"
-                                            >Installment Date*</label
-                                        >
+                                        <label class="form-label mb-1">
+                                            Installment Date*
+                                        </label>
                                         <input
                                             type="date"
                                             class="form-control border-color custom-input"
@@ -426,29 +351,14 @@ onMounted(() => {
                                         />
                                     </div>
                                     <div class="col-md-4">
-                                        <label class="form-label mb-1"
-                                            >Installment Amount*</label
-                                        >
+                                        <label class="form-label mb-1">
+                                            Installment Amount*
+                                        </label>
                                         <input
                                             type="number"
                                             class="form-control border-color custom-input"
                                             v-model="form.installment_amount"
-                                            readonly
                                         />
-                                    </div>
-                                    <div class="col-md-4">
-                                        <label class="form-label mb-1"
-                                            >Installment Status*</label
-                                        >
-                                        <select
-                                            class="form-select border-color custom-input"
-                                            v-model="form.installment_status"
-                                        >
-                                            <option value="pending">
-                                                Pending
-                                            </option>
-                                            <option value="paid">Paid</option>
-                                        </select>
                                     </div>
                                 </div>
                             </div>
@@ -501,10 +411,9 @@ onMounted(() => {
 
 .border-color {
     border: 1.8px solid #059223d5;
-    border-radius: none;
 }
+
 .gradient {
-    background: #349c1a;
     background: linear-gradient(
         90deg,
         rgb(28, 105, 9) 27%,
@@ -512,11 +421,11 @@ onMounted(() => {
         rgb(7, 134, 24) 91%
     );
 }
+
 .modal {
     background-color: rgba(0, 0, 0, 0.5);
 }
 
-/* ✅ Make all field names show with First Letter of Every Word Capitalized */
 .modal-content label,
 .modal-content .card-header,
 .modal-content option,

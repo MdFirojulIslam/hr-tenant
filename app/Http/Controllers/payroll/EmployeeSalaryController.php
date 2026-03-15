@@ -10,6 +10,7 @@ use App\Models\salaries;
 use Carbon\Carbon;
 use App\Models\salary_sheet;
 use App\Models\department;
+use App\Models\loan;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -17,6 +18,8 @@ use Illuminate\Support\Facades\Validator;
 use Maatwebsite\Excel\Facades\Excel;
 use PhpOffice\PhpWord\PhpWord;
 use App\Exports\SalaryDisbursementExport;
+
+use App\Exports\LoanReportExport;
 use App\Models\official;
 use App\Models\salary_disbursement;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -282,14 +285,12 @@ class EmployeeSalaryController extends Controller
         $loans = DB::table('loans')
             ->join('loan_repayments', 'loan_repayments.loan_id', '=', 'loans.id')
             ->select('loans.employee_id', DB::raw('SUM(loan_repayments.installment_amounts) as total_loan'))
-            ->where('loans.status', 'active')
             ->where('loan_repayments.paid_status', 'paid')
             ->whereBetween('loan_repayments.paid_on_dates', [$month_start, $month_end])
             ->groupBy('loans.employee_id')
             ->get()
             ->keyBy('employee_id');
 
-        // All salaries
         $salaries = DB::table('salaries')
             ->join('employees', 'employees.id', '=', 'salaries.employee_id')
             ->join('officials', 'officials.EID', '=', 'salaries.employee_id')
@@ -407,7 +408,7 @@ class EmployeeSalaryController extends Controller
                 'salary_sheets.bank_account_no',
                 'salary_sheets.net_pay',
                 'salary_sheets.disbursement_status',
-                DB::raw("COALESCE(sd.status, 'PENDING') as disbursement_status")
+                DB::raw("COALESCE(sd.status, 'PENDING') as disbursement_status") // fetch status from salary_disbursement table
             )
             ->orderBy('departments.id')
             ->get();
@@ -1130,5 +1131,204 @@ class EmployeeSalaryController extends Controller
             'year' => $year,
             'monthName' => $monthName
         ]);
+    }
+
+    public function downloadSalaryAdjustmentReport(Request $request)
+    {
+
+        $month  = $request->month;
+        $year   = $request->year;
+        $format = $request->format;
+
+        // Earnings
+        $earnings = DB::table('salary_earnings as se')
+            ->join('employees', 'employees.id', '=', 'se.employee_id')
+            ->join('salary_adjustment_types as sat', 'sat.id', '=', 'se.adjustment_types_id')
+            ->select(
+                'employees.Employee_Id as employee_id',
+                'employees.Full_Name as employee_name',
+                'sat.adjustment_name',
+                DB::raw("'Earning' as adjustment_type"),
+                'se.amount',
+                'se.date',
+                'se.remarks'
+            )
+            ->whereMonth('se.date', $month)
+            ->whereYear('se.date', $year);
+
+        // Deductions
+        $deductions = DB::table('salary_deductions as sd')
+            ->join('employees', 'employees.id', '=', 'sd.employee_id')
+            ->join('salary_adjustment_types as sat', 'sat.id', '=', 'sd.adjustment_types_id')
+            ->select(
+                'employees.Employee_Id as employee_id',
+                'employees.Full_Name as employee_name',
+                'sat.adjustment_name',
+                DB::raw("'Deduction' as adjustment_type"),
+                'sd.amount',
+                'sd.date',
+                'sd.remarks'
+            )
+            ->whereMonth('sd.date', $month)
+            ->whereYear('sd.date', $year);
+
+        // Merge both tables
+        $data = $earnings->unionAll($deductions)->get();
+
+        // Excel
+        if ($format == "xlsx") {
+
+            return Excel::download(
+                new \App\Exports\SalaryAdjustmentExport($month, $year),
+                "salary_adjustment_report.xlsx"
+            );
+        }
+
+        // PDF
+        if ($format == "pdf") {
+
+            $monthName = Carbon::create()->month($month)->format('F');
+
+            $pdf = PDF::loadView(
+                'payroll.salary-adjustment-report',
+                compact('data', 'monthName', 'year')
+            );
+
+            return $pdf->download("salary_adjustment_report.pdf");
+        }
+    }
+
+    // public function downloadLoanAdjustmentReport(Request $request)
+    // {
+    //     $month  = $request->month;
+    //     $year   = $request->year;
+    //     $format = $request->format ?? 'pdf'; // pdf or xlsx
+
+    //     // Fetch loans with repayments filtered by month & year
+    //     $loans = loan::with(['repayments' => function ($query) use ($month, $year) {
+    //         $query->where('paid_status', 'paid')
+    //             ->whereMonth('paid_on_dates', $month)
+    //             ->whereYear('paid_on_dates', $year);
+    //     }])->get();
+
+    //     $data = $loans->map(function ($loan) {
+    //         $paidInstallments = $loan->repayments; // already filtered
+    //         $totalPaid = $paidInstallments->sum('installment_amounts');
+    //         $lastPaid = $paidInstallments->last();
+
+    //         return [
+    //             'employee_id' => "ABNB" . optional($loan->employee)->Employee_Id,
+    //             'employee_name' => optional($loan->employee)->Full_Name ?? "N/A",
+    //             'total_loan_amount' => $loan->principal_amounts,
+    //             'tenure' => $loan->tenure_months,
+    //             'paid_tenure' => $paidInstallments->count(),
+    //             'total_paid' => $totalPaid ?: "0",
+    //             'remaining_amount' => $loan->principal_amounts - $totalPaid ?: "0",
+    //             'last_installment' => $lastPaid ? $lastPaid->installment_amounts : "0",
+    //             'last_installment_date' => $lastPaid ? $lastPaid->paid_on_dates : "null",
+    //         ];
+    //     });
+
+    //     // Determine report month/year from the filtered data
+    //     $firstDate = collect($data)->pluck('last_installment_date')->filter()->first();
+    //     $reportMonthYear = $firstDate ? Carbon::parse($firstDate)->format('F Y') : '';
+
+    //     if ($format === 'xlsx') {
+    //         return Excel::download(
+    //             new LoanReportExport($data, $reportMonthYear),
+    //             'loan_report.xlsx'
+    //         );
+    //     }
+
+    //     $pdf = Pdf::loadView('payroll.loan_report', ['data' => $data]);
+    //     return $pdf->download("loan_report.pdf");
+    // }
+
+    public function downloadLoanAdjustmentReport(Request $request)
+    {
+        $mode = $request->mode ?? 'monthly'; // monthly or total
+        $format = $request->format ?? 'pdf';
+
+        if ($mode === 'monthly') {
+            [$data, $reportMonthYear] = $this->getMonthlyLoanData($request);
+            $exportClass = \App\Exports\MonthlyLoanReportExport::class;
+        } else {
+            [$data, $reportMonthYear] = $this->getTotalLoanData();
+            $exportClass = \App\Exports\TotalLoanReportExport::class;
+        }
+
+        if ($format === 'xlsx') {
+            return Excel::download(
+                new $exportClass($data, $reportMonthYear),
+                $mode === 'monthly' ? 'monthly_loan_report.xlsx' : 'total_loan_report.xlsx'
+            );
+        }
+
+        $pdf = Pdf::loadView('payroll.loan_report', ['data' => $data]);
+        return $pdf->download($mode === 'monthly' ? "monthly_loan_report.pdf" : "total_loan_report.pdf");
+    }
+
+    /**
+     * Monthly report data
+     */
+    protected function getMonthlyLoanData(Request $request)
+    {
+        $month = $request->month;
+        $year = $request->year;
+
+        $loans = loan::with(['repayments' => function ($query) use ($month, $year) {
+            $query->where('paid_status', 'paid')
+                ->whereMonth('paid_on_dates', $month)
+                ->whereYear('paid_on_dates', $year);
+        }])->get();
+
+        $data = $loans->map(function ($loan) {
+            $paidInstallments = $loan->repayments; // already filtered
+            $lastPaid = $paidInstallments->last();
+
+            return [
+                'employee_id' => "ABNB" . optional($loan->employee)->Employee_Id,
+                'employee_name' => optional($loan->employee)->Full_Name ?? "N/A",
+                'total_loan_amount' => $loan->principal_amounts,
+                'last_installment' => $lastPaid ? $lastPaid->installment_amounts : 0,
+                'last_installment_date' => $lastPaid ? $lastPaid->paid_on_dates : null,
+            ];
+        });
+
+        $firstDate = collect($data)->pluck('last_installment_date')->filter()->first();
+        $reportMonthYear = $firstDate ? Carbon::parse($firstDate)->format('F Y') : '';
+
+        return [$data, $reportMonthYear];
+    }
+
+    /**
+     * Total report data
+     */
+    protected function getTotalLoanData()
+    {
+        $loans = loan::with('repayments')->get();
+
+        $data = $loans->map(function ($loan) {
+            $paidInstallments = $loan->repayments->where('paid_status', 'paid');
+            $totalPaid = $paidInstallments->sum('installment_amounts');
+            $lastPaid = $paidInstallments->last();
+
+            return [
+                'employee_id' => "ABNB" . optional($loan->employee)->Employee_Id,
+                'employee_name' => optional($loan->employee)->Full_Name ?? "N/A",
+                'total_loan_amount' => $loan->principal_amounts,
+                'tenure' => $loan->tenure_months,
+                'paid_tenure' => $paidInstallments->count(),
+                'total_paid' => $totalPaid ?: 0,
+                'remaining_amount' => $loan->principal_amounts - $totalPaid ?: 0,
+                'last_installment_date' => $lastPaid ? $lastPaid->paid_on_dates : null,
+            ];
+        });
+
+        // Use the latest last installment date for report title
+        $firstDate = collect($data)->pluck('last_installment_date')->filter()->last();
+        $reportMonthYear = $firstDate ? Carbon::parse($firstDate)->format('F Y') : '';
+
+        return [$data, $reportMonthYear];
     }
 }

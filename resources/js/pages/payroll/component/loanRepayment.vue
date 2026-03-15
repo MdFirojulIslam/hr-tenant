@@ -29,23 +29,21 @@ const getData = async () => {
     try {
         const res = await api.get("/repayments-info");
         repaymentsInfo.value = res.data.map((item) => {
-            const autoAmount =
-                Number(item.principal_amount) / Number(item.tenure_months);
             return {
                 id: item.id,
                 official_id: item.official_id,
                 employee_id: item.employee_id,
                 employee_name: item.employee_name,
                 department_name: item.department_name,
-                principal_amount: item.principal_amount,
+                principal_amount: item.principal_amounts,
                 tenure_months: item.tenure_months,
-                paid_installments: item.paid_installments,
+                paid_installments: item.paid_amount,
 
                 // Custom fields
                 installment_date:
                     item.installment_date || getCurrentMonthDate(),
 
-                installment_amount: autoAmount.toFixed(2),
+                installment_amount: item.monthly_installments,
                 checked: false,
             };
         });
@@ -208,16 +206,19 @@ onMounted(() => {
                             >
                                 <thead class="table-light">
                                     <tr class="text-nowrap">
-                                        <th>SL</th>
-                                        <th>Official ID</th>
-                                        <th>Name</th>
-                                        <th>Department</th>
-                                        <th>Principal</th>
-                                        <th>Tenure</th>
-                                        <th>Total Paid</th>
-                                        <th>Installment Date</th>
-                                        <th>Amount</th>
-                                        <th>Status</th>
+                                        <th class="text-center">S/N</th>
+                                        <th class="text-center">OFFICIAL ID</th>
+                                        <th>NAME</th>
+                                        <th>DEPARTMENT</th>
+                                        <th class="text-center">PRINCIPLE</th>
+                                        <th class="text-center">TENURE</th>
+                                        <th class="text-center">TOTAL PAID</th>
+                                        <th class="text-center">REMAIN</th>
+                                        <th class="text-center">
+                                            DEDUCTION MONTH
+                                        </th>
+                                        <th class="text-center">AMOUNT</th>
+                                        <th class="text-center">STATUS</th>
                                         <th>
                                             <input
                                                 type="checkbox"
@@ -231,14 +232,31 @@ onMounted(() => {
                                     <tr
                                         v-for="(item, index) in filteredData"
                                         :key="index"
+                                        class="text-nowrap"
                                     >
-                                        <td>{{ index + 1 }}</td>
-                                        <td>ABNB-{{ item.official_id }}</td>
+                                        <td class="text-center">
+                                            {{ index + 1 }}
+                                        </td>
+                                        <td class="text-center">
+                                            ABNB-{{ item.official_id }}
+                                        </td>
                                         <td>{{ item.employee_name }}</td>
                                         <td>{{ item.department_name }}</td>
-                                        <td>{{ item.principal_amount }}</td>
-                                        <td>{{ item.tenure_months }}</td>
-                                        <td>{{ item.paid_installments }}</td>
+                                        <td class="text-center">
+                                            {{ item.principal_amount }}
+                                        </td>
+                                        <td class="text-center">
+                                            {{ item.tenure_months }}
+                                        </td>
+                                        <td class="text-center">
+                                            {{ item.paid_installments }}
+                                        </td>
+                                        <td class="text-center">
+                                            {{
+                                                Number(item.principal_amount) -
+                                                Number(item.paid_installments)
+                                            }}
+                                        </td>
 
                                         <td>
                                             <input
@@ -248,10 +266,10 @@ onMounted(() => {
                                             />
                                         </td>
 
-                                        <td>
+                                        <td class="text-center">
                                             <input
                                                 type="decimal"
-                                                class="form-control border-color"
+                                                class="form-control border-color text-center"
                                                 v-model="
                                                     item.installment_amount
                                                 "

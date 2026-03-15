@@ -37,10 +37,12 @@ Route::post('/update-repayment-dates', [LoanController::class, 'updateRepaymentD
 
 //added by firoj
 Route::get('/get-loan-amount/{id}', [LoanController::class, 'getLoanAmount']);
-Route::post('/loan-repayment', [LoanController::class, 'createRepayment']);
+Route::put('/loan-repayment/{id}', [LoanController::class, 'updateRepayment']);
 Route::get('/loan-installments/{id}', [LoanController::class, 'repaymentHistory']);
 Route::get('/repayments-info', [LoanController::class, 'repaymentInfo']);
 Route::get('/delete-loan/{id}', [LoanController::class, 'deleteLoan']);
+Route::get('/delete-single-loan/{id}', [LoanController::class, 'deleteSingleLoan']);
+Route::get('/loan-installment-details/{loanId}/{repaymentId}', [LoanController::class, 'viewSingleLoan']);
 
 
 Route::get('/delete-salary/{id}', [EmployeeSalaryController::class, 'deleteSalary']);
@@ -90,3 +92,6 @@ Route::get('/bonus-disbursement-cash-word', [BonusSheetController::class, 'Bonus
 Route::post('/disburse-bonus', [BonusSheetController::class, 'bonusDisburse']);
 
 Route::get('/payslip-print-view/{id}', [EmployeeSalaryController::class, 'printPayslip']);
+
+Route::get('/salary-adjustment-report', [EmployeeSalaryController::class, 'downloadSalaryAdjustmentReport']);
+Route::get('/loan-adjustment-report', [EmployeeSalaryController::class, 'downloadLoanAdjustmentReport']);

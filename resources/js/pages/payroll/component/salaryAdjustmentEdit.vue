@@ -26,8 +26,6 @@ const { isOpen, editStore, updateinfo } = defineProps([
     "updateinfo",
 ]);
 
-console.log("Edit Store Data:", editStore);
-
 const error = ref([]);
 const department = ref([]);
 const employee = ref([]);
@@ -327,6 +325,7 @@ onMounted(() => {
                                                 @change="
                                                     getEmployee(form.department)
                                                 "
+                                                disabled
                                             >
                                                 <option value="" disabled>
                                                     Select Department
@@ -365,6 +364,7 @@ onMounted(() => {
                                                     onEmployeeSelect
                                                 "
                                                 :clear-on-select="false"
+                                                :disabled="true"
                                             />
                                             <!-- <button
                                                 v-if="selectedEmployee"

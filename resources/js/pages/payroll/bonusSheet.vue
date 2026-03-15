@@ -285,7 +285,8 @@ onMounted(() => getData());
 
                 <div class="ms-3">
                     <button class="btn btn-info mt-4" @click="downloadSalary">
-                        Download Bonus Sheet
+                        <i class="fa-solid fa-download me-2"></i>Download Bonus
+                        Sheet
                     </button>
                 </div>
             </div>

@@ -36,7 +36,6 @@ const heading = ref("");
 const currentPage = ref(1);
 
 const onEmployeeSelect = (value) => {
-    console.log("Selected employee:", value);
     selectedEmployee.value = value;
     if (value) {
         searchEmp.value = value.id;
@@ -152,7 +151,7 @@ onMounted(() => getData());
         <div
             class="d-flex justify-content-between align-items-center py-2 px-3"
         >
-            <h2 class="m-0">Salary Setup List</h2>
+            <h2 class="m-0 header-design">Salary Setup List</h2>
             <div v-if="role_id == 1 || role_id == 2">
                 <button
                     @click="salaryOpen('Save')"
@@ -183,12 +182,10 @@ onMounted(() => getData());
                 <!-- Filters -->
                 <div class="row g-3 mb-3">
                     <div class="col-lg-3 position-relative">
-                        <label class="form-label">Select Department</label>
                         <select
-                            class="form-control field-height field-hover"
+                            class="form-control field-height field-background-colour"
                             v-model="searchDept"
                             @change="getEmployee(searchDept)"
-                            style="font-weight: normal; background: transparent"
                         >
                             <option value="" disabled>All Department</option>
                             <option
@@ -202,7 +199,7 @@ onMounted(() => getData());
                         <button
                             v-if="searchDept"
                             type="button"
-                            class="btn btn-sm btn-link position-absolute top-0 end-0 mt-5 me-3"
+                            class="btn btn-sm btn-link position-absolute top-0 end-0 mt-2 me-3"
                             @click="
                                 searchDept = '';
                                 employeeIDs = [];
@@ -214,7 +211,6 @@ onMounted(() => getData());
 
                     <!-- Employee -->
                     <div class="col-lg-3 position-relative">
-                        <label class="form-label">Select Employee</label>
                         <Multiselect
                             v-model="selectedEmployee"
                             :options="employee"
@@ -225,29 +221,13 @@ onMounted(() => getData());
                             :close-on-select="true"
                             :allow-empty="true"
                             @update:modelValue="onEmployeeSelect"
-                            class="multiselect-design field-hover"
+                            class="multiselect-design"
                         />
-
-                        <!-- REMOVE this -->
-                        <button
-                            v-if="selectedEmployee"
-                            type="button"
-                            class="btn btn-sm btn-link position-absolute top-0 end-0 mt-5 me-5"
-                            @click="
-                                selectedEmployee = null;
-                                searchEmp = '';
-                            "
-                        >
-                            <i class="fa fa-times"></i>
-                        </button>
                     </div>
                     <div class="col-lg-3 position-relative">
-                        <label class="form-label"
-                            >Search By Account/Official ID</label
-                        >
                         <input
                             type="text"
-                            class="form-control field-height field-hover"
+                            class="form-control field-height field-background-colour"
                             v-model="searchQuery"
                             placeholder="Search By Account No or Official ID"
                             @input="searchemp"
@@ -270,7 +250,7 @@ onMounted(() => getData());
                     <div class="table-responsive shadow-sm bg-light">
                         <table class="table table-bordered table-sm">
                             <thead class="table-light">
-                                <tr>
+                                <tr class="text-nowrap">
                                     <th width="2%">S/N</th>
                                     <th width="8%">OFFICIAL ID</th>
                                     <th width="15%">DEPARTMENT</th>
@@ -301,6 +281,7 @@ onMounted(() => getData());
                                 <tr
                                     v-for="(salary, index) in salaries.data"
                                     :key="salary.id"
+                                    class="text-nowrap"
                                 >
                                     <td>{{ salaries.from + index }}</td>
                                     <td>ABNB-{{ salary.official_id }}</td>
@@ -390,17 +371,16 @@ onMounted(() => getData());
     </div>
 </template>
 
-<style scoped>
-.border-color {
-    border-radius: none;
-}
-.form-label {
-    font-weight: 800;
-    letter-spacing: 0.5px;
-    margin-left: 4px;
-}
-.field-height {
-    height: 38px;
+<style>
+.table-responsive .table,
+.table-responsive .table tbody,
+.table-responsive .table tr,
+.table-responsive .table td {
+    /* background-color: rgba(234, 236, 234, 0.2) !important; */
+    background: #ffffffd5 !important;
+    color: #000000;
+    border: 0.8px solid #7e7c7c63;
+    letter-spacing: 0.3px;
 }
 
 .field-hover:hover {
@@ -417,7 +397,62 @@ onMounted(() => getData());
     font-weight: 700;
     color: #fff;
 }
+
 .table thead {
     height: 30px;
+}
+
+.field-height {
+    height: 35px;
+}
+.placeholder-text {
+    color: #999; /* faded text for placeholder */
+    font-size: 14px;
+}
+.multiselect-design .multiselect__placeholder {
+    color: #999;
+    font-size: 14px;
+    margin-bottom: 0px;
+    align-items: center;
+}
+
+.multiselect-design .multiselect__tags {
+    min-height: 35px !important; /* override default min-height */
+    height: 35px; /* exact height */
+    padding: 0 8px; /* adjust left/right padding */
+    border-radius: 5px;
+    border: 0.8px solid #b3a9a963;
+    background: #c4c2c250;
+    display: flex; /* align input vertically */
+    align-items: center;
+    font-size: 14px;
+}
+
+/* Input inside the multiselect */
+.multiselect-design .multiselect__input,
+.multiselect-design .multiselect__single {
+    height: 100%; /* fill the tags container height */
+    line-height: 35px; /* match container for vertical centering */
+    padding: 0; /* remove extra padding */
+    margin: 0;
+    background: transparent; /* match container bg */
+    border: 0; /* remove default border */
+    flex: 1; /* grow to fill remaining space */
+}
+
+.multiselect-design .multiselect__select {
+    height: 35px;
+}
+
+.field-background-colour {
+    background: #c4c2c250;
+    border: 0.8px solid #b3a9a963;
+}
+.header-design {
+    letter-spacing: 1px;
+    padding-top: 5px;
+    /* background-color: #d6d6d6f5;
+
+    border-radius: 5px; */
 }
 </style>

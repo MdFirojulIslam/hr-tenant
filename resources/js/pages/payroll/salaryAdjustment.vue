@@ -22,6 +22,11 @@ const salaryAdjustmentComponent = defineAsyncComponent(
 const salaryAdjustmentComponentNew = defineAsyncComponent(
     () => import("@/pages/payroll/component/salaryAdjustmentForm.vue"),
 );
+
+const salaryAdjustmentReport = defineAsyncComponent(
+    () => import("@/pages/payroll/component/salaryAdjustmentReport.vue"),
+);
+
 // states
 const selectedMonth = ref(new Date().getMonth() + 1); // optional
 const selectedYear = ref(new Date().getFullYear()); // optional
@@ -45,6 +50,14 @@ const salaries = ref({});
 const salaryRecords = ref([]);
 const selectedEmployee = ref(null);
 
+const reportModal = ref(false);
+const downloadReport = () => {
+    reportModal.value = true;
+};
+const closeReportModal = () => {
+    reportModal.value = false;
+};
+
 const onEmployeeSelect = (emp) => {
     if (!emp) return;
     form.eid = emp.id;
@@ -64,22 +77,7 @@ const getDeptShortName = (name) => {
     return map[name] || name; // fallback to full name if not found
 };
 
-const years = ref([
-    "2022",
-    "2023",
-    "2024",
-    "2025",
-    "2026",
-    "2027",
-    "2028",
-    "2029",
-    "2030",
-    "2031",
-    "2032",
-    "2033",
-    "2034",
-    "2035",
-]);
+const years = ref(["2025", "2026", "2027", "2028", "2029", "2030"]);
 
 const months = ref([
     "January",
@@ -210,16 +208,29 @@ onMounted(() => getData());
             class="d-flex justify-content-between align-items-center py-2 px-3"
         >
             <h2 class="m-0 header-design">Salary Adjustment List</h2>
-            <div>
-                <button
-                    @click="salaryAdjustmentNew('Save')"
-                    type="button"
-                    class="btn btn-success d-flex align-items-center fw-medium shadow-sm"
-                >
-                    <i class="fa-solid fa-plus me-2"></i> New Adjustment
+            <div class="d-flex gap-2">
+                <button @click="downloadReport()" class="btn btn-primary">
+                    <i class="fa-solid fa-download me-2"></i> Download Report
                 </button>
+
+                <div>
+                    <button
+                        @click="salaryAdjustmentNew('Save')"
+                        type="button"
+                        class="btn btn-success d-flex align-items-center fw-medium shadow-sm"
+                    >
+                        <i class="fa-solid fa-plus me-2"></i> New Adjustment
+                    </button>
+                </div>
             </div>
         </div>
+        <!-- Download Report Modal -->
+        <component
+            v-if="reportModal"
+            :is="salaryAdjustmentReport"
+            :isOpen="reportModal"
+            @modal-close="closeReportModal"
+        />
 
         <!-- Salary Modal -->
         <component
