@@ -581,6 +581,7 @@ class EmployeeSalaryController extends Controller
             ->join('officials', 'officials.EID', '=', 'salary_sheets.employee_id')
             ->join('departments', 'departments.id', '=', 'officials.Department_Id')
             ->where('salary_sheets.payment_method', 'bank')
+            ->whereNotNull('salary_sheets.disbursement_status')
             ->whereYear('salary_sheets.salary_date', $year)
             ->whereMonth('salary_sheets.salary_date', $month)
             ->select(
@@ -617,6 +618,7 @@ class EmployeeSalaryController extends Controller
             ->join('officials', 'officials.EID', '=', 'salary_sheets.employee_id')
             ->join('departments', 'departments.id', '=', 'officials.Department_Id')
             ->where('salary_sheets.payment_method', 'cash')
+            ->whereNotNull('salary_sheets.disbursement_status')
             ->whereYear('salary_sheets.salary_date', $year)
             ->whereMonth('salary_sheets.salary_date', $month)
             ->select(
@@ -657,6 +659,7 @@ class EmployeeSalaryController extends Controller
             ->where('salary_sheets.payment_method', 'bank')
             ->whereYear('salary_sheets.salary_date', $year)
             ->whereMonth('salary_sheets.salary_date', $month)
+            ->whereNotNull('salary_sheets.disbursement_status')
             ->select(
                 'employees.Employee_Id as employee_id',
                 'employees.Full_Name as full_name',
@@ -686,6 +689,7 @@ class EmployeeSalaryController extends Controller
             ->where('salary_sheets.payment_method', 'cash')
             ->whereYear('salary_sheets.salary_date', $year)
             ->whereMonth('salary_sheets.salary_date', $month)
+            ->whereNotNull('salary_sheets.disbursement_status')
             ->select(
                 'employees.Employee_Id as employee_id',
                 'employees.Full_Name as full_name',
@@ -715,6 +719,7 @@ class EmployeeSalaryController extends Controller
             ->where('salary_sheets.payment_method', 'bank')
             ->whereYear('salary_sheets.salary_date', $year)
             ->whereMonth('salary_sheets.salary_date', $month)
+            ->whereNotNull('salary_sheets.disbursement_status')
             ->select(
                 DB::raw("CONCAT('ABNB', employees.Employee_Id) as employee_id"),
                 'employees.Full_Name',
@@ -807,6 +812,7 @@ class EmployeeSalaryController extends Controller
             ->where('salary_sheets.payment_method', 'cash')
             ->whereYear('salary_sheets.salary_date', $year)
             ->whereMonth('salary_sheets.salary_date', $month)
+            ->whereNotNull('salary_sheets.disbursement_status')
             ->select(
                 DB::raw("CONCAT('ABNB', employees.Employee_Id) as employee_id"),
                 'employees.Full_Name as full_name',
@@ -1264,8 +1270,14 @@ class EmployeeSalaryController extends Controller
             );
         }
 
-        $pdf = Pdf::loadView('payroll.loan_report', ['data' => $data]);
-        return $pdf->download($mode === 'monthly' ? "monthly_loan_report.pdf" : "total_loan_report.pdf");
+        $pdf = Pdf::loadView('payroll.loan_report', [
+            'data' => $data,
+            'reportMonthYear' => $reportMonthYear ?? null
+        ]);
+
+        return $pdf->download(
+            $mode === 'monthly' ? "monthly_loan_report.pdf" : "total_loan_report.pdf"
+        );
     }
 
     /**

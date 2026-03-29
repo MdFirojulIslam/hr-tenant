@@ -174,7 +174,7 @@ onMounted(async () => {
         <div class="row mb-3">
             <!-- Department Filter -->
             <div class="col-lg-3 position-relative" v-if="role_id == 1">
-                <label class="form-label">Select Department</label>
+                <label class="form-label label-class">Select Department</label>
                 <select
                     v-model="searchDept"
                     @change="getEmployee(searchDept)"
@@ -205,7 +205,7 @@ onMounted(async () => {
 
             <!-- Employee Filter -->
             <div class="col-lg-3 position-relative me-3" v-if="role_id == 1">
-                <label class="form-label">Select Employee</label>
+                <label class="form-label label-class">Select Employee</label>
                 <Multiselect
                     v-model="selectedEmployee"
                     :options="employee"
@@ -230,7 +230,7 @@ onMounted(async () => {
             <!-- Year & Month -->
             <div class="col-lg-4 d-flex align-items-end gap-2">
                 <div class="col-lg-6">
-                    <label class="form-label"> Select Year </label>
+                    <label class="form-label label-class"> Select Year </label>
                     <select
                         v-model="selectedYear"
                         class="form-control field-height field-hover"
@@ -240,7 +240,7 @@ onMounted(async () => {
                         </option>
                     </select>
                 </div>
-                <div class="col-lg-6">
+                <div class="col-lg-6 label-class">
                     <label class="form-label"> Select Month </label>
                     <select
                         v-model="selectedMonth"
@@ -536,6 +536,78 @@ onMounted(async () => {
     color: #198754;
     font-weight: bold;
     font-size: 21px;
+}
+.field-hover:hover {
+    border-color: #80bdff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.table tbody tr:hover > td {
+    background-color: #717c73c7 !important;
+}
+
+.table thead th {
+    background-color: #4e4e4e;
+    font-weight: 700;
+    color: #fff;
+}
+
+.table thead {
+    height: 30px;
+}
+
+.field-height {
+    height: 35px;
+}
+.placeholder-text {
+    color: #999; /* faded text for placeholder */
+    font-size: 14px;
+}
+.multiselect-design .multiselect__placeholder {
+    color: #999;
+    font-size: 14px;
+    margin-bottom: 0px;
+    align-items: center;
+}
+
+.multiselect-design .multiselect__tags {
+    min-height: 35px !important; /* override default min-height */
+    height: 35px; /* exact height */
+    padding: 0 8px; /* adjust left/right padding */
+    border-radius: 5px;
+    border: 0.8px solid #b3a9a963;
+    background: #c4c2c250;
+    display: flex; /* align input vertically */
+    align-items: center;
+    font-size: 14px;
+}
+
+/* Input inside the multiselect */
+.multiselect-design .multiselect__input,
+.multiselect-design .multiselect__single {
+    height: 100%; /* fill the tags container height */
+    line-height: 35px; /* match container for vertical centering */
+    padding: 0; /* remove extra padding */
+    margin: 0;
+    background: transparent; /* match container bg */
+    border: 0; /* remove default border */
+    flex: 1; /* grow to fill remaining space */
+}
+
+.multiselect-design .multiselect__select {
+    height: 35px;
+}
+
+.field-background-colour {
+    background: #c4c2c250;
+    border: 0.8px solid #b3a9a963;
+}
+.header-design {
+    letter-spacing: 1px;
+    padding-top: 5px;
+    /* background-color: #d6d6d6f5;
+
+    border-radius: 5px; */
 }
 @media (max-width: 768px) {
     .label-info {

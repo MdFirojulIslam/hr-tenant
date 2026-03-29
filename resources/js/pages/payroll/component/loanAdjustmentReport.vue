@@ -174,7 +174,6 @@ const downloadReport = async () => {
                                 v-model="reportFormat"
                                 class="form-control field-background-colour"
                             >
-                                <option value="pdf">PDF</option>
                                 <option value="xlsx">Excel</option>
                             </select>
                         </div>
@@ -203,7 +202,6 @@ const downloadReport = async () => {
                                 v-model="totalFormat"
                                 class="form-control field-background-colour"
                             >
-                                <option value="pdf">PDF</option>
                                 <option value="xlsx">Excel</option>
                             </select>
                         </div>

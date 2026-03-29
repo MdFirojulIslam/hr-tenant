@@ -248,6 +248,7 @@ class BonusSheetController extends Controller
             ->join('officials', 'officials.EID', '=', 'bonus_sheets.employee_id')
             ->join('departments', 'departments.id', '=', 'officials.Department_Id')
             ->whereNotNull('bonus_sheets.bank_account_no')
+            ->whereNotNull('bonus_sheets.bonus_disbursements')
             ->whereYear('bonus_sheets.bonus_date', $year)
             ->whereMonth('bonus_sheets.bonus_date', $month)
             ->select(
@@ -282,6 +283,7 @@ class BonusSheetController extends Controller
             ->join('officials', 'officials.EID', '=', 'bonus_sheets.employee_id')
             ->join('departments', 'departments.id', '=', 'officials.Department_Id')
             ->whereNull('bonus_sheets.bank_account_no')
+            ->whereNotNull('bonus_sheets.bonus_disbursements')
             ->whereYear('bonus_sheets.bonus_date', $year)
             ->whereMonth('bonus_sheets.bonus_date', $month)
             ->select(
@@ -317,6 +319,7 @@ class BonusSheetController extends Controller
             ->join('officials', 'officials.EID', '=', 'bonus_sheets.employee_id')
             ->join('departments', 'departments.id', '=', 'officials.Department_Id')
             ->whereNotNull('bonus_sheets.bank_account_no')
+            ->whereNotNull('bonus_sheets.bonus_disbursements')
             ->whereYear('bonus_sheets.bonus_date', $year)
             ->whereMonth('bonus_sheets.bonus_date', $month)
             ->select(
@@ -347,6 +350,7 @@ class BonusSheetController extends Controller
             ->join('officials', 'officials.EID', '=', 'bonus_sheets.employee_id')
             ->join('departments', 'departments.id', '=', 'officials.Department_Id')
             ->whereNull('bonus_sheets.bank_account_no')
+            ->whereNotNull('bonus_sheets.bonus_disbursements')
             ->whereYear('bonus_sheets.bonus_date', $year)
             ->whereMonth('bonus_sheets.bonus_date', $month)
             ->select(
@@ -377,6 +381,7 @@ class BonusSheetController extends Controller
             ->join('officials', 'officials.EID', '=', 'bonus_sheets.employee_id')
             ->join('departments', 'departments.id', '=', 'officials.Department_Id')
             ->where('bonus_sheets.payment_methods', 'bank')
+            ->whereNotNull('bonus_sheets.bonus_disbursements')
             ->whereYear('bonus_sheets.bonus_date', $year)
             ->whereMonth('bonus_sheets.bonus_date', $month)
             ->select(
@@ -466,6 +471,7 @@ class BonusSheetController extends Controller
             ->join('officials', 'officials.EID', '=', 'bonus_sheets.employee_id')
             ->join('departments', 'departments.id', '=', 'officials.Department_Id')
             ->where('bonus_sheets.payment_methods', 'cash')
+            ->whereNotNull('bonus_sheets.bonus_disbursements')
             ->whereYear('bonus_sheets.bonus_date', $year)
             ->whereMonth('bonus_sheets.bonus_date', $month)
             ->select(

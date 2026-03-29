@@ -1,24 +1,13 @@
 <script setup>
 import { ref, onMounted, computed, defineAsyncComponent } from "vue";
-// import { Bootstrap4Pagination } from "laravel-vue-pagination";
-
 import api from "@/api";
 import { useStore } from "vuex";
-
 import Multiselect from "vue-multiselect";
 import "vue-multiselect/dist/vue-multiselect.min.css";
 
-const onEmployeeSelect = (emp) => {
-    if (!emp) return;
-    form.eid = emp.id;
-    searchEmp.value = emp.id; // if you use searchEmp for filtering
-    getEmployeeImg(emp.id);
-};
-
-const selectedEmployee = ref(null);
-
 const store = useStore();
 const role_id = store.getters.getRoleId;
+const user = store.getters.getUser;
 
 // ---------------- States ----------------
 const expandedRow = ref(null);
@@ -29,9 +18,10 @@ const tableInfo = ref([]);
 const paginationObject = ref({});
 const error = ref("");
 const isLoading = ref(true);
-const installments = ref({}); // key = loan_id, value = installment array
+const installments = ref({});
+const selectedEmployee = ref(null);
 const searchDept = ref("");
-const user = store.getters.getUser; // or from auth
+const selectedStatus = ref("active");
 
 // ---------------- Loan Setup Modal ----------------
 const heading = ref("");
@@ -47,11 +37,9 @@ const selectedRepayment = ref(null);
 const singleLoanModal = ref(false);
 const singleLoanData = ref(null);
 const singleLoanTitle = ref("");
-
 const editingInstallment = ref(null);
 
-const selectedStatus = ref("active"); // will hold "active" or "close"
-
+// ---------------- Loan Report ----------------
 const loanReportModal = ref(false);
 const downloadLoanReport = () => {
     loanReportModal.value = true;
@@ -70,13 +58,12 @@ const repaymentComponent = defineAsyncComponent(
 const singleLoanComponent = defineAsyncComponent(
     () => import("./component/installmentForm.vue"),
 );
-
 const loanAdjustmentReport = defineAsyncComponent(
     () => import("@/pages/payroll/component/loanAdjustmentReport.vue"),
 );
 
 // ---------------- Fetch Table Data ----------------
-const getData = async (page = 1) => {
+const getData = async () => {
     try {
         const [deptRes, loanRes] = await Promise.all([
             api.get(`/department-list/${user.id}`),
@@ -90,30 +77,6 @@ const getData = async (page = 1) => {
         isLoading.value = false;
     }
 };
-
-// const updateInstallmentInline = async (ins) => {
-//     try {
-//         const payload = {
-//             repayment_id: ins.id,
-//             installment_amount: ins.installment_amounts,
-//             installment_date: ins.paid_on_dates,
-//         };
-
-//         const res = await api.put(`/loan-repayment/${ins.id}`, payload);
-
-//         if (res.data.success) {
-//             updateInstallment({
-//                 repayment_id: ins.id,
-//                 loan_id: ins.loan_id, // ✅ add this
-//                 installment_amounts: ins.installment_amounts,
-//                 paid_on_dates: ins.paid_on_dates,
-//             });
-//             editingInstallment.value = null;
-//         }
-//     } catch (err) {
-//         console.error(err);
-//     }
-// };
 
 // ---------------- Fetch Employees ----------------
 const getEmployee = async (deptID) => {
@@ -147,13 +110,11 @@ const filteredData = computed(() => {
 
 // ---------------- Expandable Row ----------------
 const toggleRow = async (loanId) => {
-    loanId = Number(loanId); // <--- FIXED
-
+    loanId = Number(loanId);
     if (expandedRow.value === loanId) {
         expandedRow.value = null;
     } else {
         expandedRow.value = loanId;
-
         if (!installments.value[loanId]) {
             await getInstallments(loanId);
         }
@@ -202,9 +163,7 @@ const singleLoanAdjustment = async (installmentId, loanId) => {
         const res = await api.get(
             `/loan-installment-details/${installmentId}/${loanId}`,
         );
-
         singleLoanData.value = res.data;
-
         singleLoanTitle.value = "Update Repayment";
         singleLoanModal.value = true;
     } catch (err) {
@@ -213,31 +172,24 @@ const singleLoanAdjustment = async (installmentId, loanId) => {
 };
 const singleLoanClose = () => {
     singleLoanModal.value = false;
-    // getData();
 };
 
 // ---------------- Update Single Installment Inline ----------------
 const updateInstallmentInline = async (ins) => {
     try {
-        // Prepare payload for API
         const payload = {
             repayment_id: ins.id,
             installment_amount: Number(ins.installment_amounts) || 0,
             installment_date: ins.paid_on_dates,
         };
-
         const res = await api.put(`/loan-repayment/${ins.id}`, payload);
-
         if (res.data.success) {
-            // Update the local installment array
             updateInstallment({
-                loan_id: ins.loan_id, // make sure loan_id is passed
+                loan_id: ins.loan_id,
                 repayment_id: ins.id,
                 installment_amounts: Number(ins.installment_amounts) || 0,
                 paid_on_dates: ins.paid_on_dates,
             });
-
-            // Clear editing state
             editingInstallment.value = null;
         }
     } catch (err) {
@@ -247,11 +199,8 @@ const updateInstallmentInline = async (ins) => {
 
 // ---------------- Update Installment in Local State ----------------
 const updateInstallment = (updatedData) => {
-    const loanId = updatedData.loan_id; // get loan_id from updatedData
-
+    const loanId = updatedData.loan_id;
     if (!loanId || !installments.value[loanId]) return;
-
-    // Update the specific installment
     installments.value[loanId] = installments.value[loanId].map((ins) => {
         if (ins.id === updatedData.repayment_id) {
             return {
@@ -259,13 +208,11 @@ const updateInstallment = (updatedData) => {
                 installment_amounts:
                     Number(updatedData.installment_amounts) || 0,
                 paid_on_dates: updatedData.paid_on_dates,
-                paid_status: updatedData.paid_status || ins.paid_status, // keep status if not provided
+                paid_status: updatedData.paid_status || ins.paid_status,
             };
         }
         return ins;
     });
-
-    // Recalculate total_paid for this loan based only on PAID installments
     const loan = tableInfo.value.find((l) => l.loan_id === loanId);
     if (loan) {
         loan.total_paid = installments.value[loanId]
@@ -274,10 +221,9 @@ const updateInstallment = (updatedData) => {
     }
 };
 
+// ---------------- Delete Loan / Installment ----------------
 const deleteLoan = async (loanId) => {
-    if (!confirm("Are you sure you want to delete this loan?")) {
-        return;
-    }
+    if (!confirm("Are you sure you want to delete this loan?")) return;
     try {
         const response = await api.get(`/delete-loan/${loanId}`);
         if (response.data.success) {
@@ -287,25 +233,21 @@ const deleteLoan = async (loanId) => {
             alert("Failed to delete loan.");
         }
     } catch (err) {
-        console.error("Error deleting loan:", err);
+        console.error(err);
         alert("An error occurred while deleting the loan.");
     }
 };
 
 const deleteSingleLoan = async (repaymentId, loanId) => {
     if (!confirm("Are you sure you want to delete this Installment?")) return;
-
     try {
         const response = await api.get(`/delete-single-loan/${repaymentId}`);
         if (response.data.success) {
-            // Remove from local reactive state
             if (installments.value[loanId]) {
                 installments.value[loanId] = installments.value[loanId].filter(
                     (ins) => ins.id !== repaymentId,
                 );
             }
-
-            // Also update total_paid for this loan
             const loan = tableInfo.value.find((l) => l.loan_id === loanId);
             if (loan) {
                 loan.total_paid = installments.value[loanId]
@@ -315,15 +257,21 @@ const deleteSingleLoan = async (repaymentId, loanId) => {
                         0,
                     );
             }
-
             alert("Installment deleted successfully.");
         } else {
             alert("Failed to delete installment.");
         }
     } catch (err) {
-        console.error("Error deleting installment:", err);
+        console.error(err);
         alert("An error occurred while deleting the installment.");
     }
+};
+
+// ---------------- Employee Select ----------------
+const onEmployeeSelect = (emp) => {
+    if (!emp) return;
+    form.eid = emp.id;
+    getEmployee(emp.id);
 };
 
 // ---------------- Lifecycle ----------------
@@ -334,11 +282,12 @@ onMounted(() => getData());
     <div
         class="border rounded container-fluid h-100 d-flex flex-column p-0 m-0"
     >
+        <!-- Header -->
         <div
-            class="d-flex justify-content-between align-items-center py-2 px-3"
+            class="d-flex justify-content-between align-items-center py-2 px-3 flex-wrap"
         >
-            <h2 class="m-0">Employee Loan List</h2>
-            <div class="d-flex flex-row gap-2">
+            <h2 class="m-0 mb-2 mb-md-0">Employee Loan List</h2>
+            <div class="d-flex flex-row gap-2 flex-wrap">
                 <button
                     @click="downloadLoanReport()"
                     type="button"
@@ -351,27 +300,25 @@ onMounted(() => getData());
                     type="button"
                     class="btn btn-success d-flex align-items-center fw-medium shadow-sm mb-2"
                 >
-                    <i class="fa-solid fa-plus me-2"></i>New Loan Setup
+                    <i class="fa-solid fa-plus me-2"></i> New Loan Setup
                 </button>
                 <button
                     @click="repaymentOpen('Loan Repayment')"
                     type="button"
                     class="btn btn-success d-flex align-items-center fw-medium shadow-sm mb-2"
                 >
-                    <i class="fa-solid fa-plus me-2"></i>Loan Repayment Setup
+                    <i class="fa-solid fa-plus me-2"></i> Loan Repayment Setup
                 </button>
             </div>
         </div>
 
-        <!-- Parent -->
+        <!-- Modals -->
         <component
             v-if="loanReportModal"
             :is="loanAdjustmentReport"
             :isOpen="loanReportModal"
             @modal-close="closeLoanReportModal"
         />
-
-        <!-- Modals -->
         <component
             v-if="loanSetupModel"
             :is="loanSetupComponent"
@@ -382,7 +329,6 @@ onMounted(() => getData());
             @modal-close="loanSetupClose"
             @refresh-list="getData"
         />
-
         <component
             v-if="repaymentModal"
             :is="repaymentComponent"
@@ -394,33 +340,18 @@ onMounted(() => getData());
             @refresh-list="getData"
         />
 
-        <!-- <component
-            v-if="singleLoanModal"
-            :is="singleLoanComponent"
-            :isOpen="singleLoanModal"
-            :updateinfo="singleLoanTitle"
-            :editStore="singleLoanData"
-            :roleId="role_id"
-            @modal-close="singleLoanClose"
-            @refresh-list="updateInstallment"
-        /> -->
-
-        <!-- Filter Section -->
+        <!-- Filters -->
         <div class="col-lg-12 mt-3">
             <div class="p-3 mb-3">
-                <div class="row g-3 mb-3">
+                <div class="row g-3 mb-3 flex-wrap">
                     <!-- Department -->
                     <div class="col-lg-3 position-relative">
                         <select
                             class="form-control field-height field-background-colour"
                             v-model="searchDept"
-                            :class="{ 'placeholder-text': !searchDept }"
                             @change="getEmployee(searchDept)"
                         >
                             <option value="" disabled>Select Department</option>
-                            <!-- <option class="default-selection" value="" disabled>
-                                Select Department
-                            </option> -->
                             <option
                                 v-for="dept in department"
                                 :key="dept.department_id"
@@ -429,35 +360,8 @@ onMounted(() => getData());
                                 {{ dept.department_name }}
                             </option>
                         </select>
-                        <button
-                            v-if="searchDept"
-                            type="button"
-                            class="btn btn-sm btn-link position-absolute top-0 end-0 mt-2 me-3"
-                            @click="
-                                searchDept = '';
-                                employeeIDs = [];
-                            "
-                        >
-                            <i class="fa fa-times"></i>
-                        </button>
                     </div>
-
                     <!-- Employee -->
-                    <!-- <div class="col-lg-3 position-relative">
-                        <select class="form-control border-color" v-model="searchEmp"
-                            style="font-weight: normal; background: transparent">
-                            <option value="" disabled>
-                                Select Employee Name
-                            </option>
-                            <option v-for="emp in employeeIDs" :key="emp.id" :value="emp.id">
-                                {{ emp.Full_Name }}
-                            </option>
-                        </select>
-                        <button v-if="searchEmp" type="button"
-                            class="btn btn-sm btn-link position-absolute top-0 end-0 mt-1 me-1" @click="searchEmp = ''">
-                            <i class="fa fa-times"></i>
-                        </button>
-                    </div> -->
                     <div class="col-lg-3 position-relative">
                         <Multiselect
                             v-model="selectedEmployee"
@@ -471,17 +375,8 @@ onMounted(() => getData());
                             @update:modelValue="onEmployeeSelect"
                             class="multiselect-design"
                         />
-
-                        <!-- REMOVE this -->
-                        <!-- <button
-                            v-if="selectedEmployee"
-                            type="button"
-                            class="btn btn-sm btn-link position-absolute top-0 end-0 mt-2 me-3"
-                            @click="selectedEmployee = ''"
-                        >
-                            <i class="fa fa-times"></i>
-                        </button> -->
                     </div>
+                    <!-- Status -->
                     <div class="col-lg-1 position-relative">
                         <select
                             class="form-control field-height field-background-colour"
@@ -491,19 +386,11 @@ onMounted(() => getData());
                             <option value="active">ACTIVE</option>
                             <option value="closed">CLOSE</option>
                         </select>
-                        <button
-                            v-if="selectedStatus"
-                            type="button"
-                            class="btn btn-sm btn-link position-absolute top-0 end-0 mt-2 me-3"
-                            @click="selectedStatus = ''"
-                        >
-                            <i class="fa fa-times"></i>
-                        </button>
                     </div>
                 </div>
 
                 <!-- Loan Table -->
-                <div class="mt-5">
+                <div class="mt-3">
                     <div
                         class="d-flex align-items-center px-2 py-2 fw-semibold border-bottom bg-light"
                     >
@@ -525,7 +412,6 @@ onMounted(() => getData());
                                     <th width="13%">EMPLOYEE NAME</th>
                                     <th width="17%">DEPARTMENT</th>
                                     <th width="17%">DESIGNATION</th>
-
                                     <th class="text-center" width="10%">
                                         PRINCIPAL AMOUNT
                                     </th>
@@ -575,7 +461,6 @@ onMounted(() => getData());
                                         <td>{{ item.employee_name }}</td>
                                         <td>{{ item.deptName }}</td>
                                         <td>{{ item.designation_name }}</td>
-
                                         <td class="text-center">
                                             {{ item.principal_amounts }}
                                         </td>
@@ -659,9 +544,6 @@ onMounted(() => getData());
                                                             </th>
                                                         </tr>
                                                     </thead>
-                                                    <!-- <pre>{{
-                                                        installments
-                                                    }}</pre> -->
                                                     <tbody>
                                                         <tr
                                                             v-for="(
@@ -701,11 +583,10 @@ onMounted(() => getData());
                                                                         editingInstallment =
                                                                             ins.id
                                                                     "
-                                                                >
-                                                                    {{
+                                                                    >{{
                                                                         ins.installment_amounts
-                                                                    }}
-                                                                </span>
+                                                                    }}</span
+                                                                >
                                                             </td>
                                                             <td
                                                                 class="text-center"
@@ -739,29 +620,14 @@ onMounted(() => getData());
                                                                         editingInstallment =
                                                                             ins.id
                                                                     "
-                                                                >
-                                                                    {{
+                                                                    >{{
                                                                         ins.paid_on_dates
-                                                                    }}
-                                                                </span>
+                                                                    }}</span
+                                                                >
                                                             </td>
                                                             <td
                                                                 class="text-center text-nowrap"
                                                             >
-                                                                <!-- <button
-                                                                    class="btn btn-sm btn-light border me-1"
-                                                                    title="Edit"
-                                                                    @click="
-                                                                        singleLoanAdjustment(
-                                                                            ins.id,
-                                                                            ins.loan_id,
-                                                                        )
-                                                                    "
-                                                                >
-                                                                    <i
-                                                                        class="fa-regular fa-pen-to-square text-warning"
-                                                                    ></i>
-                                                                </button> -->
                                                                 <button
                                                                     class="btn btn-sm btn-light border"
                                                                     title="Delete"
@@ -802,13 +668,6 @@ onMounted(() => getData());
                             </tbody>
                         </table>
                     </div>
-                    <!-- <div class="d-flex justify-content-end mt-0">
-                        <Bootstrap4Pagination
-                            :data="paginationObject"
-                            :limit="2"
-                            @pagination-change-page="getData"
-                        />
-                    </div> -->
                 </div>
             </div>
         </div>
@@ -818,92 +677,77 @@ onMounted(() => getData());
 <style>
 .border-color {
     border: 1.8px solid #059223d5;
-    border-radius: none;
 }
 .text-uppercase {
     text-transform: uppercase;
 }
-.table-responsive .table,
-.table-responsive .table tbody,
-.table-responsive .table tr,
-.table-responsive .table td {
-    /* background-color: rgba(234, 236, 234, 0.2) !important; */
-    background: #ffffffd5 !important;
-    color: #000000;
-    border: 0.8px solid #7e7c7c63;
-    letter-spacing: 0.3px;
-}
-
-.field-hover:hover {
-    border-color: #80bdff;
-    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
-}
-
-.table tbody tr:hover > td {
-    background-color: #717c73c7 !important;
-}
-
 .table thead th {
     background-color: #4e4e4e;
     font-weight: 700;
     color: #fff;
 }
-
-.table thead {
-    height: 30px;
-}
-
 .field-height {
     height: 35px;
 }
 .placeholder-text {
-    color: #999; /* faded text for placeholder */
-    font-size: 14px;
-}
-.multiselect-design .multiselect__placeholder {
     color: #999;
     font-size: 14px;
-    margin-bottom: 0px;
-    align-items: center;
 }
-
 .multiselect-design .multiselect__tags {
-    min-height: 35px !important; /* override default min-height */
-    height: 35px; /* exact height */
-    padding: 0 8px; /* adjust left/right padding */
+    min-height: 35px !important;
+    height: 35px;
+    padding: 0 8px;
     border-radius: 5px;
     border: 0.8px solid #b3a9a963;
     background: #c4c2c250;
-    display: flex; /* align input vertically */
+    display: flex;
     align-items: center;
     font-size: 14px;
 }
-
-/* Input inside the multiselect */
 .multiselect-design .multiselect__input,
 .multiselect-design .multiselect__single {
-    height: 100%; /* fill the tags container height */
-    line-height: 35px; /* match container for vertical centering */
-    padding: 0; /* remove extra padding */
+    height: 100%;
+    line-height: 35px;
+    padding: 0;
     margin: 0;
-    background: transparent; /* match container bg */
-    border: 0; /* remove default border */
-    flex: 1; /* grow to fill remaining space */
+    background: transparent;
+    border: 0;
+    flex: 1;
 }
-
 .multiselect-design .multiselect__select {
     height: 35px;
 }
-
 .field-background-colour {
     background: #c4c2c250;
     border: 0.8px solid #b3a9a963;
 }
-.header-design {
-    letter-spacing: 1px;
-    padding-top: 5px;
-    /* background-color: #d6d6d6f5;
 
-    border-radius: 5px; */
+/* Responsive */
+@media (max-width: 768px) {
+    .d-flex.flex-row.gap-2 {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+    }
+    .d-flex.flex-row.gap-2 button {
+        width: 100%;
+        display: block;
+    }
+    .row.g-3.mb-3 {
+        flex-direction: column;
+    }
+    .row.g-3.mb-3 .col-lg-3,
+    .row.g-3.mb-3 .col-lg-1 {
+        flex: 1 1 100%;
+        max-width: 100%;
+        margin-bottom: 8px;
+    }
+    .table-responsive {
+        overflow-x: auto;
+    }
+    .ms-5.p-1 {
+        width: 100% !important;
+        margin-left: 0 !important;
+    }
 }
 </style>

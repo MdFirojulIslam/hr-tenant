@@ -191,7 +191,7 @@ const filteredSalaries = computed(() => {
     return salaries.value.filter((salary) => {
         return (
             (salary.full_name || "").toLowerCase().includes(q) ||
-            String(salary.employee_id || "").includes(q) ||
+            String(salary.Employee_Id || "").includes(q) ||
             (salary.bank_account_no || "").toLowerCase().includes(q)
         );
     });
@@ -210,9 +210,9 @@ onMounted(() => getData());
                 <h2 class="m-0">Yearly Bonus Sheet</h2>
             </div>
 
-            <div class="d-flex justify-content-start">
-                <div class="form-group">
-                    <label>Salary Year</label>
+            <div class="row g-3 align-items-end">
+                <div class="col-12 col-md-1">
+                    <label class="label-class">Salary Year</label>
                     <select
                         class="form-control border-color"
                         v-model="selectedYear"
@@ -227,8 +227,8 @@ onMounted(() => getData());
                         </option>
                     </select>
                 </div>
-                <div class="form-group mx-4">
-                    <label>Salary Month</label>
+                <div class="col-12 col-md-1">
+                    <label class="label-class">Salary Month</label>
                     <select
                         class="form-control border-color border-color"
                         v-model="selectedMonth"
@@ -244,49 +244,51 @@ onMounted(() => getData());
                     </select>
                 </div>
 
-                <div class="ms-4">
+                <div class="col-12 col-md-2">
+                    <label class="label-class">Search</label>
                     <input
-                        type="text"
-                        class="form-control mt-4 mx-7 border-color"
-                        placeholder="Name, ID, or Bank A/C"
+                        class="form-control border-color"
+                        placeholder="Name, ID,  Bank A/C"
                         v-model="searchQuery"
                     />
                 </div>
 
-                <div class="ms-5">
+                <div class="col-6 col-md-1 generate-button">
                     <button
-                        class="btn btn-warning mt-4 mx-2"
+                        class="btn btn-warning"
                         @click="generateSalary"
                         :disabled="isDisbursed"
                     >
-                        Generate Bonus Sheet
+                        Generate Bonus
                     </button>
                 </div>
 
-                <div
-                    class="ms-auto justify-content-center align-items-center d-flex"
-                >
-                    <label class="net-total-lable">NET TOTAL :</label>
-                    <div class="total-class border rounded px-3 py-1 fw-medium">
-                        {{ netTotal }}
+                <div class="col-6 col-md-2 align-items-center net-total">
+                    <div
+                        class="d-flex justify-content-end align-items-center mt-2 text-nowrap"
+                    >
+                        <span class="net-total-lable me-2">NET TOTAL :</span>
+                        <div
+                            class="total-class border rounded px-3 py-1 fw-bold"
+                        >
+                            {{ netTotal }}
+                        </div>
                     </div>
                 </div>
+                <div class="col-12 col-md-1 ms-auto">
+                    <button class="btn btn-info w-100" @click="downloadSalary">
+                        <i class="fa-solid fa-download me-2"></i>Download
+                    </button>
+                </div>
 
-                <div class="ms-auto">
+                <div class="col-6 col-md-1 disburse-button">
                     <button
-                        class="btn mt-4"
+                        class="btn w-100"
                         :class="isDisbursed ? 'btn-secondary' : 'btn-success'"
                         :disabled="isDisbursed"
                         @click="disburseBonus"
                     >
                         {{ isDisbursed ? "DISBURSED" : "DISBURSE BONUS" }}
-                    </button>
-                </div>
-
-                <div class="ms-3">
-                    <button class="btn btn-info mt-4" @click="downloadSalary">
-                        <i class="fa-solid fa-download me-2"></i>Download Bonus
-                        Sheet
                     </button>
                 </div>
             </div>
@@ -404,5 +406,48 @@ onMounted(() => getData());
     margin-left: 10px;
     font-size: 15px;
     border-radius: none;
+}
+@media (max-width: 768px) {
+    .generate-button {
+        width: 100% !important;
+    }
+    .net-total {
+        display: flex; /* Make it flex */
+        justify-content: flex-start; /* ✅ Aligns items to the left horizontally */
+        width: 100% !important;
+        margin: 0 !important;
+        align-items: center; /* optional, aligns items vertically */
+    }
+    .disburse-button {
+        display: flex; /* Make it flex */
+        justify-content: flex-start; /* ✅ Aligns items to the left horizontally */
+        width: 100% !important;
+        align-items: center;
+    }
+    h4 {
+        font-size: 18px;
+    }
+
+    .table {
+        font-size: 12px;
+    }
+
+    .table th,
+    .table td {
+        padding: 6px;
+    }
+
+    .total-class {
+        font-size: 13px;
+    }
+
+    .label-class {
+        font-size: 11px;
+    }
+
+    .btn {
+        font-size: 12px;
+        padding: 6px;
+    }
 }
 </style>

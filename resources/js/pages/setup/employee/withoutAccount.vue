@@ -174,7 +174,7 @@ onMounted(() => {
                 <div class="table-responsive shadow-sm bg-light mt-3">
                     <table class="table table-bordered table-hover table-sm">
                         <thead class="table-head">
-                            <tr class="thead-text">
+                            <tr class="thead-text text-nowrap">
                                 <th>S/N</th>
                                 <th class="text-center">IMAGE</th>
                                 <th>ID</th>
@@ -189,7 +189,7 @@ onMounted(() => {
                         </thead>
                         <tbody>
                             <tr
-                                class="ver-align"
+                                class="ver-align text-nowrap"
                                 v-for="(employee, index) in employees.data"
                                 :key="employee.id"
                             >
@@ -333,5 +333,39 @@ onMounted(() => {
 
 .table tr {
     height: 55px;
+}
+@media (max-width: 576px) {
+    /* Stack header items vertically */
+    .card-body .d-flex {
+        flex-direction: column;
+        align-items: stretch; /* make child elements full width */
+        gap: 10px; /* space between items */
+    }
+
+    /* Make buttons take full width */
+    .active-account,
+    .without-account,
+    .inactive-account,
+    .all-employee {
+        width: 100%;
+        margin-left: 0 !important;
+    }
+
+    .active-account button,
+    .without-account button,
+    .inactive-account button,
+    .all-employee button {
+        width: 100%;
+    }
+
+    /* Search input full width */
+    .card-body input.form-control {
+        width: 100%;
+    }
+
+    /* Plus button full width if needed */
+    .btn-plus {
+        width: 100%;
+    }
 }
 </style>

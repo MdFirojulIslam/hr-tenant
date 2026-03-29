@@ -4,7 +4,7 @@ import { onClickOutside } from "@vueuse/core";
 import { useStore } from "vuex";
 import axios from "axios";
 import Swal from "sweetalert2";
-import api from '@/api';
+import api from "@/api";
 
 const store = useStore();
 const { isOpen, editStore, updateinfo, EID, acaId } = defineProps([
@@ -74,7 +74,7 @@ const getData = async () => {
 };
 
 onMounted(() => {
-    onClickOutside(target, () => instance.emit("modal-close")), getData();
+    (onClickOutside(target, () => instance.emit("modal-close")), getData());
 });
 
 const closeModal = () => {

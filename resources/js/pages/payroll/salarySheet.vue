@@ -208,9 +208,9 @@ onMounted(() => getData());
                 />
             </div>
 
-            <div class="col-6 col-md-1">
+            <div class="col-6 col-md-1 generate-button">
                 <button
-                    class="btn btn-warning w-100"
+                    class="btn btn-warning"
                     @click="generateSalary"
                     :disabled="isDisbursed"
                 >
@@ -218,8 +218,10 @@ onMounted(() => getData());
                 </button>
             </div>
 
-            <div class="col-6 col-md-2 align-items-center">
-                <div class="d-flex justify-content-end align-items-center mt-3">
+            <div class="col-6 col-md-2 align-items-center net-total">
+                <div
+                    class="d-flex justify-content-end align-items-center mt-3 text-nowrap"
+                >
                     <span class="net-total-lable me-2">NET TOTAL :</span>
                     <div class="total-class border rounded px-3 py-1 fw-bold">
                         {{ netTotal }}
@@ -227,7 +229,7 @@ onMounted(() => getData());
                 </div>
             </div>
 
-            <div class="col-6 col-md-1 ms-auto">
+            <div class="col-6 col-md-1 ms-auto disburse-button">
                 <button
                     class="btn w-100"
                     :class="isDisbursed ? 'btn-secondary' : 'btn-success'"
@@ -260,7 +262,7 @@ onMounted(() => getData());
             <table class="table table-bordered table-hover table-sm">
                 <thead>
                     <tr class="text-nowrap">
-                        <th>S/N</th>
+                        <th class="text-center">S/N</th>
                         <th class="text-center">EMP ID</th>
                         <th>EMPLOYEE NAME</th>
                         <th>DEPARTMENT</th>
@@ -279,7 +281,7 @@ onMounted(() => getData());
                         :key="salary.employee_id"
                         class="text-nowrap"
                     >
-                        <td>{{ index + 1 }}</td>
+                        <td class="text-center">{{ index + 1 }}</td>
                         <td class="text-center">
                             ABNB-{{ salary.employee_id }}
                         </td>
@@ -356,6 +358,22 @@ onMounted(() => getData());
 /* MOBILE RESPONSIVE */
 
 @media (max-width: 768px) {
+    .generate-button {
+        width: 100% !important;
+    }
+    .net-total {
+        display: flex; /* Make it flex */
+        justify-content: flex-start; /* ✅ Aligns items to the left horizontally */
+        width: 100% !important;
+        margin: 0 !important;
+        align-items: center; /* optional, aligns items vertically */
+    }
+    .disburse-button {
+        display: flex; /* Make it flex */
+        justify-content: flex-start; /* ✅ Aligns items to the left horizontally */
+        width: 100% !important;
+        align-items: center;
+    }
     h4 {
         font-size: 18px;
     }

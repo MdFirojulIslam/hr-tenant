@@ -4,19 +4,17 @@ import api from "@/api";
 import Swal from "sweetalert2";
 
 /* ================= STATE ================= */
-const disburse = ref([]); // for salaries data
-const bankTotal = ref(0); // total for bank accounts
-const cashTotal = ref(0); // total for cash payments
-
+const disburse = ref([]);
+const bankTotal = ref(0);
+const cashTotal = ref(0);
 const error = ref([]);
 
-const monthStatus = ref("PENDING"); // Default
+const monthStatus = ref("PENDING");
 
 const selectedMonth = ref(new Date().getMonth() + 1);
 const selectedYear = ref(new Date().getFullYear());
 const searchQuery = ref("");
 
-// Auto-download formats
 const bankFormat = ref("");
 const cashFormat = ref("");
 
@@ -53,19 +51,13 @@ const months = [
     "December",
 ];
 
-const selectedMonthName = computed(() => {
-    return months[selectedMonth.value - 1];
-});
+const selectedMonthName = computed(() => months[selectedMonth.value - 1]);
 
+/* ================= COMPLETE ================= */
 const setcomplete = async () => {
     const result = await Swal.fire({
         title: "Confirm Disbursement",
-        html: `
-            <p>
-                Are you sure you want to confirm disbursement for
-                <strong>${selectedMonthName.value} ${selectedYear.value}</strong>?
-            </p>
-        `,
+        html: `<p>Confirm disbursement for <strong>${selectedMonthName.value} ${selectedYear.value}</strong>?</p>`,
         icon: "warning",
         showCancelButton: true,
         confirmButtonText: "Yes, Confirm",
@@ -83,12 +75,12 @@ const setcomplete = async () => {
 
             Swal.fire(
                 "Completed!",
-                `Disbursement for ${selectedMonthName.value} ${selectedYear.value} has been completed.`,
+                `Disbursement for ${selectedMonthName.value} ${selectedYear.value} completed.`,
                 "success",
             );
 
             getData();
-        } catch (err) {
+        } catch {
             Swal.fire("Error", "Failed to complete disbursement", "error");
         }
     }
@@ -108,7 +100,6 @@ const getData = async () => {
         bankTotal.value = response.data.bank_total;
         cashTotal.value = response.data.cash_total;
 
-        // Determine month status (assume all rows share the same status)
         if (disburse.value.length > 0) {
             monthStatus.value = String(
                 disburse.value[0].disbursement_status,
@@ -137,13 +128,14 @@ const filteredDisbursement = computed(() => {
     );
 });
 
-/* ================= DOWNLOAD HELPER ================= */
+/* ================= DOWNLOAD ================= */
 const downloadFile = (response, filename) => {
     const blob = new Blob([response.data], {
         type: response.headers["content-type"],
     });
 
     const url = window.URL.createObjectURL(blob);
+
     const link = document.createElement("a");
     link.href = url;
     link.download = filename;
@@ -155,7 +147,6 @@ const downloadFile = (response, filename) => {
     document.body.removeChild(link);
 };
 
-/* ================= BANK DOWNLOAD ================= */
 const downloadBank = async (type) => {
     try {
         const response = await api.get(`/salary-disbursement-bank-${type}`, {
@@ -175,7 +166,6 @@ const downloadBank = async (type) => {
     }
 };
 
-/* ================= CASH DOWNLOAD ================= */
 const downloadCash = async (type) => {
     try {
         const response = await api.get(`/salary-disbursement-cash-${type}`, {
@@ -195,7 +185,7 @@ const downloadCash = async (type) => {
     }
 };
 
-/* ================= WATCHERS (AUTO DOWNLOAD) ================= */
+/* ================= WATCH ================= */
 watch(bankFormat, (format) => {
     if (!format) return;
     downloadBank(format);
@@ -213,15 +203,15 @@ onMounted(() => getData());
 </script>
 
 <template>
-    <div class="border rounded container-fluid p-3">
-        <h2 class="mb-4">Monthly Salary Disbursement</h2>
+    <div class="container-fluid border rounded p-3">
+        <h4 class="mb-3 fw-bold">Monthly Salary Disbursement</h4>
 
-        <div class="d-flex align-items-end flex-wrap">
-            <!-- YEAR -->
-            <div class="me-4">
+        <!-- CONTROLS -->
+        <div class="row g-3 align-items-end">
+            <div class="col-6 col-md-1">
                 <label class="label-class">Salary Year</label>
                 <select
-                    class="form-control border-color date-field"
+                    class="form-control border-color"
                     v-model="selectedYear"
                     @change="changeDate"
                 >
@@ -231,11 +221,10 @@ onMounted(() => getData());
                 </select>
             </div>
 
-            <!-- MONTH -->
-            <div>
+            <div class="col-6 col-md-1">
                 <label class="label-class">Salary Month</label>
                 <select
-                    class="form-control border-color date-field"
+                    class="form-control border-color"
                     v-model="selectedMonth"
                     @change="changeDate"
                 >
@@ -245,8 +234,7 @@ onMounted(() => getData());
                 </select>
             </div>
 
-            <!-- SEARCH -->
-            <div class="ms-3">
+            <div class="col-12 col-md-2">
                 <label class="label-class">Search</label>
                 <input
                     class="form-control border-color"
@@ -255,91 +243,95 @@ onMounted(() => getData());
                 />
             </div>
 
-            <div class="ms-5">
+            <div class="col-6 col-md-1">
                 <label class="label-class">Bank Total</label>
-                <div class="total-amount fw-semibold">{{ bankTotal }}</div>
-            </div>
-            <div class="ms-3">
-                <label class="label-class">Cash Total</label>
-                <div class="total-amount fw-semibold">{{ cashTotal }}</div>
+                <div class="total-amount">{{ bankTotal }}</div>
             </div>
 
-            <!-- BANK DOWNLOAD -->
-            <div class="ms-auto me-2">
-                <label class="label-class">Download Bank </label>
+            <div class="col-6 col-md-1">
+                <label class="label-class">Cash Total</label>
+                <div class="total-amount">{{ cashTotal }}</div>
+            </div>
+
+            <div class="col-12 col-md-1 ms-auto">
+                <label class="label-class">Download Bank</label>
                 <select
                     class="form-control border-color selected-option"
                     v-model="bankFormat"
                 >
-                    <option disabled value="" class="placeholder-text">
-                        -- Select Download Format --
-                    </option>
+                    <option disabled value="">Select Format</option>
                     <option value="pdf">PDF</option>
                     <option value="xlsx">Excel</option>
                     <option value="word">Word</option>
                 </select>
             </div>
 
-            <!-- CASH DOWNLOAD -->
-            <div class="">
+            <div class="col-12 col-md-1">
                 <label class="label-class">Download Cash</label>
                 <select
                     class="form-control border-color selected-option"
                     v-model="cashFormat"
                 >
-                    <option disabled value="">
-                        -- Select Download Format --
-                    </option>
-
+                    <option disabled value="">Select Format</option>
                     <option value="pdf">PDF</option>
                     <option value="xlsx">Excel</option>
                     <option value="word">Word</option>
                 </select>
             </div>
-            <div class="ms-5">
+
+            <div class="col-12 col-md-1 d-grid">
                 <button
                     class="set-button"
-                    @click="setcomplete()"
+                    @click="setcomplete"
                     :disabled="monthStatus === 'COMPLETED'"
                 >
                     RELEASE PAYMENT
                 </button>
             </div>
-            <div class="ms-2" v-if="monthStatus === 'COMPLETED'">
-                <button class="completed-button" disabled="">
+
+            <div class="col-12 col-md-3" v-if="monthStatus === 'COMPLETED'">
+                <button class="completed-button w-100" disabled>
                     DISBURSE COMPLETED
                 </button>
             </div>
         </div>
 
         <!-- TABLE -->
-        <div class="mt-4 table-responsive">
-            <div class="mb-2 fw-semibold">
+        <div class="table-responsive mt-4">
+            <div class="fw-semibold mb-2">
                 Total Employees: {{ filteredDisbursement.length }}
             </div>
 
-            <table class="table table-bordered table-sm">
-                <thead>
+            <table class="table table-bordered table-sm align-middle">
+                <thead class="table-light text-nowrap">
                     <tr>
-                        <th>S/N</th>
-                        <th>Employee ID</th>
-                        <th>Name</th>
-                        <th class="text-center">Bank / Cash</th>
-                        <th class="text-center">Net Salary</th>
+                        <th class="text-center">S/N</th>
+                        <th class="text-center">EMPLOYEE ID</th>
+                        <th>EMPLOYEE NAME</th>
+                        <th class="text-center">BANK / CASH</th>
+                        <th class="text-center">NET SALARY</th>
                     </tr>
                 </thead>
+
                 <tbody>
-                    <tr v-for="(item, i) in filteredDisbursement" :key="i">
-                        <td>{{ i + 1 }}</td>
-                        <td>ABNB-{{ item.employee_id }}</td>
-                        <td>{{ item.full_name }}</td>
+                    <tr
+                        v-for="(item, i) in filteredDisbursement"
+                        :key="i"
+                        class="text-nowrap"
+                    >
+                        <td class="text-center">{{ i + 1 }}</td>
+                        <td class="text-center">ABNB-{{ item.employee_id }}</td>
+                        <td class="text-nowrap">{{ item.full_name }}</td>
                         <td class="text-center">
                             {{ item.bank_account_no ?? "Cash" }}
                         </td>
                         <td class="text-center">{{ item.net_pay }}</td>
                     </tr>
+
                     <tr v-if="filteredDisbursement.length === 0">
-                        <td colspan="5" class="text-center">No data found</td>
+                        <td colspan="5" class="text-center py-3">
+                            No data found
+                        </td>
                     </tr>
                 </tbody>
             </table>
@@ -348,54 +340,56 @@ onMounted(() => getData());
 </template>
 
 <style>
-.set-button {
-    background-color: #bd360dd5;
-    color: #fff;
-    font-weight: 600;
-    border: none;
-    padding: 6px 12px;
-    border-radius: 4px;
+.border-color {
+    border: 1.5px solid #059223d5;
 }
-.completed-button {
-    background-color: #048a1fd5;
-    color: #000;
+
+.label-class {
     font-weight: 600;
-    border: none;
-    padding: 6px 12px;
-    border-radius: 4px;
+    font-size: 13px;
+    margin-bottom: 3px;
 }
+
 .selected-option {
-    background-color: #bfcec2d5; /* dropdown background */
-    color: #000; /* text color */
-    width: 200px;
+    background: #bfcec2d5;
     font-weight: 600;
 }
 
 .total-amount {
-    background-color: rgba(45, 141, 64, 0.85);
-    color: #ffffff;
-    padding: 5px 10px;
+    background: rgba(45, 141, 64, 0.85);
+    color: #fff;
+    padding: 6px 10px;
     border-radius: 4px;
     border: 1px solid #1d2c20d5;
-    width: 80px;
     text-align: center;
-}
-
-/* optional focus/hover */
-.selected-option:focus {
-    outline: none;
-    border: 2px solid #059223d5;
-}
-
-.border-color {
-    border: 1.8px solid #059223d5;
-}
-.label-class {
     font-weight: 600;
-    font-size: 13px;
-    padding-bottom: 5px;
 }
-.date-field {
-    width: 100px;
+
+.set-button {
+    background: #bd360dd5;
+    color: #fff;
+    font-weight: 600;
+    border: none;
+    padding: 7px 10px;
+    border-radius: 4px;
+}
+
+.completed-button {
+    background: #048a1fd5;
+    color: #000;
+    font-weight: 600;
+    border: none;
+    padding: 7px 10px;
+    border-radius: 4px;
+}
+
+@media (max-width: 768px) {
+    .table {
+        font-size: 12px;
+    }
+
+    .total-amount {
+        font-size: 12px;
+    }
 }
 </style>

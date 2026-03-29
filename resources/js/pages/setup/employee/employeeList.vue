@@ -146,27 +146,35 @@ onMounted(() => {
                         />
                     </div>
 
-                    <div class="ms-auto all-employee">
+                    <div class="ms-auto d-flex flex-wrap gap-2 all-employee">
                         <button @click="haveAccount()" disabled>
                             All EMPLOYEE
                         </button>
                     </div>
 
-                    <div class="ms-4 active-account button-hover">
+                    <div
+                        class="ms-4 d-flex flex-wrap gap-2 active-account button-hover"
+                    >
                         <button @click="haveAccount()">HAVE ACCOUNT</button>
                     </div>
 
-                    <div class="ms-4 without-account button-hover">
+                    <div
+                        class="ms-4 d-flex flex-wrap gap-2 without-account button-hover"
+                    >
                         <button @click="withoutAccount()">
                             WITHOUT ACCOUNT
                         </button>
                     </div>
-                    <div class="ms-4 inactive-account button-hover">
+                    <div
+                        class="ms-4 d-flex flex-wrap gap-2 inactive-account button-hover"
+                    >
                         <button @click="inactive()">INACTIVE</button>
                     </div>
                 </div>
 
-                <div class="d-flex align-items-center px-2 mt-5 fw-semibold">
+                <div
+                    class="d-flex align-items-center px-2 mt-5 fw-semibold total-employee"
+                >
                     <span class="me-2">Total Employees:</span>
                     <span class="bg-white border rounded px-3 fw-medium">{{
                         employees.total
@@ -175,10 +183,10 @@ onMounted(() => {
                 <div class="table-responsive shadow-sm bg-light mt-3">
                     <table class="table table-bordered table-hover table-sm">
                         <thead class="table-head">
-                            <tr class="thead-text">
-                                <th>S/N</th>
+                            <tr class="thead-text text-nowrap">
+                                <th class="text-center">S/N</th>
                                 <th class="text-center">IMAGE</th>
-                                <th>ID</th>
+                                <th class="text-center">ID</th>
                                 <th>NAME</th>
                                 <th>DEPARTMENT</th>
                                 <th class="text-center">DOB</th>
@@ -190,7 +198,7 @@ onMounted(() => {
                         </thead>
                         <tbody>
                             <tr
-                                class="ver-align"
+                                class="ver-align text-nowrap"
                                 v-for="(employee, index) in employees.data"
                                 :key="employee.id"
                             >
@@ -210,7 +218,9 @@ onMounted(() => {
                                 <template v-else>
                                     <td class="text-center">No image</td>
                                 </template>
-                                <td>ABNB-{{ employee.Employee_Id }}</td>
+                                <td class="text-center">
+                                    ABNB-{{ employee.Employee_Id }}
+                                </td>
                                 <td>{{ employee.Full_Name }}</td>
                                 <td>{{ employee.department_name }}</td>
                                 <td class="text-center">{{ employee.DOB }}</td>
@@ -334,5 +344,40 @@ onMounted(() => {
 
 .table tr {
     height: 55px;
+}
+
+@media (max-width: 576px) {
+    /* Stack header items vertically */
+    .card-body .d-flex {
+        flex-direction: column;
+        align-items: stretch; /* make child elements full width */
+        gap: 10px; /* space between items */
+    }
+
+    /* Make buttons take full width */
+    .active-account,
+    .without-account,
+    .inactive-account,
+    .all-employee {
+        width: 100%;
+        margin-left: 0 !important;
+    }
+
+    .active-account button,
+    .without-account button,
+    .inactive-account button,
+    .all-employee button {
+        width: 100%;
+    }
+
+    /* Search input full width */
+    .card-body input.form-control {
+        width: 100%;
+    }
+
+    /* Plus button full width if needed */
+    .btn-plus {
+        width: 100%;
+    }
 }
 </style>

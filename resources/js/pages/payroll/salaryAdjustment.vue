@@ -14,7 +14,7 @@ import "vue-multiselect/dist/vue-multiselect.min.css";
 const store = useStore();
 const user = store.getters.getUser;
 
-// modal component
+// modal components
 const salaryAdjustmentComponent = defineAsyncComponent(
     () => import("@/pages/payroll/component/salaryAdjustmentEdit.vue"),
 );
@@ -28,17 +28,15 @@ const salaryAdjustmentReport = defineAsyncComponent(
 );
 
 // states
-const selectedMonth = ref(new Date().getMonth() + 1); // optional
-const selectedYear = ref(new Date().getFullYear()); // optional
+const selectedMonth = ref(new Date().getMonth() + 1);
+const selectedYear = ref(new Date().getFullYear());
 
-// previous month (if current month is January, it becomes December)
 const today = new Date();
-const previousMonth = today.getMonth() === 0 ? 12 : today.getMonth(); // 0 = Jan
-const searchMonth = ref(previousMonth); // 1 = Jan, 12 = Dec
+const previousMonth = today.getMonth() === 0 ? 12 : today.getMonth();
+const searchMonth = ref(previousMonth);
 
 const searchDept = ref("");
 const searchEmp = ref("");
-
 const searchYear = ref("");
 
 const department = ref([]);
@@ -65,7 +63,6 @@ const onEmployeeSelect = (emp) => {
     getEmployeeImg(emp.id);
 };
 
-// convert department full name to short name
 const getDeptShortName = (name) => {
     const map = {
         "General Trade": "GT",
@@ -74,7 +71,7 @@ const getDeptShortName = (name) => {
         "Finance & Accounts": "FA",
         Marketing: "MKT",
     };
-    return map[name] || name; // fallback to full name if not found
+    return map[name] || name;
 };
 
 const years = ref(["2025", "2026", "2027", "2028", "2029", "2030"]);
@@ -105,13 +102,12 @@ const heading = ref("");
 const selectedStore = ref(null);
 const salaryId = ref(null);
 const salaryAdjustmentModel = ref(false);
-
 const salaryAdjustmentModelNew = ref(false);
 
 const isLoading = ref(true);
 const error = ref(null);
 
-// fetch data with pagination
+// fetch data
 const getData = async () => {
     isLoading.value = true;
     try {
@@ -122,7 +118,7 @@ const getData = async () => {
         ]);
         department.value = deptRes.data;
         adjustments.value = adjustmentTypeRes.data;
-        salaryRecords.value = adjustmentRes.data; // direct array
+        salaryRecords.value = adjustmentRes.data;
     } catch (err) {
         error.value = err.message || "Error fetching data";
     } finally {
@@ -153,13 +149,11 @@ const filteredData = computed(() => {
         const matchEmp = selectedEmployee.value
             ? item.eid == selectedEmployee.value.id
             : true;
-
         const [year, month] = item.date ? item.date.split("-") : [null, null];
         const matchYear = searchYear.value ? searchYear.value == year : true;
         const matchMonth = searchMonth.value
             ? parseInt(searchMonth.value) == parseInt(month)
             : true;
-
         return matchDept && matchEmp && matchYear && matchMonth;
     });
 });
@@ -181,16 +175,8 @@ const salaryAdjustmentClose = () => {
     getData();
 };
 
-// const editSalaryAdjustment = (eid, date) => {
-//     selectedStore.value = salaryRecords.value.find(
-//         (item) => item.eid === eid && item.date === date
-//     );
-//     salaryId.value = eid; // or any unique identifier you want to track
-//     salaryAdjustmentOpen("Update");
-// };
-
 const editSalaryAdjustment = (item, eid) => {
-    selectedStore.value = item; // direct reference
+    selectedStore.value = item;
     salaryId.value = eid;
     salaryAdjustmentOpen("Update");
 };
@@ -205,34 +191,33 @@ onMounted(() => getData());
     >
         <!-- Header -->
         <div
-            class="d-flex justify-content-between align-items-center py-2 px-3"
+            class="d-flex flex-wrap justify-content-between align-items-center py-2 px-3 header-container"
         >
             <h2 class="m-0 header-design">Salary Adjustment List</h2>
-            <div class="d-flex gap-2">
-                <button @click="downloadReport()" class="btn btn-primary">
+            <div class="d-flex flex-wrap gap-2 buttons-container">
+                <button
+                    @click="downloadReport()"
+                    class="btn btn-primary download-adjustment"
+                >
                     <i class="fa-solid fa-download me-2"></i> Download Report
                 </button>
-
-                <div>
-                    <button
-                        @click="salaryAdjustmentNew('Save')"
-                        type="button"
-                        class="btn btn-success d-flex align-items-center fw-medium shadow-sm"
-                    >
-                        <i class="fa-solid fa-plus me-2"></i> New Adjustment
-                    </button>
-                </div>
+                <button
+                    @click="salaryAdjustmentNew('Save')"
+                    type="button"
+                    class="btn btn-success d-flex align-items-center fw-medium shadow-sm new-adjustment"
+                >
+                    <i class="fa-solid fa-plus me-2"></i> New Adjustment
+                </button>
             </div>
         </div>
-        <!-- Download Report Modal -->
+
+        <!-- Modals -->
         <component
             v-if="reportModal"
             :is="salaryAdjustmentReport"
             :isOpen="reportModal"
             @modal-close="closeReportModal"
         />
-
-        <!-- Salary Modal -->
         <component
             v-if="salaryAdjustmentModel"
             :is="salaryAdjustmentComponent"
@@ -244,7 +229,6 @@ onMounted(() => getData());
             @submit="getData"
             name="first-modal"
         />
-
         <component
             v-if="salaryAdjustmentModelNew"
             :is="salaryAdjustmentComponentNew"
@@ -256,11 +240,10 @@ onMounted(() => getData());
             name="first-modal"
         />
 
-        <!-- Table & Filters -->
+        <!-- Filters -->
         <div class="col-lg-12 mt-3">
             <div class="p-3 mb-3">
-                <!-- Filters -->
-                <div class="row g-3 mb-3">
+                <div class="row g-3 mb-3 filters-container">
                     <!-- Department -->
                     <div class="col-lg-3 position-relative">
                         <select
@@ -270,9 +253,6 @@ onMounted(() => getData());
                             @change="getEmployee(searchDept)"
                         >
                             <option value="" disabled>Select Department</option>
-                            <!-- <option class="default-selection" value="" disabled>
-                                Select Department
-                            </option> -->
                             <option
                                 v-for="dept in department"
                                 :key="dept.department_id"
@@ -295,21 +275,6 @@ onMounted(() => getData());
                     </div>
 
                     <!-- Employee -->
-                    <!-- <div class="col-lg-3 position-relative">
-                        <select class="form-control border-color" v-model="searchEmp"
-                            style="font-weight: normal; background: transparent">
-                            <option value="" disabled>
-                                Select Employee Name
-                            </option>
-                            <option v-for="emp in employeeIDs" :key="emp.id" :value="emp.id">
-                                {{ emp.Full_Name }}
-                            </option>
-                        </select>
-                        <button v-if="searchEmp" type="button"
-                            class="btn btn-sm btn-link position-absolute top-0 end-0 mt-1 me-1" @click="searchEmp = ''">
-                            <i class="fa fa-times"></i>
-                        </button>
-                    </div> -->
                     <div class="col-lg-3 position-relative">
                         <Multiselect
                             v-model="selectedEmployee"
@@ -324,20 +289,10 @@ onMounted(() => getData());
                             :clear-on-select="false"
                             class="multiselect-design"
                         />
-
-                        <!-- REMOVE this -->
-                        <!-- <button
-                            v-if="selectedEmployee"
-                            type="button"
-                            class="btn btn-sm btn-link position-absolute top-0 end-0 mt-2 me-3"
-                            @click="selectedEmployee = ''"
-                        >
-                            <i class="fa fa-times"></i>
-                        </button> -->
                     </div>
 
                     <!-- Year -->
-                    <div class="col-lg-2 position-relative">
+                    <div class="col-lg-1 position-relative">
                         <select
                             class="form-control field-height field-background-colour"
                             :class="{ 'placeholder-text': !searchYear }"
@@ -363,7 +318,7 @@ onMounted(() => getData());
                     </div>
 
                     <!-- Month -->
-                    <div class="col-lg-2 position-relative">
+                    <div class="col-lg-1 position-relative">
                         <select
                             class="form-control field-height field-background-colour"
                             v-model="searchMonth"
@@ -389,7 +344,8 @@ onMounted(() => getData());
                         </button>
                     </div>
                 </div>
-                <!-- Salary Table -->
+
+                <!-- Table -->
                 <div class="mt-4">
                     <div class="table-responsive shadow-sm">
                         <table
@@ -401,7 +357,7 @@ onMounted(() => getData());
                                         S/N
                                     </th>
                                     <th class="text-center" style="width: 8%">
-                                        EMPLOYEE ID
+                                        EMP ID
                                     </th>
                                     <th style="width: 16%">EMPLOYEE NAME</th>
                                     <th style="width: 13%">DEPARTMENT</th>
@@ -429,14 +385,12 @@ onMounted(() => getData());
                                     v-for="(item, index) in filteredData"
                                     :key="index"
                                 >
-                                    <td>{{ index + 1 }}</td>
+                                    <td class="text-center">{{ index + 1 }}</td>
                                     <td class="text-center">
                                         ANBN-{{ item.employee_official_id }}
                                     </td>
                                     <td>{{ item.emp_name }}</td>
-                                    <td>
-                                        {{ item.emp_dept }}
-                                    </td>
+                                    <td>{{ item.emp_dept }}</td>
                                     <td class="text-center">
                                         {{
                                             item.type == "earning"
@@ -469,17 +423,6 @@ onMounted(() => getData());
                                             ></i>
                                         </button>
                                     </td>
-                                    <!-- <button
-                                        class="btn btn-sm btn-light border"
-                                        title="Delete"
-                                        @click="
-                                            deleteadjustment(item.employee_id)
-                                        "
-                                    >
-                                        <i
-                                            class="fa-solid fa-trash text-danger"
-                                        ></i>
-                                    </button> -->
                                 </tr>
                             </tbody>
                         </table>
@@ -500,20 +443,15 @@ onMounted(() => getData());
 </template>
 
 <style>
+/* Table styling */
 .table-responsive .table,
 .table-responsive .table tbody,
 .table-responsive .table tr,
 .table-responsive .table td {
-    /* background-color: rgba(234, 236, 234, 0.2) !important; */
     background: #ffffffd5 !important;
     color: #000000;
     border: 0.8px solid #7e7c7c63;
     letter-spacing: 0.3px;
-}
-
-.field-hover:hover {
-    border-color: #80bdff;
-    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
 }
 
 .table tbody tr:hover > td {
@@ -525,7 +463,6 @@ onMounted(() => getData());
     font-weight: 700;
     color: #fff;
 }
-
 .table thead {
     height: 30px;
 }
@@ -533,41 +470,33 @@ onMounted(() => getData());
 .field-height {
     height: 35px;
 }
+
 .placeholder-text {
-    color: #999; /* faded text for placeholder */
-    font-size: 14px;
-}
-.multiselect-design .multiselect__placeholder {
     color: #999;
     font-size: 14px;
-    margin-bottom: 0px;
-    align-items: center;
 }
 
 .multiselect-design .multiselect__tags {
-    min-height: 35px !important; /* override default min-height */
-    height: 35px; /* exact height */
-    padding: 0 8px; /* adjust left/right padding */
+    min-height: 35px !important;
+    height: 35px;
+    padding: 0 8px;
     border-radius: 5px;
     border: 0.8px solid #b3a9a963;
     background: #c4c2c250;
-    display: flex; /* align input vertically */
+    display: flex;
     align-items: center;
     font-size: 14px;
 }
-
-/* Input inside the multiselect */
 .multiselect-design .multiselect__input,
 .multiselect-design .multiselect__single {
-    height: 100%; /* fill the tags container height */
-    line-height: 35px; /* match container for vertical centering */
-    padding: 0; /* remove extra padding */
+    height: 100%;
+    line-height: 35px;
+    padding: 0;
     margin: 0;
-    background: transparent; /* match container bg */
-    border: 0; /* remove default border */
-    flex: 1; /* grow to fill remaining space */
+    background: transparent;
+    border: 0;
+    flex: 1;
 }
-
 .multiselect-design .multiselect__select {
     height: 35px;
 }
@@ -576,11 +505,43 @@ onMounted(() => getData());
     background: #c4c2c250;
     border: 0.8px solid #b3a9a963;
 }
+
 .header-design {
     letter-spacing: 1px;
     padding-top: 5px;
-    /* background-color: #d6d6d6f5;
+}
 
-    border-radius: 5px; */
+/* MOBILE RESPONSIVE */
+@media (max-width: 576px) {
+    /* Header stack */
+    .header-container {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+    }
+    .buttons-container {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+    }
+    .new-adjustment,
+    .download-adjustment {
+        width: 100% !important;
+        display: block;
+    }
+
+    /* Filters stack vertically */
+    .filters-container {
+        flex-direction: column;
+    }
+    .filters-container .col-lg-3,
+    .filters-container .col-lg-2 {
+        flex: 1 1 100%;
+        max-width: 100%;
+    }
+    .filters-container select,
+    .multiselect-design {
+        width: 100%;
+    }
 }
 </style>

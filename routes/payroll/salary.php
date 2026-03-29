@@ -37,7 +37,8 @@ Route::post('/update-repayment-dates', [LoanController::class, 'updateRepaymentD
 
 //added by firoj
 Route::get('/get-loan-amount/{id}', [LoanController::class, 'getLoanAmount']);
-Route::put('/loan-repayment/{id}', [LoanController::class, 'updateRepayment']);
+// Route::put('/loan-repayment/{id}', [LoanController::class, 'updateRepayment']);
+Route::post('/loan-repayment', [LoanController::class, 'createRepayment']);
 Route::get('/loan-installments/{id}', [LoanController::class, 'repaymentHistory']);
 Route::get('/repayments-info', [LoanController::class, 'repaymentInfo']);
 Route::get('/delete-loan/{id}', [LoanController::class, 'deleteLoan']);

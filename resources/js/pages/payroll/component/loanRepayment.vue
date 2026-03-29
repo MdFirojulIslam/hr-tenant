@@ -82,10 +82,10 @@ const saveRepayment = async () => {
     const selectedRows = filteredData.value
         .filter((r) => r.checked)
         .map((r) => ({
-            employee_id: r.employee_id, // ✅ required for backend
+            employee_id: r.employee_id,
             installment_date: r.installment_date,
             installment_amount: r.installment_amount,
-            installment_status: "Paid", // ✅ set status
+            installment_status: "Paid",
         }));
 
     if (selectedRows.length === 0) {
@@ -218,7 +218,7 @@ onMounted(() => {
                                             DEDUCTION MONTH
                                         </th>
                                         <th class="text-center">AMOUNT</th>
-                                        <th class="text-center">STATUS</th>
+                                        <!-- <th class="text-center">STATUS</th> -->
                                         <th>
                                             <input
                                                 type="checkbox"
@@ -276,12 +276,12 @@ onMounted(() => {
                                             />
                                         </td>
 
-                                        <td class="text-center">
+                                        <!-- <td class="text-center">
                                             <span
                                                 class="badge bg-success text-white px-3 py-1 paid-badge"
                                                 >Paid</span
                                             >
-                                        </td>
+                                        </td> -->
 
                                         <td>
                                             <input

@@ -236,7 +236,7 @@ onMounted(() => getData());
                 </div>
 
                 <!-- Salary Table -->
-                <div class="mt-5">
+                <div class="mt-3">
                     <!-- Total Employees Row -->
                     <div
                         class="d-flex align-items-center py-2 fw-semibold border-bottom bg-light"
@@ -251,8 +251,10 @@ onMounted(() => getData());
                         <table class="table table-bordered table-sm">
                             <thead class="table-light">
                                 <tr class="text-nowrap">
-                                    <th width="2%">S/N</th>
-                                    <th width="8%">OFFICIAL ID</th>
+                                    <th class="text-center" width="2%">S/N</th>
+                                    <th class="text-center" width="8%">
+                                        EMP ID
+                                    </th>
                                     <th width="15%">DEPARTMENT</th>
                                     <th width="18%">DESIGNATION NAME</th>
                                     <th width="12%">EMPLOYEE NAME</th>
@@ -269,7 +271,7 @@ onMounted(() => getData());
                                         TOTAL PAY
                                     </th>
                                     <th class="text-center" width="10%">
-                                        BANK ACCOUNT
+                                        BANK / CASH
                                     </th>
                                     <th width="8%" class="text-center">
                                         ACTION
@@ -283,8 +285,12 @@ onMounted(() => getData());
                                     :key="salary.id"
                                     class="text-nowrap"
                                 >
-                                    <td>{{ salaries.from + index }}</td>
-                                    <td>ABNB-{{ salary.official_id }}</td>
+                                    <td class="text-center">
+                                        {{ salaries.from + index }}
+                                    </td>
+                                    <td class="text-center">
+                                        ABNB-{{ salary.official_id }}
+                                    </td>
                                     <td>{{ salary.department_name }}</td>
                                     <td>{{ salary.designation_name }}</td>
                                     <td>{{ salary.full_name }}</td>
