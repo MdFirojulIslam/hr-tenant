@@ -22,5 +22,6 @@ Route::group(['middleware' => ['auth:sanctum']], function () {
     require_once __DIR__ . '/workspace/itinerary.php';
     require_once __DIR__ . '/payroll/salary.php';
     require_once __DIR__ . '/separation/separation.php';
+    require_once __DIR__ . '/roster/roster.php';
     require_once __DIR__ . '/component-permission/cmp_permission.php';
 });

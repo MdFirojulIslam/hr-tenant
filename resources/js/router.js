@@ -560,6 +560,22 @@ const routes = [
             requireAuth: true,
         },
     },
+    {
+        path: "/roster-setup",
+        name: "RosterSetup",
+        component: () => import("./pages/attendance/rosterSetup.vue"),
+        meta: {
+            requireAuth: true,
+        },
+    },
+    {
+        path: "/roster-report-list",
+        name: "RosterReportList",
+        component: () => import("./pages/attendance/rosterReportList.vue"),
+        meta: {
+            requireAuth: true,
+        },
+    },
 ];
 
 const router = createRouter({

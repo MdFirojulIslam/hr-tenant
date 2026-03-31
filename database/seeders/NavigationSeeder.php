@@ -68,7 +68,9 @@ class NavigationSeeder extends Seeder
             ['id' => '56', 'name' => 'User Component Permission', 'url' => '/security/user-component-permission', 'icon' => 'NULL', 'page' => 'UserComponentPermission', 'path' => './pages/security/userComponentPermission.vue', 'parent_id' => '2', 'active' => '1'],
             ['id' => '57', 'name' => 'Salary Payslip', 'url' => '/payroll/salary-payslip', 'icon' => 'NULL', 'page' => 'SalaryPayslip', 'path' => './pages/payroll/salaryPayslip.vue', 'parent_id' => '41', 'active' => '1'],
             ['id' => '58', 'name' => 'Bonus Sheet', 'url' => '/payroll/bonus_sheet', 'icon' => 'NULL', 'page' => 'BonusSheet', 'path' => './pages/payroll/bonusSheet.vue', 'parent_id' => '41', 'active' => '1'],
-            ['id' => '59', 'name' => 'Bonus Disbursement', 'url' => '/payroll/bonus-disbursement', 'icon' => 'NULL', 'page' => 'BonusDisbursement', 'path' => './pages/payroll/bonusDisbursement.vue', 'parent_id' => '41', 'active' => '1']
+            ['id' => '59', 'name' => 'Bonus Disbursement', 'url' => '/payroll/bonus-disbursement', 'icon' => 'NULL', 'page' => 'BonusDisbursement', 'path' => './pages/payroll/bonusDisbursement.vue', 'parent_id' => '41', 'active' => '1'],
+            ['id' => '60', 'name' => 'Roster Setup', 'url' => '/roster-setup', 'icon' => 'NULL', 'page' => 'RosterSetup', 'path' => './pages/attendance/rosterSetup.vue', 'parent_id' => '9', 'active' => '1'],
+            ['id' => '61', 'name' => 'Roster Report List', 'url' => '/roster-report-list', 'icon' => 'NULL', 'page' => 'RosterReportList', 'path' => './pages/attendance/rosterReportList.vue', 'parent_id' => '9', 'active' => '1']
         ];
 
         foreach ($navigations as $item) {
