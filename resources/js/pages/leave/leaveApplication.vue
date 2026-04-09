@@ -432,7 +432,7 @@ onMounted(() => getData());
                                             <button
                                                 @click="
                                                     openAttachment(
-                                                        l.attachment_url
+                                                        l.attachment_url,
                                                     )
                                                 "
                                                 class="btn btn-info"

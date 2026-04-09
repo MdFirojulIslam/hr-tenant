@@ -23,7 +23,7 @@ class NavigationSeeder extends Seeder
             ['id' => '7', 'name' => 'Employee', 'url' => '/setup/employee/employeeList', 'icon' => 'NULL', 'page' => 'EmployeeList', 'path' => './pages/setup/employee/employeeList.vue', 'parent_id' => '6', 'active' => '1'],
             ['id' => '8', 'name' => 'Employee List', 'url' => '/setup/employee/empexl', 'icon' => 'NULL', 'page' => 'EmpExl', 'path' => './pages/setup/employee/empExl.vue', 'parent_id' => '6', 'active' => '1'],
             ['id' => '9', 'name' => 'Attendance', 'url' => 'NULL', 'icon' => 'fa-solid fa-fingerprint', 'page' => 'NULL', 'path' => '', 'parent_id' => '0', 'active' => '1'],
-            ['id' => '10', 'name' => 'Attendance', 'url' => 'Attendance', 'icon' => 'NULL', 'page' => 'Attendance', 'path' => './pages/attendance/attendance.vue', 'parent_id' => '9', 'active' => '1'],
+            ['id' => '10', 'name' => 'Monthly Attendance', 'url' => 'Attendance', 'icon' => 'NULL', 'page' => 'Attendance', 'path' => './pages/attendance/attendance.vue', 'parent_id' => '9', 'active' => '1'],
             ['id' => '11', 'name' => 'Report', 'url' => 'NULL', 'icon' => 'fas fa-book-open', 'page' => 'NULL', 'path' => 'NULL', 'parent_id' => '0', 'active' => '1'],
             ['id' => '12', 'name' => 'Attendance Report', 'url' => '/report/attendanceReport', 'icon' => 'NULL', 'page' => 'AttendanceReport', 'path' => './pages/report/AttendanceReport.vue', 'parent_id' => '11', 'active' => '1'],
             ['id' => '13', 'name' => 'Leave', 'url' => 'NULL', 'icon' => 'fa-solid fa-wrench', 'page' => 'NULL', 'path' => 'NULL', 'parent_id' => '0', 'active' => '1'],
@@ -42,7 +42,7 @@ class NavigationSeeder extends Seeder
             ['id' => '29', 'name' => 'Expense Records', 'url' => '/expense/expense-records', 'icon' => 'NULL', 'page' => 'ExpenseRecords', 'path' => './pages/expense/expenseRecords.vue', 'parent_id' => '27', 'active' => '1'],
             ['id' => '30', 'name' => 'Expense Report', 'url' => '/report/expense-report', 'icon' => 'NULL', 'page' => 'ExpenseReport', 'path' => './pages/report/expenseReport.vue', 'parent_id' => '27', 'active' => '1'],
             ['id' => '31', 'name' => 'Leave Report', 'url' => '/report/leave-report', 'icon' => 'NULL', 'page' => 'LeaveReport', 'path' => './pages/report/leaveReport.vue', 'parent_id' => '11', 'active' => '1'],
-            ['id' => '32', 'name' => 'Field Force Attendance', 'url' => '/attendance/field-force-attendance', 'icon' => 'NULL', 'page' => 'FieldForceAttendance', 'path' => './pages/attendance/field-force-attendance.vue', 'parent_id' => '9', 'active' => '1'],
+            ['id' => '32', 'name' => 'Online Attendance', 'url' => '/attendance/field-force-attendance', 'icon' => 'NULL', 'page' => 'FieldForceAttendance', 'path' => './pages/attendance/field-force-attendance.vue', 'parent_id' => '9', 'active' => '1'],
             ['id' => '33', 'name' => 'Organizational Hierarchy', 'url' => '/setup/employee/organizational-hierarchy', 'icon' => 'NULL', 'page' => 'OrganizationalHierarchy', 'path' => './pages/setup/employee/hierarchy.vue', 'parent_id' => '6', 'active' => '1'],
             ['id' => '34', 'name' => 'Workstation', 'url' => '/workstation', 'icon' => 'fa-solid fa-briefcase', 'page' => 'NULL', 'path' => 'NULL', 'parent_id' => '0', 'active' => '1'],
             ['id' => '35', 'name' => 'Notes', 'url' => '/workstation/notes', 'icon' => 'NULL', 'page' => 'Notes', 'path' => './pages/workstation/notes.vue', 'parent_id' => '34', 'active' => '1'],
@@ -69,8 +69,8 @@ class NavigationSeeder extends Seeder
             ['id' => '57', 'name' => 'Salary Payslip', 'url' => '/payroll/salary-payslip', 'icon' => 'NULL', 'page' => 'SalaryPayslip', 'path' => './pages/payroll/salaryPayslip.vue', 'parent_id' => '41', 'active' => '1'],
             ['id' => '58', 'name' => 'Bonus Sheet', 'url' => '/payroll/bonus_sheet', 'icon' => 'NULL', 'page' => 'BonusSheet', 'path' => './pages/payroll/bonusSheet.vue', 'parent_id' => '41', 'active' => '1'],
             ['id' => '59', 'name' => 'Bonus Disbursement', 'url' => '/payroll/bonus-disbursement', 'icon' => 'NULL', 'page' => 'BonusDisbursement', 'path' => './pages/payroll/bonusDisbursement.vue', 'parent_id' => '41', 'active' => '1'],
-            ['id' => '60', 'name' => 'Roster Setup', 'url' => '/roster-setup', 'icon' => 'NULL', 'page' => 'RosterSetup', 'path' => './pages/attendance/rosterSetup.vue', 'parent_id' => '9', 'active' => '1'],
-            ['id' => '61', 'name' => 'Roster Report List', 'url' => '/roster-report-list', 'icon' => 'NULL', 'page' => 'RosterReportList', 'path' => './pages/attendance/rosterReportList.vue', 'parent_id' => '9', 'active' => '1']
+            ['id' => '60', 'name' => 'Roster/Schedule Setup', 'url' => '/roster-setup', 'icon' => 'NULL', 'page' => 'RosterSetup', 'path' => './pages/attendance/rosterSetup.vue', 'parent_id' => '9', 'active' => '1'],
+            ['id' => '61', 'name' => 'Daily Attendance', 'url' => '/roster-report-list', 'icon' => 'NULL', 'page' => 'RosterReportList', 'path' => './pages/attendance/rosterReportList.vue', 'parent_id' => '9', 'active' => '1']
         ];
 
         foreach ($navigations as $item) {

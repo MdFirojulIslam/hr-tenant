@@ -1,6 +1,8 @@
 <?php
 
+
 namespace App\Http\Controllers\Roster;
+
 
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
@@ -10,14 +12,18 @@ use Illuminate\Support\Facades\DB;
 use App\Models\roster_schedule;
 use App\Models\attendence;
 
+
 class RosterScheduleController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $result = DB::table('roster_schedules')
+
+
+        $query = DB::table('roster_schedules')
             ->join('employees', 'employees.id', '=', 'roster_schedules.employee_id')
             ->join('officials', 'officials.EID', '=', 'employees.id')
             ->join('departments', 'departments.id', '=', 'officials.Department_Id')
+
             ->select(
                 'roster_schedules.id as roster_id',
                 'employees.Full_Name as employee_name',
@@ -25,11 +31,99 @@ class RosterScheduleController extends Controller
                 'employees.Employee_Id as official_id',
                 'departments.id as department_id',
                 'departments.Name as department_name',
+                'roster_schedules.day_name',
                 'roster_schedules.effective_from',
+                'roster_schedules.effective_to',
                 'roster_schedules.time_in',
                 'roster_schedules.time_out',
-                'roster_schedules.work_from'
-            )->get();
+                'roster_schedules.work_from',
+                'roster_schedules.weekend'
+            );
+
+        // -------------------------
+        // FILTERS
+        // -------------------------
+        if ($request->filled('department_id')) {
+            $query->where('departments.id', $request->department_id);
+        }
+
+        if ($request->filled('employee_id')) {
+            $query->where('employees.id', $request->employee_id);
+        }
+
+        if ($request->filled('day_name')) {
+            $query->where('roster_schedules.day_name', $request->day_name);
+        }
+
+        // -------------------------
+        // ORDERING
+        // -------------------------
+        $query->orderBy('employees.id')
+            ->orderByRaw("
+            FIELD(roster_schedules.day_name,
+                'Saturday','Sunday','Monday','Tuesday','Wednesday','Thursday','Friday'
+            )
+        ");
+
+        // -------------------------
+        // PAGINATION
+        // -------------------------
+        $perPage = $request->get('per_page', 40);
+        $data = $query->paginate($perPage);
+
+
+        return response()->json([
+            'success' => true,
+            'data'    => $data
+        ]);
+    }
+
+
+    public function show($id)
+    {
+
+        $roster = roster_schedule::where('id', $id)->first();
+
+
+        $result = DB::table('roster_schedules')
+            ->join('employees', 'employees.id', '=', 'roster_schedules.employee_id')
+            ->join('officials', 'officials.EID', '=', 'employees.id')
+            ->join('departments', 'departments.id', '=', 'officials.Department_Id')
+            ->select(
+                'roster_schedules.id as roster_id',
+
+
+                'employees.Full_Name as employee_name',
+                'employees.id as employee_id',
+                'employees.Employee_Id as official_id',
+
+
+                'departments.id as department_id',
+                'departments.Name as department_name',
+
+
+                // ✅ IMPORTANT ADDITIONS
+                'roster_schedules.day_name',
+                'roster_schedules.effective_from',
+                'roster_schedules.effective_to',
+
+
+                'roster_schedules.time_in',
+                'roster_schedules.time_out',
+                'roster_schedules.work_from',
+                'roster_schedules.weekend'
+            )
+            ->where('roster_schedules.employee_id', $roster->employee_id)
+            ->get();
+
+
+
+        if (!$result) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Roster setup not found'
+            ], 404);
+        }
 
 
         return response()->json([
@@ -39,24 +133,39 @@ class RosterScheduleController extends Controller
     }
 
 
+
+
     public function create(Request $request)
     {
         try {
             $user_id = Auth::user()->EID;
+
+
             if (!$user_id) {
                 return response()->json([
                     'success' => false,
+                    'message' => 'Unauthorized'
                 ], 401);
             }
 
+
+            // -------------------------
+            // VALIDATION
+            // -------------------------
             $validator = Validator::make($request->all(), [
-                'department'     => 'required|integer',
                 'eid'            => 'required|integer',
                 'effective_from' => 'required|date',
-                'time_in'        => 'required',
-                'time_out'       => 'required',
-                'work_from'      => 'required|in:office,home',
+                'effective_to'   => 'required|date|after_or_equal:effective_from',
+                'roster_days'    => 'required|array|min:1',
+
+
+                'roster_days.*.day_name'  => 'required|string',
+                'roster_days.*.work_from' => 'nullable|in:office,home',
+                'roster_days.*.is_weekend' => 'required|boolean',
+                'roster_days.*.time_in'   => 'nullable',
+                'roster_days.*.time_out'  => 'nullable',
             ]);
+
 
             if ($validator->fails()) {
                 return response()->json([
@@ -65,22 +174,115 @@ class RosterScheduleController extends Controller
                 ], 422);
             }
 
-            $roster = new roster_schedule();
-            $roster->employee_id    = $request->eid;
-            $roster->effective_from = $request->effective_from;
-            $roster->time_in        = $request->time_in;
-            $roster->time_out       = $request->time_out;
-            $roster->work_from      = $request->work_from;
-            $roster->created_by = $user_id;
 
-            $roster->save();
+            // -------------------------
+            // OVERLAP CHECK
+            // -------------------------
+            $exists = DB::table('roster_schedules')
+                ->where('employee_id', $request->eid)
+                ->where(function ($q) use ($request) {
+                    $q->whereBetween('effective_from', [$request->effective_from, $request->effective_to])
+                        ->orWhereBetween('effective_to', [$request->effective_from, $request->effective_to])
+                        ->orWhere(function ($q2) use ($request) {
+                            $q2->where('effective_from', '<=', $request->effective_from)
+                                ->where('effective_to', '>=', $request->effective_to);
+                        });
+                })
+                ->exists();
+
+
+            if ($exists) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Roster already exists for this date range'
+                ], 422);
+            }
+
+
+            // -------------------------
+            // TIME VALIDATION
+            // -------------------------
+            foreach ($request->roster_days as $day) {
+
+
+                $isWeekend = $day['is_weekend'] ?? false;
+
+
+                if (!$isWeekend) {
+
+
+                    if (empty($day['time_in']) || empty($day['time_out'])) {
+                        return response()->json([
+                            'success' => false,
+                            'message' => $day['day_name'] . ' requires Time In & Time Out'
+                        ], 422);
+                    }
+
+
+                    if (strtotime($day['time_out']) <= strtotime($day['time_in'])) {
+                        return response()->json([
+                            'success' => false,
+                            'message' => $day['day_name'] . ' Time Out must be greater than Time In'
+                        ], 422);
+                    }
+                }
+            }
+
+
+            // -------------------------
+            // GENERATE ROSTER ID 🔥
+            // -------------------------
+            $rosterId = DB::table('roster_schedules')->max('roster_id') + 1;
+
+
+            // -------------------------
+            // PREPARE DATA
+            // -------------------------
+            $data = [];
+
+
+            foreach ($request->roster_days as $day) {
+
+
+                $isWeekend = $day['is_weekend'] ?? false;
+
+
+                $data[] = [
+                    'roster_id'      => $rosterId, // ✅ important
+
+
+                    'employee_id'    => $request->eid,
+                    'day_name'       => $day['day_name'],
+
+
+                    'time_in'        => $isWeekend ? null : $day['time_in'],
+                    'time_out'       => $isWeekend ? null : $day['time_out'],
+                    'work_from'      => $isWeekend ? null : $day['work_from'],
+
+
+                    'weekend'        => $isWeekend ? 1 : 0,
+
+
+                    'effective_from' => $request->effective_from,
+                    'effective_to'   => $request->effective_to,
+
+
+                    'created_by'     => $user_id,
+                    'created_at'     => now(),
+                    'updated_at'     => now(),
+                ];
+            }
+
+
+            roster_schedule::insert($data);
+
 
             return response()->json([
                 'success' => true,
                 'message' => 'Roster setup created successfully',
-                'data'    => $roster
             ]);
         } catch (\Exception $e) {
+
 
             return response()->json([
                 'success' => false,
@@ -89,24 +291,39 @@ class RosterScheduleController extends Controller
             ], 500);
         }
     }
+
+
     public function update(Request $request, $id)
     {
         try {
             $user_id = Auth::user()->EID;
+
+
             if (!$user_id) {
                 return response()->json([
                     'success' => false,
+                    'message' => 'Unauthorized'
                 ], 401);
             }
 
+
+            // -------------------------
+            // VALIDATION
+            // -------------------------
             $validator = Validator::make($request->all(), [
-                'department'     => 'required|integer',
                 'eid'            => 'required|integer',
                 'effective_from' => 'required|date',
-                'time_in'        => 'required',
-                'time_out'       => 'required',
-                'work_from'      => 'required|in:office,home',
+                'effective_to'   => 'required|date|after_or_equal:effective_from',
+                'roster_days'    => 'required|array|min:1',
+
+
+                'roster_days.*.day_name'  => 'required|string',
+                'roster_days.*.work_from' => 'nullable|in:office,home',
+                'roster_days.*.is_weekend' => 'required|boolean',
+                'roster_days.*.time_in'   => 'nullable',
+                'roster_days.*.time_out'  => 'nullable',
             ]);
+
 
             if ($validator->fails()) {
                 return response()->json([
@@ -115,39 +332,120 @@ class RosterScheduleController extends Controller
                 ], 422);
             }
 
-            $roster = roster_schedule::where('id', $id)->first();
-            if (!$roster) {
+
+            // -------------------------
+            // GET CURRENT ROSTER (GROUP)
+            // -------------------------
+            $currentRoster = DB::table('roster_schedules')
+                ->where('id', $id)
+                ->first();
+
+
+            if (!$currentRoster) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Roster setup not found'
+                    'message' => 'Roster not found'
                 ], 404);
             }
-            if ($request->override) {
-                roster_schedule::create([
-                    'employee_id' => $request->eid,
-                    'effective_from' => $request->effective_from,
-                    'time_in' => $request->time_in,
-                    'time_out' => $request->time_out,
-                    'work_from' => $request->work_from,
-                    'created_by' => $user_id,
-                ]);
-            } else {
-                $roster->update([
-                    'employee_id' => $request->eid,
-                    'effective_from' => $request->effective_from,
-                    'time_in' => $request->time_in,
-                    'time_out' => $request->time_out,
-                    'work_from' => $request->work_from,
-                    'updated_by' => $user_id,
-                ]);
+
+
+            $rosterId = $currentRoster->roster_id;
+
+
+            // -------------------------
+            // OVERLAP CHECK (FIXED 🔥)
+            // -------------------------
+            $exists = DB::table('roster_schedules')
+                ->where('employee_id', $request->eid)
+
+
+                // ❗ exclude same roster group
+                ->where('roster_id', '!=', $rosterId)
+
+
+                ->where(function ($q) use ($request) {
+                    $q->whereBetween('effective_from', [$request->effective_from, $request->effective_to])
+                        ->orWhereBetween('effective_to', [$request->effective_from, $request->effective_to])
+                        ->orWhere(function ($q2) use ($request) {
+                            $q2->where('effective_from', '<=', $request->effective_from)
+                                ->where('effective_to', '>=', $request->effective_to);
+                        });
+                })
+                ->exists();
+
+
+            if ($exists) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Another roster exists in this date range'
+                ], 422);
             }
+
+
+            // -------------------------
+            // TIME VALIDATION
+            // -------------------------
+            foreach ($request->roster_days as $day) {
+
+
+                $isWeekend = $day['is_weekend'] ?? false;
+
+
+                if (!$isWeekend) {
+
+
+                    if (empty($day['time_in']) || empty($day['time_out'])) {
+                        return response()->json([
+                            'success' => false,
+                            'message' => $day['day_name'] . ' requires Time In & Time Out'
+                        ], 422);
+                    }
+
+
+                    if (strtotime($day['time_out']) <= strtotime($day['time_in'])) {
+                        return response()->json([
+                            'success' => false,
+                            'message' => $day['day_name'] . ' Time Out must be greater than Time In'
+                        ], 422);
+                    }
+                }
+            }
+
+
+            // -------------------------
+            // UPDATE (GROUP BASED 🔥)
+            // -------------------------
+            foreach ($request->roster_days as $day) {
+
+
+                $isWeekend = $day['is_weekend'] ?? false;
+
+
+                roster_schedule::where('roster_id', $rosterId)
+                    ->where('day_name', $day['day_name'])
+                    ->update([
+                        'time_in'        => $isWeekend ? null : $day['time_in'],
+                        'time_out'       => $isWeekend ? null : $day['time_out'],
+                        'work_from'      => $isWeekend ? null : $day['work_from'],
+                        'weekend'        => $isWeekend ? 1 : 0,
+
+
+                        'effective_from' => $request->effective_from,
+                        'effective_to'   => $request->effective_to,
+
+
+                        'updated_by'     => $user_id,
+                        'updated_at'     => now(),
+                    ]);
+            }
+
 
             return response()->json([
                 'success' => true,
-                'message' => 'Roster setup updated successfully',
-                'data'    => $roster
+                'message' => 'Roster updated successfully'
             ]);
         } catch (\Exception $e) {
+
 
             return response()->json([
                 'success' => false,
@@ -157,69 +455,21 @@ class RosterScheduleController extends Controller
         }
     }
 
+
     public function reportList(Request $request)
     {
         $role_id = Auth::user()->role_id;
-        $user_id = Auth::user()->EID;
-
         $date = $request->searchDate;
 
 
-        // if ($role_id == 1) {
+        $dayName = \Carbon\Carbon::parse($date)->format('l');
 
-        //     $machine_attendance_sub = DB::table('attendences')
-        //         ->select(
-        //             'EID',
-        //             DB::raw('MIN(Time_In) as in_time'),
-        //             DB::raw('MAX(Time_Out) as out_time')
-        //         )
-        //         ->whereDate('Date', $date)
-        //         ->groupBy('EID');
 
-        //     $app_attendance_sub = DB::table('app_attendances')
-        //         ->select(
-        //             'EID',
-        //             DB::raw("TIME(MIN(CASE WHEN status = 'in' THEN created_at END)) as in_time"),
-        //             DB::raw("TIME(MAX(CASE WHEN status = 'out' THEN created_at END)) as out_time")
-        //         )
-        //         ->whereDate('created_at', $date)
-        //         ->groupBy('EID');
-
-        //     $result = DB::table('roster_schedules')
-        //         ->join('employees', 'employees.id', '=', 'roster_schedules.employee_id')
-        //         ->join('officials', 'officials.EID', '=', 'employees.id')
-        //         ->join('departments', 'departments.id', '=', 'officials.Department_Id')
-        //         ->leftJoinSub($machine_attendance_sub, 'machine_att', function ($join) {
-        //             $join->on('machine_att.EID', '=', 'roster_schedules.employee_id');
-        //         })
-        //         ->leftJoinSub($app_attendance_sub, 'app_att', function ($join) {
-        //             $join->on('app_att.EID', '=', 'roster_schedules.employee_id');
-        //         })
-        //         ->select(
-        //             'roster_schedules.id as roster_id',
-        //             'employees.Full_Name as employee_name',
-        //             'employees.id as employee_id',
-        //             'employees.Employee_Id as official_id',
-        //             'departments.id as department_id',
-        //             'departments.Name as department_name',
-
-        //             'machine_att.in_time as actual_time_in',
-        //             'machine_att.out_time as actual_time_out',
-
-        //             'app_att.in_time as app_in_time',
-        //             'app_att.out_time as app_out_time',
-
-        //             'roster_schedules.time_in',
-        //             'roster_schedules.time_out',
-
-        //             'roster_schedules.work_from'
-        //         )
-        //         ->get();
-        // }
         if ($role_id == 1) {
 
+
             // -------------------------
-            // MACHINE ATTENDANCE SUB
+            // MACHINE ATTENDANCE
             // -------------------------
             $machine_attendance_sub = DB::table('attendences')
                 ->select(
@@ -230,139 +480,211 @@ class RosterScheduleController extends Controller
                 ->whereDate('Date', $date)
                 ->groupBy('EID');
 
-            // -------------------------
-            // APP ATTENDANCE SUB
-            // -------------------------
+
             $app_attendance_sub = DB::table('app_attendances')
                 ->select(
                     'EID',
-                    DB::raw("TIME(MIN(CASE WHEN LOWER(status) = 'in' THEN created_at END)) as in_time"),
-                    DB::raw("TIME(MAX(CASE WHEN LOWER(status) = 'out' THEN created_at END)) as out_time")
+                    DB::raw("TIME(MIN(CASE WHEN LOWER(status)='in' THEN created_at END)) as in_time"),
+                    DB::raw("TIME(MAX(CASE WHEN LOWER(status)='out' THEN created_at END)) as out_time")
                 )
                 ->whereDate('created_at', $date)
                 ->groupBy('EID');
 
+
             // -------------------------
             // MAIN QUERY
             // -------------------------
-            $result = DB::table('roster_schedules')
-                ->join('employees', 'employees.id', '=', 'roster_schedules.employee_id')
+            $query = DB::table('employees')
+
+
+                ->join('roster_schedules', function ($join) use ($date, $dayName) {
+                    $join->on('employees.id', '=', 'roster_schedules.employee_id')
+                        ->whereDate('roster_schedules.effective_from', '<=', $date)
+                        ->where(function ($q) use ($date) {
+                            $q->whereNull('roster_schedules.effective_to')
+                                ->orWhereDate('roster_schedules.effective_to', '>=', $date);
+                        })
+                        ->where('roster_schedules.day_name', $dayName);
+                })
+
+
                 ->join('officials', 'officials.EID', '=', 'employees.id')
                 ->join('departments', 'departments.id', '=', 'officials.Department_Id')
 
-                ->leftJoinSub($machine_attendance_sub, 'machine_att', function ($join) {
-                    $join->on('machine_att.EID', '=', 'roster_schedules.employee_id');
+
+                ->leftJoin('holidays', function ($join) use ($date) {
+                    $join->whereDate('holidays.from_date', '<=', $date)
+                        ->whereDate('holidays.to_date', '>=', $date);
                 })
+
+
+                ->leftJoin('leaves', function ($join) use ($date) {
+                    $join->on('leaves.employee_id', '=', 'employees.id')
+                        ->where('leaves.status', 'Approved')
+                        ->whereDate('leaves.from_date', '<=', $date)
+                        ->whereDate('leaves.to_date', '>=', $date);
+                })
+
+
+                ->leftJoinSub($machine_attendance_sub, 'machine_att', function ($join) {
+                    $join->on('machine_att.EID', '=', 'employees.id');
+                })
+
 
                 ->leftJoinSub($app_attendance_sub, 'app_att', function ($join) {
-                    $join->on('app_att.EID', '=', 'roster_schedules.employee_id');
+                    $join->on('app_att.EID', '=', 'employees.id');
                 })
 
-                ->select(
 
-                    // Employee Info
-                    'roster_schedules.id as roster_id',
+                ->select(
+                    DB::raw("'$date' as report_date"),
+
+
                     'employees.Full_Name as employee_name',
                     'employees.id as employee_id',
                     'employees.Employee_Id as official_id',
                     'departments.Name as department_name',
 
-                    // Raw attendance
-                    'machine_att.in_time as machine_in_time',
-                    'machine_att.out_time as machine_out_time',
-                    'app_att.in_time as app_in_time',
-                    'app_att.out_time as app_out_time',
 
-                    // Roster
+                    'roster_schedules.day_name',
                     'roster_schedules.time_in',
                     'roster_schedules.time_out',
-                    'roster_schedules.work_from',
+                    'roster_schedules.weekend',
 
-                    // Final Actual Time (App > Machine)
+
+                    'machine_att.in_time as machine_in',
+                    'machine_att.out_time as machine_out',
+                    'app_att.in_time as app_in',
+                    'app_att.out_time as app_out',
+
+
+                    'holidays.holiday_name',
+                    'leaves.id as leave_id',
+
+
                     DB::raw("COALESCE(app_att.in_time, machine_att.in_time) as actual_in"),
                     DB::raw("COALESCE(app_att.out_time, machine_att.out_time) as actual_out"),
 
-                    // IN diff
+
                     DB::raw("
-                        TIMESTAMPDIFF(
+                    CASE
+                        WHEN roster_schedules.weekend = 1 THEN NULL
+                        ELSE TIMESTAMPDIFF(
                             MINUTE,
                             CONCAT('$date',' ', roster_schedules.time_in),
                             CONCAT('$date',' ', COALESCE(app_att.in_time, machine_att.in_time))
-                        ) as in_diff_minutes
-                    "),
+                        )
+                    END as in_diff_minutes
+                "),
 
-                    // OUT diff
+
                     DB::raw("
-                        TIMESTAMPDIFF(
+                    CASE
+                        WHEN roster_schedules.weekend = 1 THEN NULL
+                        ELSE TIMESTAMPDIFF(
                             MINUTE,
                             CONCAT('$date',' ', roster_schedules.time_out),
                             CONCAT('$date',' ', COALESCE(app_att.out_time, machine_att.out_time))
-                        ) as out_diff_minutes
-                    "),
+                        )
+                    END as out_diff_minutes
+                "),
 
-                    // 🔥 WORKING HOURS
+
                     DB::raw("
-                        TIMESTAMPDIFF(
+                    CASE
+                        WHEN roster_schedules.weekend = 1 THEN NULL
+                        ELSE TIMESTAMPDIFF(
                             MINUTE,
                             CONCAT('$date',' ', COALESCE(app_att.in_time, machine_att.in_time)),
                             CONCAT('$date',' ', COALESCE(app_att.out_time, machine_att.out_time))
-                        ) as working_minutes
-                    ")
+                        )
+                    END as working_minutes
+                "),
+
+
+                    DB::raw("
+                    CASE
+                        WHEN holidays.id IS NOT NULL THEN holidays.holiday_name
+                        WHEN leaves.id IS NOT NULL THEN 'On Leave'
+                        WHEN roster_schedules.weekend = 1 THEN 'Weekend'
+                        WHEN COALESCE(app_att.in_time, machine_att.in_time) IS NULL THEN 'Absent'
+                        ELSE 'Present'
+                    END as attendance_status
+                ")
                 )
-                ->get();
+
+
+                // ✅ FILTERS (IMPORTANT FIX)
+                ->when($request->department_id, function ($q) use ($request) {
+                    $q->where('officials.Department_Id', $request->department_id);
+                })
+
+
+                ->when($request->employee_id, function ($q) use ($request) {
+                    $q->where('employees.id', $request->employee_id);
+                });
+
+
+            // ✅ EXECUTE QUERY
+            $result = $query->get();
         }
 
-        function formatMinutes($minutes)
-        {
-            if ($minutes === null) return null;
 
-            $sign = $minutes < 0 ? '-' : '+';
-            $minutes = abs($minutes);
 
-            $hours = floor($minutes / 60);
-            $mins = $minutes % 60;
-
-            if ($hours == 0) {
-                return $sign . ' ' . $mins . ' min';
-            }
-
-            return $sign . ' ' . $hours . ' h ' . $mins . ' min';
-        }
-        function formatWorkingHours($minutes)
-        {
-            if ($minutes === null) return null;
-
-            if ($minutes < 0) return null;
-
-            $hours = floor($minutes / 60);
-            $mins = $minutes % 60;
-
-            if ($hours == 0) {
-                return $mins . ' min';
-            }
-
-            if ($mins == 0) {
-                return $hours . ' h';
-            }
-            return $hours . ' h ' . $mins . ' min';
-        }
-
+        // -------------------------
+        // FORMAT
+        // -------------------------
         $result = $result->map(function ($row) {
-            $row->in_diff = formatMinutes($row->in_diff_minutes);
-            $row->out_diff = formatMinutes($row->out_diff_minutes);
 
-            $row->working_hours = formatWorkingHours($row->working_minutes);
+
+            $formatInMinutes = function ($minutes) {
+                if ($minutes === null) return null;
+                $sign = $minutes < 0 ? '+' : '-';
+                $minutes = abs($minutes);
+                $hours = floor($minutes / 60);
+                $mins = $minutes % 60;
+                return $hours == 0 ? "$sign $mins min" : "$sign $hours h $mins min";
+            };
+
+
+            $formatOutMinutes = function ($minutes) {
+                if ($minutes === null) return null;
+                $sign = $minutes < 0 ? '-' : '+';
+                $minutes = abs($minutes);
+                $hours = floor($minutes / 60);
+                $mins = $minutes % 60;
+                return $hours == 0 ? "$sign $mins min" : "$sign $hours h $mins min";
+            };
+
+
+            $formatWorkingHours = function ($minutes) {
+                if ($minutes === null || $minutes < 0) return null;
+                $hours = floor($minutes / 60);
+                $mins = $minutes % 60;
+                if ($hours == 0) return "$mins min";
+                if ($mins == 0) return "$hours h";
+                return "$hours h $mins min";
+            };
+
+
+            $row->in_diff = $formatInMinutes($row->in_diff_minutes);
+            $row->out_diff = $formatOutMinutes($row->out_diff_minutes);
+            $row->working_hours = $formatWorkingHours($row->working_minutes);
+
+
 
             $row->working_hour_decimal = $row->working_minutes !== null
                 ? round($row->working_minutes / 60, 2)
                 : null;
 
+
             return $row;
         });
 
+
         return response()->json([
             'success' => true,
-            'data'    => $result
+            'data' => $result
         ]);
     }
 }

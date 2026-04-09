@@ -3,6 +3,10 @@ import { ref, onMounted, computed } from "vue";
 import axios from "axios";
 import Swal from "sweetalert2";
 import api from "@/api";
+import { useStore } from "vuex";
+
+const store = useStore();
+const user = store.getters.getUser;
 
 // ----------------- Reactive State -----------------
 const department = ref([]);
@@ -34,9 +38,10 @@ const form = ref({
 const getData = async () => {
     try {
         const [responsedept, responsetype] = await axios.all([
-            api.get("/department"),
+            api.get(`/department-list-leave/${user.id}`),
             api.get("/leave-type"),
         ]);
+        console.log("Departments:", responsedept.data);
         department.value = responsedept.data;
         leaveType.value = responsetype.data;
     } catch (err) {
@@ -73,6 +78,19 @@ const getEmployeeImg = async (id) => {
         console.error("Error fetching employee info:", err);
     }
 };
+
+const computedTotalDays = computed(() => {
+    if (!form.value.from_date || !form.value.to_date) return 0;
+
+    const startDate = new Date(form.value.from_date);
+    const endDate = new Date(form.value.to_date);
+
+    // +1 to include both start and end dates
+    const diffTime = endDate - startDate;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+
+    return diffDays > 0 ? diffDays : 0;
+});
 
 // Get personal leave info for dynamic table
 const getLeaveInfo = async (id) => {
@@ -200,10 +218,10 @@ onMounted(() => getData());
                                         </option>
                                         <option
                                             v-for="dept in department"
-                                            :key="dept.id"
-                                            :value="dept.id"
+                                            :key="dept.department_id"
+                                            :value="dept.department_id"
                                         >
-                                            {{ dept.Name }}
+                                            {{ dept.department_name }}
                                         </option>
                                     </select>
                                 </div>
@@ -246,6 +264,14 @@ onMounted(() => getData());
                                         v-model="form.to_date"
                                         class="form-control"
                                     />
+                                </div>
+                            </div>
+                            <div class="col-lg-6 col-md-6 col-sm-12 mb-3">
+                                <div class="form-group">
+                                    <label>Total Days: </label>
+                                    <span class="fw-bold ms-1">{{
+                                        computedTotalDays
+                                    }}</span>
                                 </div>
                             </div>
 
@@ -405,7 +431,7 @@ onMounted(() => getData());
                                             {{
                                                 totalDays(
                                                     l.from_date,
-                                                    l.to_date
+                                                    l.to_date,
                                                 )
                                             }}
                                         </td>
@@ -416,7 +442,7 @@ onMounted(() => getData());
                                                 v-if="l.attachment_url"
                                                 @click="
                                                     openAttachment(
-                                                        l.attachment_url
+                                                        l.attachment_url,
                                                     )
                                                 "
                                                 class="btn btn-info btn-sm"

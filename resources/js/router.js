@@ -576,6 +576,12 @@ const routes = [
             requireAuth: true,
         },
     },
+    {
+        path: "/attendance/roster-setup",
+        name: "createRoster",
+        component: () =>
+            import("@/pages/attendance/component/createRoster.vue"),
+    },
 ];
 
 const router = createRouter({

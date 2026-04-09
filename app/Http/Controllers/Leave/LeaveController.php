@@ -11,6 +11,7 @@ use App\Models\app_attendance;
 
 use App\Models\leave_type;
 use App\Models\official;
+use App\Models\department;
 use App\Models\employee;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
@@ -52,6 +53,23 @@ class LeaveController extends Controller
         } else {
             return response()->json('User not found');
         }
+    }
+
+
+
+    public function departmentList($id)
+    {
+        $role = Auth::user()->role_id;
+        if ($role == 1) {
+            $response = department::select('id as department_id', 'Name as department_name')->get();
+        } else {
+            $response = employee::select('departments.id as department_id', 'departments.Name as department_name')
+                ->join('officials', 'officials.EID', '=', 'employees.id')
+                ->join('departments', 'departments.id', '=', 'officials.Department_Id')
+                ->where('employees.id', $id)
+                ->get();
+        }
+        return response()->json($response);
     }
 
 

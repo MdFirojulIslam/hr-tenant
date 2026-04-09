@@ -28,6 +28,8 @@ Route::put('/leave-approval', [LeaveController::class, 'supervisedApproval']);
 
 Route::put('/hr-approved', [LeaveController::class, 'hrApproval']);
 
+Route::get('department-list-leave/{id}', [LeaveController::class, 'departmentList']);
+
 
 
 //Leave Report

@@ -49,6 +49,7 @@ class SalarySheetExport implements
             ->select(
                 DB::raw("CONCAT('ABNB-', employees.Employee_Id) as employee_code"),
                 'employees.Full_Name',
+                'departments.Name as department_name',
                 'designations.Name as designation_name',
                 'officials.DOJ',
                 'salary_sheets.absent_days',
@@ -96,6 +97,7 @@ class SalarySheetExport implements
         return [
             $row->employee_code,
             $row->Full_Name,
+            $row->department_name,
             $row->designation_name,
             $row->DOJ,
             $row->absent_days,
@@ -138,6 +140,7 @@ class SalarySheetExport implements
             [
                 'EID',
                 'Name',
+                'Department',
                 'Designation',
                 'Date Of Join',
                 'Absent',
@@ -222,16 +225,16 @@ class SalarySheetExport implements
                 ]);
 
                 /* ===== Total Net Pay ===== */
-                $netPayColumn = 'Z';
+                $netPayColumn = 'AA';
                 $totalRow = $lastRow + 1;
 
-                $sheet->setCellValue("Y{$totalRow}", 'Total');
+                $sheet->setCellValue("Z{$totalRow}", 'Total');
                 $sheet->setCellValue(
                     "{$netPayColumn}{$totalRow}",
                     "=SUM({$netPayColumn}4:{$netPayColumn}{$lastRow})"
                 );
 
-                $sheet->getStyle("Y{$totalRow}:{$netPayColumn}{$totalRow}")
+                $sheet->getStyle("Z{$totalRow}:{$netPayColumn}{$totalRow}")
                     ->getFont()
                     ->setBold(true);
 

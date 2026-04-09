@@ -1,24 +1,52 @@
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, onMounted, defineAsyncComponent } from "vue";
 import api from "@/api";
+import { useStore } from "vuex";
+
+import Multiselect from "vue-multiselect";
+import "vue-multiselect/dist/vue-multiselect.min.css";
+
+const store = useStore();
+const user = store.getters.getUser;
+
+const department = ref([]);
+const employee = ref([]);
+
+const searchDept = ref("");
+const selectedEmployee = ref(null);
 const rosterReports = ref([]);
 const searchDate = ref("");
+const downloadReport = ref(false);
+
+const rosterReportModal = defineAsyncComponent(
+    () => import("@/pages/attendance/component/rosterReportDownload.vue"),
+);
+
+// -------------------------
+// DATE FUNCTIONS
+// -------------------------
+
+const downloadRosterReport = () => {
+    downloadReport.value = true;
+};
+
+const closeDownloadReport = () => {
+    downloadReport.value = false;
+};
 
 const getTodayDate = () => {
     const today = new Date();
-    return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(
-        2,
-        "0",
-    )}-${String(today.getDate()).padStart(2, "0")}`;
+    return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
 };
 
 const formatDate = (dateStr) => {
     if (!dateStr) return "";
     const date = new Date(dateStr);
-    const day = String(date.getDate()).padStart(2, "0");
-    const month = date.toLocaleString("en-US", { month: "short" });
-    const year = date.getFullYear();
-    return `${day} ${month}, ${year}`;
+    return date.toLocaleDateString("en-US", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+    });
 };
 
 const formatTime = (timeStr) => {
@@ -35,29 +63,87 @@ const formatTime = (timeStr) => {
     });
 };
 
+// -------------------------
+// GET EMPLOYEE
+// -------------------------
+const getEmployee = async (deptID) => {
+    if (!deptID) {
+        employee.value = [];
+        return;
+    }
+
+    try {
+        const res = await api.get(`/adjustment-employees/${deptID}`);
+        employee.value = res.data;
+    } catch (err) {
+        console.error("Error fetching employees:", err);
+    }
+};
+
+// -------------------------
+// GET DATA (MAIN API)
+// -------------------------
 const getData = async () => {
     try {
-        const response = await api.get("/roster-report-list", {
-            params: {
-                searchDate: searchDate.value,
-            },
-        });
+        const [deptRes, response] = await Promise.all([
+            api.get(`/department-list/${user.id}`),
+            api.get("/roster-report-list", {
+                params: {
+                    searchDate: searchDate.value,
+                    department_id: searchDept.value,
+                    employee_id: selectedEmployee.value?.id,
+                },
+            }),
+        ]);
 
+        department.value = deptRes.data || [];
         rosterReports.value = response.data.data ?? response.data;
-
-        console.log("Roster Reports:", rosterReports.value);
     } catch (error) {
-        console.error(
-            "Error fetching roster reports:",
-            error.response?.data || error.message,
-        );
+        console.error("Error fetching roster reports:", error);
     }
+};
+
+// -------------------------
+// EVENTS
+// -------------------------
+const clearDepartment = async () => {
+    searchDept.value = "";
+    selectedEmployee.value = null;
+    employee.value = [];
+    await getData();
+};
+
+const onDeptChange = async () => {
+    await getEmployee(searchDept.value);
+    selectedEmployee.value = null;
+    getData();
+};
+
+const onEmployeeChange = () => {
+    getData();
 };
 
 const handleDateChange = () => {
     getData();
 };
 
+const isLateIn = (roster) => {
+    if (!roster.in_diff_minutes) return false;
+
+    // Late means positive delay (late entry)
+    return roster.in_diff_minutes > 15;
+};
+
+const isEarlyOut = (roster) => {
+    if (!roster.out_diff_minutes) return false;
+
+    // Early خروج = negative (left before time)
+    return roster.out_diff_minutes < 0;
+};
+
+// -------------------------
+// INIT
+// -------------------------
 onMounted(() => {
     searchDate.value = getTodayDate();
     getData();
@@ -65,133 +151,174 @@ onMounted(() => {
 </script>
 
 <template>
-    <div class="boarder rounded container-fluid d-flex flex-column p-0 m-0">
+    <component
+        v-if="downloadReport"
+        :is="rosterReportModal"
+        :isOpen="downloadReport"
+        @modal-close="closeDownloadReport"
+    />
+
+    <div class="border rounded container-fluid d-flex flex-column p-0 m-0">
         <div
             class="d-flex justify-content-between align-items-center py-2 px-3"
         >
-            <h2 class="m-0 header-design">Roster Report List</h2>
-            <div>
+            <h2 class="m-0 header-design">Daily Attendance</h2>
+            <div class="d-flex flex-wrap gap-2 buttons-container">
                 <button
-                    type="button"
-                    @click="rosterSetup()"
-                    class="btn btn-success d-flex align-items-center fw-medium shadow-sm"
+                    @click="downloadRosterReport()"
+                    class="btn btn-primary download-adjustment"
                 >
-                    <i class="fa-solid fa-plus me-2"></i> Download
+                    <i class="fa-solid fa-download me-2"></i> Download
                 </button>
             </div>
         </div>
-        <div class="col-lg-12 mt-3">
-            <div class="p-3 mb-3">
-                <!-- Filters -->
-                <div class="row g-3 mb-3">
-                    <!-- Employee -->
 
+        <div class="col-lg-12">
+            <div class="p-3">
+                <!-- Filters -->
+                <div class="row g-3 mb-4">
+                    <!-- Department -->
                     <div class="col-lg-3 position-relative">
+                        <label class="form-label">Select Department</label>
+                        <select
+                            class="form-control field-height field-background-colour"
+                            :class="{ 'placeholder-text': !searchDept }"
+                            v-model="searchDept"
+                            @change="onDeptChange"
+                        >
+                            <option value="">Select Department</option>
+                            <option
+                                v-for="dept in department"
+                                :key="dept.department_id"
+                                :value="dept.department_id"
+                            >
+                                {{ dept.department_name }}
+                            </option>
+                        </select>
+                        <button
+                            v-if="searchDept"
+                            type="button"
+                            class="btn btn-sm btn-link position-absolute top-0 end-0 me-3 cross-icon"
+                            @click="clearDepartment"
+                        >
+                            <i class="fa fa-times"></i>
+                        </button>
+                    </div>
+
+                    <!-- Employee -->
+                    <div class="col-lg-3">
+                        <label class="form-label">Select Employee</label>
+                        <Multiselect
+                            v-model="selectedEmployee"
+                            :options="employee"
+                            label="Full_Name"
+                            track-by="id"
+                            placeholder="Select employee"
+                            class="multiselect-design"
+                            @select="onEmployeeChange"
+                        />
+                    </div>
+
+                    <!-- Date -->
+                    <div class="col-lg-3">
+                        <label class="form-label">Select Date</label>
                         <input
                             type="date"
                             class="form-control field-height field-background-colour"
                             v-model="searchDate"
+                            :class="{ 'placeholder-text': !searchDept }"
                             @change="handleDateChange"
                         />
                     </div>
                 </div>
 
-                <!-- Salary Table -->
-                <div class="mt-3">
-                    <!-- Total Employees Row -->
-                    <div
-                        class="d-flex align-items-center py-2 fw-semibold border-bottom bg-light"
-                    >
-                        <span class="me-2">Total Employees:</span>
-                        <span
-                            class="bg-white border rounded px-2 py-1 fw-medium"
-                        >
-                        </span>
-                    </div>
-                    <div class="table-responsive shadow-sm bg-light">
-                        <table class="table table-bordered table-sm">
-                            <thead class="table-light">
-                                <tr class="text-nowrap">
-                                    <th width="3%" class="text-center">S/N</th>
-                                    <th width="8%" class="text-center">
-                                        EMPLOYEE ID
-                                    </th>
-                                    <th>EMPLOYEE NAME</th>
-                                    <th>DEPARTMENT</th>
-                                    <th width="8%" class="text-center">DATE</th>
-                                    <th width="8%" class="text-center">
-                                        IN TIME
-                                    </th>
-                                    <th width="8%" class="text-center">
-                                        OUT TIME
-                                    </th>
-                                    <th width="8%" class="text-center">
-                                        IN TIME DIFF
-                                    </th>
-                                    <th width="8%" class="text-center">
-                                        OUT TIME DIFF
-                                    </th>
-                                    <th width="8%" class="text-center">
-                                        WORKING HOURS
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr
-                                    v-for="(roster, index) in rosterReports"
-                                    :key="roster.id"
-                                    class="text-nowrap"
-                                >
-                                    <td class="text-center">{{ index + 1 }}</td>
-                                    <td class="text-center">
-                                        ABNB-{{ roster.official_id }}
-                                    </td>
-                                    <td>{{ roster.employee_name }}</td>
-                                    <td>{{ roster.department_name }}</td>
-                                    <td class="text-center">
-                                        {{ formatDate(roster.attendance_date) }}
-                                    </td>
-                                    <td class="text-center">
-                                        {{
-                                            formatTime(
-                                                roster.actual_in ??
-                                                    roster.app_in_time,
-                                            )
-                                        }}
-                                    </td>
-
-                                    <td class="text-center">
-                                        {{
-                                            formatTime(
-                                                roster.actual_out ??
-                                                    roster.app_out_time,
-                                            )
-                                        }}
-                                    </td>
-                                    <td class="text-center">
-                                        {{ roster.in_diff }}
-                                    </td>
-                                    <td class="text-center">
-                                        {{ roster.out_diff }}
-                                    </td>
-                                    <td class="text-center">
-                                        {{ roster.working_hours }}
-                                    </td>
-                                </tr>
-                            </tbody>
-
-                            <input
-                                type="date"
-                                class="form-control field-height field-background-colour"
-                                v-model="searchDate"
-                                @change="handleDateChange"
-                            />
-                        </table>
-                    </div>
+                <div
+                    class="d-flex align-items-center py-2 fw-semibold border-bottom"
+                >
+                    <span class="me-2">Total Employees:</span>
+                    <span class="border rounded px-2 py-1 fw-medium">{{
+                        rosterReports.length
+                    }}</span>
                 </div>
 
-                <!-- Pagination -->
-                <div class="d-flex justify-content-end mt-0"></div>
+                <!-- Table -->
+                <div class="table-responsive">
+                    <table class="table table-bordered table-sm">
+                        <thead class="table-light">
+                            <tr class="text-nowrap">
+                                <th width="2%" class="text-center">S/N</th>
+                                <th width="6%" class="text-center">EMP ID</th>
+                                <th width="13%">EMPLOYEE NAME</th>
+                                <th width="18%">DEPARTMENT</th>
+                                <th width="7%" class="text-center">DATE</th>
+                                <th width="5%" class="text-center">DAY</th>
+                                <th width="5%" class="text-center">STATUS</th>
+                                <th width="5%" class="text-center">IN</th>
+                                <th width="5%" class="text-center">OUT</th>
+                                <th width="7%" class="text-center">IN DIFF</th>
+                                <th width="7%" class="text-center">OUT DIFF</th>
+                                <th width="7%" class="text-center">WORKING</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            <tr
+                                v-for="(roster, index) in rosterReports"
+                                :key="index"
+                            >
+                                <td class="text-center">{{ index + 1 }}</td>
+                                <td class="text-center">
+                                    ABNB-{{ roster.official_id }}
+                                </td>
+                                <td>{{ roster.employee_name }}</td>
+                                <td>{{ roster.department_name }}</td>
+                                <td class="text-center">
+                                    {{ formatDate(roster.report_date) }}
+                                </td>
+                                <td class="text-center">
+                                    {{ roster.day_name }}
+                                </td>
+                                <td class="text-center">
+                                    {{ roster.attendance_status }}
+                                </td>
+                                <td
+                                    class="text-center"
+                                    :class="{
+                                        'text-danger fw-bold': isLateIn(roster),
+                                    }"
+                                >
+                                    {{ formatTime(roster.actual_in) }}
+                                </td>
+
+                                <td
+                                    class="text-center"
+                                    :class="{
+                                        'text-danger fw-bold':
+                                            isEarlyOut(roster),
+                                    }"
+                                >
+                                    {{ formatTime(roster.actual_out) }}
+                                </td>
+
+                                <td class="text-center">
+                                    {{ roster.in_diff }}
+                                </td>
+                                <td class="text-center">
+                                    {{ roster.out_diff }}
+                                </td>
+                                <td class="text-center">
+                                    {{ roster.working_hours }}
+                                </td>
+                            </tr>
+
+                            <tr v-if="rosterReports.length === 0">
+                                <td colspan="12" class="text-center text-muted">
+                                    No Data Found
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
@@ -207,6 +334,11 @@ onMounted(() => {
     color: #000000;
     border: 0.8px solid #7e7c7c63;
     letter-spacing: 0.3px;
+}
+
+.form-label {
+    font-weight: 600;
+    letter-spacing: 0.4px;
 }
 
 .field-hover:hover {
@@ -231,10 +363,16 @@ onMounted(() => {
 .field-height {
     height: 35px;
 }
+
 .placeholder-text {
-    color: #999; /* faded text for placeholder */
+    color: #999;
     font-size: 14px;
 }
+
+.cross-icon {
+    margin-top: 29px;
+}
+
 .multiselect-design .multiselect__placeholder {
     color: #999;
     font-size: 14px;
@@ -243,13 +381,12 @@ onMounted(() => {
 }
 
 .multiselect-design .multiselect__tags {
-    min-height: 35px !important; /* override default min-height */
-    height: 35px; /* exact height */
-    padding: 0 8px; /* adjust left/right padding */
+    min-height: 35px !important;
+    height: 35px;
+    padding: 0 8px;
     border-radius: 5px;
     border: 0.8px solid #b3a9a963;
-    background: #c4c2c250;
-    display: flex; /* align input vertically */
+    display: flex;
     align-items: center;
     font-size: 14px;
 }
@@ -257,13 +394,13 @@ onMounted(() => {
 /* Input inside the multiselect */
 .multiselect-design .multiselect__input,
 .multiselect-design .multiselect__single {
-    height: 100%; /* fill the tags container height */
-    line-height: 35px; /* match container for vertical centering */
-    padding: 0; /* remove extra padding */
+    height: 100%;
+    line-height: 35px;
+    padding: 0;
     margin: 0;
-    background: transparent; /* match container bg */
-    border: 0; /* remove default border */
-    flex: 1; /* grow to fill remaining space */
+    background: transparent;
+    border: 0;
+    flex: 1;
 }
 
 .multiselect-design .multiselect__select {
@@ -271,14 +408,12 @@ onMounted(() => {
 }
 
 .field-background-colour {
-    background: #c4c2c250;
     border: 0.8px solid #b3a9a963;
 }
+
 .header-design {
     letter-spacing: 1px;
     padding-top: 5px;
-    /* background-color: #d6d6d6f5;
-
-    border-radius: 5px; */
+    font-weight: 700;
 }
 </style>

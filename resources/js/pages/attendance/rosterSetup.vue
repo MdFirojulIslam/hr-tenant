@@ -1,37 +1,69 @@
 <script setup>
-import { defineAsyncComponent, ref, onMounted } from "vue";
+import { ref, onMounted } from "vue";
 import api from "@/api";
 import { useStore } from "vuex";
+import { useRouter } from "vue-router";
+
+import Multiselect from "vue-multiselect";
 import "vue-multiselect/dist/vue-multiselect.min.css";
+
 const store = useStore();
 const user = store.getters.getUser;
+const router = useRouter();
 
+const totalRecords = ref(0);
+// -------------------------
+// STATE
+// -------------------------
 const rosterSchedules = ref([]);
 const department = ref([]);
-const searchDept = ref("");
-const searchEmp = ref("");
+const employee = ref([]);
 
-const selectedRoster = ref(null);
+const searchDept = ref("");
+const selectedEmployee = ref(null);
+const searchDay = ref("");
 
 const isLoading = ref(false);
-const error = ref(null);
 
-const rosterSetupComponent = defineAsyncComponent(
-    () => import("./component/rosterSetup.vue"),
-);
+// pagination
+const currentPage = ref(1);
+const lastPage = ref(1);
+const perPage = ref(40);
 
+// -------------------------
+// ROUTING
+// -------------------------
+const rosterSetup = () => {
+    router.push({ name: "createRoster" });
+};
+
+const editRoster = (roster) => {
+    router.push({
+        name: "createRoster",
+        query: {
+            edit: true,
+            id: roster.roster_id,
+        },
+    });
+};
+
+// -------------------------
+// FORMATTERS
+// -------------------------
 const formatDate = (dateStr) => {
-    if (!dateStr) return "";
+    if (!dateStr) return "-";
     const date = new Date(dateStr);
-    const day = String(date.getDate()).padStart(2, "0");
-    const month = date.toLocaleString("en-US", { month: "short" });
-    const year = date.getFullYear();
-    return `${day} ${month}, ${year}`;
+    return date.toLocaleDateString("en-GB", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+    });
 };
 
 const formatTime = (timeStr) => {
-    const [hour, minute] = timeStr.split(":");
+    if (!timeStr) return "-";
 
+    const [hour, minute] = timeStr.split(":");
     const date = new Date();
     date.setHours(hour, minute);
 
@@ -42,163 +74,309 @@ const formatTime = (timeStr) => {
     });
 };
 
-const getData = async () => {
+// -------------------------
+// FETCH EMPLOYEE
+// -------------------------
+const getEmployee = async (deptID) => {
+    if (!deptID) {
+        employee.value = [];
+        return;
+    }
+    try {
+        const res = await api.get(`/adjustment-employees/${deptID}`);
+        employee.value = res.data;
+    } catch (err) {
+        console.error(err);
+    }
+};
+
+// -------------------------
+// FETCH DATA (WITH FILTERS + PAGINATION)
+// -------------------------
+const getData = async (page = 1) => {
     isLoading.value = true;
+
     try {
         const [deptRes, rosterRes] = await Promise.all([
             api.get(`/department-list/${user.id}`),
-            api.get("/roster-schedule"),
+            api.get("/roster-schedule", {
+                params: {
+                    page: page,
+                    per_page: perPage.value,
+                    department_id: searchDept.value || null,
+                    employee_id: selectedEmployee.value?.id || null,
+                    day_name: searchDay.value || null,
+                },
+            }),
         ]);
 
-        department.value = deptRes.data;
-        rosterSchedules.value = rosterRes.data;
-        console.log(rosterSchedules.value);
+        department.value = deptRes.data || [];
+
+        const resData = rosterRes.data.data;
+        rosterSchedules.value = resData.data;
+
+        currentPage.value = resData.current_page;
+        lastPage.value = resData.last_page;
+
+        totalRecords.value = resData.total;
     } catch (err) {
-        error.value = err.message;
+        console.error(err);
     } finally {
         isLoading.value = false;
     }
 };
 
-const rosterSetupModal = ref(false);
-const rosterSetup = () => {
-    rosterSetupModal.value = true;
+// -------------------------
+// FILTER HANDLERS
+// -------------------------
+const onFilterChange = () => {
+    currentPage.value = 1;
+    getData(1);
 };
-const closeRosterSetupModal = () => {
-    rosterSetupModal.value = false;
-    selectedRoster.value = null;
+
+const onDeptChange = async () => {
+    await getEmployee(searchDept.value);
+    selectedEmployee.value = null;
+    onFilterChange();
 };
-const editRoster = (roster) => {
-    selectedRoster.value = roster;
-    rosterSetupModal.value = true;
+
+const onEmployeeChange = () => {
+    onFilterChange();
 };
+
+const onDayChange = () => {
+    onFilterChange();
+};
+
+// -------------------------
+// PAGINATION LOGIC (CUSTOM UI)
+// -------------------------
+const goToPage = (page) => {
+    if (page < 1 || page > lastPage.value) return;
+    getData(page);
+};
+
+// show limited pages (like 27 28 29 etc)
+const visiblePages = () => {
+    const pages = [];
+
+    let start = Math.max(1, currentPage.value - 2);
+    let end = Math.min(lastPage.value, currentPage.value + 2);
+
+    if (currentPage.value <= 3) {
+        start = 1;
+        end = Math.min(5, lastPage.value);
+    }
+
+    if (currentPage.value >= lastPage.value - 2) {
+        start = Math.max(1, lastPage.value - 4);
+        end = lastPage.value;
+    }
+
+    for (let i = start; i <= end; i++) {
+        pages.push(i);
+    }
+
+    return pages;
+};
+
+// -------------------------
 onMounted(() => {
-    getData();
+    const today = new Date().toLocaleDateString("en-US", { weekday: "long" });
+    searchDay.value = today;
+
+    getData(1);
 });
 </script>
 
 <template>
-    <component
-        v-if="rosterSetupModal"
-        :is="rosterSetupComponent"
-        :isOpen="rosterSetupModal"
-        :editData="selectedRoster"
-        @close="closeRosterSetupModal"
-        @refresh="getData"
-    />
-    <div class="boarder rounded container-fluid d-flex flex-column p-0 m-0">
+    <div class="border rounded container-fluid d-flex flex-column p-0 m-0">
+        <!-- HEADER -->
         <div
             class="d-flex justify-content-between align-items-center py-2 px-3"
         >
-            <h2 class="m-0 header-design">Roster Setup List</h2>
-            <div>
-                <button
-                    type="button"
-                    @click="rosterSetup()"
-                    class="btn btn-success d-flex align-items-center fw-medium shadow-sm"
-                >
-                    <i class="fa-solid fa-plus me-2"></i> New Setup
-                </button>
-            </div>
+            <h2 class="header-design">Roster/Schedule Setup</h2>
+
+            <button @click="rosterSetup" class="btn btn-success">
+                + New Setup
+            </button>
         </div>
-        <div class="col-lg-12 mt-3">
-            <div class="p-3 mb-3">
-                <!-- Filters -->
 
-                <!-- Salary Table -->
-                <div class="mt-3">
-                    <!-- Total Employees Row -->
-                    <div
-                        class="d-flex align-items-center py-2 fw-semibold border-bottom bg-light"
+        <div class="p-3">
+            <!-- FILTER -->
+            <div class="row g-3 mb-3">
+                <!-- Department -->
+                <div class="col-lg-3">
+                    <label class="form-label">Select Department</label>
+                    <select
+                        class="form-control field-height field-background-colour"
+                        v-model="searchDept"
+                        :class="{ 'placeholder-text': !searchDept }"
+                        @change="onDeptChange"
                     >
-                        <span class="me-2">Total Employees:</span>
-                        <span
-                            class="bg-white border rounded px-2 py-1 fw-medium"
+                        <option value="">Select Department</option>
+                        <option
+                            v-for="dept in department"
+                            :key="dept.department_id"
+                            :value="dept.department_id"
                         >
-                        </span>
-                    </div>
-                    <div class="table-responsive shadow-sm bg-light">
-                        <table class="table table-bordered table-sm">
-                            <thead class="table-light">
-                                <tr class="text-nowrap">
-                                    <th width="3%" class="text-center">S/N</th>
-                                    <th width="8%" class="text-center">
-                                        EMPLOYEE ID
-                                    </th>
-                                    <th>EMPLOYEE NAME</th>
-                                    <th>DEPARTMENT</th>
-                                    <th width="8%" class="text-center">DATE</th>
-                                    <th width="8%" class="text-center">
-                                        IN TIME
-                                    </th>
-                                    <th width="8%" class="text-center">
-                                        OUT TIME
-                                    </th>
-                                    <th width="8%" class="text-center">
-                                        WORK FROM
-                                    </th>
-                                    <th width="5%" class="text-center">
-                                        ACTION
-                                    </th>
-                                </tr>
-                            </thead>
-
-                            <tbody>
-                                <tr
-                                    v-for="(
-                                        roster, index
-                                    ) in rosterSchedules.data"
-                                    :key="roster.id"
-                                    class="text-nowrap"
-                                >
-                                    <td class="text-center">{{ index + 1 }}</td>
-                                    <td class="text-center">
-                                        ABNB-{{ roster.official_id }}
-                                    </td>
-                                    <td>{{ roster.employee_name }}</td>
-                                    <td>{{ roster.department_name }}</td>
-                                    <td class="text-center">
-                                        {{ formatDate(roster.effective_from) }}
-                                    </td>
-                                    <td class="text-center">
-                                        {{ formatTime(roster.time_in) }}
-                                    </td>
-                                    <td class="text-center">
-                                        {{ formatTime(roster.time_out) }}
-                                    </td>
-                                    <td class="text-center">
-                                        {{ roster.work_from }}
-                                    </td>
-                                    <td class="text-center text-nowrap">
-                                        <button
-                                            class="btn btn-sm btn-light border me-1"
-                                            title="Edit"
-                                            @click="editRoster(roster)"
-                                        >
-                                            <i
-                                                class="fa-regular fa-pen-to-square text-warning"
-                                            ></i>
-                                        </button>
-                                        <button
-                                            class="btn btn-sm btn-light border"
-                                            title="Delete"
-                                            @click="
-                                                deleteRoster(roster.roster_id)
-                                            "
-                                        >
-                                            <i
-                                                class="fa-solid fa-trash text-danger"
-                                            ></i>
-                                        </button>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
+                            {{ dept.department_name }}
+                        </option>
+                    </select>
                 </div>
 
-                <!-- Pagination -->
-                <div class="d-flex justify-content-end mt-0"></div>
+                <!-- Employee -->
+                <div class="col-lg-3">
+                    <label class="form-label">Select Employee</label>
+                    <Multiselect
+                        v-model="selectedEmployee"
+                        :options="employee"
+                        label="Full_Name"
+                        track-by="id"
+                        placeholder="Select employee"
+                        @select="onEmployeeChange"
+                        class="multiselect-design"
+                    />
+                </div>
+
+                <!-- Day -->
+                <div class="col-lg-2">
+                    <label class="form-label">Day Name</label>
+                    <select
+                        class="form-control field-height field-background-colour"
+                        v-model="searchDay"
+                        @change="onDayChange"
+                    >
+                        <option value="">Select Day</option>
+                        <option>Saturday</option>
+                        <option>Sunday</option>
+                        <option>Monday</option>
+                        <option>Tuesday</option>
+                        <option>Wednesday</option>
+                        <option>Thursday</option>
+                        <option>Friday</option>
+                    </select>
+                </div>
+            </div>
+            <div
+                class="d-flex align-items-center py-2 fw-semibold border-bottom"
+            >
+                <span class="me-2">Total Employees:</span>
+                <span class="border rounded px-2 py-1 fw-medium">
+                    {{ totalRecords }}
+                </span>
+            </div>
+
+            <!-- TABLE -->
+            <div class="table-responsive">
+                <table class="table table-bordered table-sm">
+                    <thead>
+                        <tr>
+                            <th class="text-center">SN</th>
+                            <th class="text-center">EMPLOYEE ID</th>
+                            <th>NAME</th>
+                            <th>DEPARTMENT</th>
+                            <th class="text-center">DAY</th>
+                            <th class="text-center">IN</th>
+                            <th class="text-center">OUT</th>
+                            <th class="text-center">WORK FROM</th>
+                            <th class="text-center">ACTION</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        <tr
+                            v-for="(roster, index) in rosterSchedules"
+                            :key="roster.roster_id"
+                        >
+                            <td class="text-center">
+                                {{ (currentPage - 1) * perPage + index + 1 }}
+                            </td>
+                            <td class="text-center">
+                                ABNB-{{ roster.official_id }}
+                            </td>
+                            <td>{{ roster.employee_name }}</td>
+                            <td>{{ roster.department_name }}</td>
+                            <td class="text-center">{{ roster.day_name }}</td>
+                            <td class="text-center">
+                                {{ formatTime(roster.time_in) }}
+                            </td>
+                            <td class="text-center">
+                                {{ formatTime(roster.time_out) }}
+                            </td>
+                            <td class="text-center">{{ roster.work_from }}</td>
+
+                            <td class="text-center">
+                                <button
+                                    @click="editRoster(roster)"
+                                    class="custom-btn btn-15"
+                                >
+                                    <i class="fa-regular fa-pen-to-square"></i>
+                                </button>
+                            </td>
+                        </tr>
+
+                        <tr v-if="rosterSchedules.length === 0">
+                            <td colspan="9" class="text-center">
+                                No data found
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- PAGINATION -->
+            <div class="d-flex justify-content-end mt-3">
+                <!-- First -->
+                <button
+                    class="btn btn-sm btn-outline-primary mx-1"
+                    @click="goToPage(1)"
+                    :disabled="currentPage === 1"
+                >
+                    <<
+                </button>
+
+                <!-- Prev -->
+                <button
+                    class="btn btn-sm btn-outline-primary mx-1"
+                    @click="goToPage(currentPage - 1)"
+                    :disabled="currentPage === 1"
+                >
+                    <
+                </button>
+
+                <!-- Pages -->
+                <button
+                    v-for="page in visiblePages()"
+                    :key="page"
+                    class="btn btn-sm mx-1"
+                    :class="
+                        page === currentPage
+                            ? 'btn-primary'
+                            : 'btn-outline-primary'
+                    "
+                    @click="goToPage(page)"
+                >
+                    {{ page }}
+                </button>
+
+                <!-- Next -->
+                <button
+                    class="btn btn-sm btn-outline-primary mx-1"
+                    @click="goToPage(currentPage + 1)"
+                    :disabled="currentPage === lastPage"
+                >
+                    >
+                </button>
+
+                <!-- Last -->
+                <button
+                    class="btn btn-sm btn-outline-primary mx-1"
+                    @click="goToPage(lastPage)"
+                    :disabled="currentPage === lastPage"
+                >
+                    >>
+                </button>
             </div>
         </div>
     </div>
@@ -214,6 +392,15 @@ onMounted(() => {
     color: #000000;
     border: 0.8px solid #7e7c7c63;
     letter-spacing: 0.3px;
+}
+
+.form-label {
+    font-weight: 600;
+    letter-spacing: 0.4px;
+}
+
+.cross-icon {
+    margin-top: 29px;
 }
 
 .field-hover:hover {
@@ -238,10 +425,12 @@ onMounted(() => {
 .field-height {
     height: 35px;
 }
+
 .placeholder-text {
-    color: #999; /* faded text for placeholder */
+    color: #999;
     font-size: 14px;
 }
+
 .multiselect-design .multiselect__placeholder {
     color: #999;
     font-size: 14px;
@@ -250,13 +439,12 @@ onMounted(() => {
 }
 
 .multiselect-design .multiselect__tags {
-    min-height: 35px !important; /* override default min-height */
-    height: 35px; /* exact height */
-    padding: 0 8px; /* adjust left/right padding */
+    min-height: 35px !important;
+    height: 35px;
+    padding: 0 8px;
     border-radius: 5px;
     border: 0.8px solid #b3a9a963;
-    background: #c4c2c250;
-    display: flex; /* align input vertically */
+    display: flex;
     align-items: center;
     font-size: 14px;
 }
@@ -264,13 +452,13 @@ onMounted(() => {
 /* Input inside the multiselect */
 .multiselect-design .multiselect__input,
 .multiselect-design .multiselect__single {
-    height: 100%; /* fill the tags container height */
-    line-height: 35px; /* match container for vertical centering */
-    padding: 0; /* remove extra padding */
+    height: 100%;
+    line-height: 35px;
+    padding: 0;
     margin: 0;
-    background: transparent; /* match container bg */
-    border: 0; /* remove default border */
-    flex: 1; /* grow to fill remaining space */
+    background: transparent;
+    border: 0;
+    flex: 1;
 }
 
 .multiselect-design .multiselect__select {
@@ -278,14 +466,12 @@ onMounted(() => {
 }
 
 .field-background-colour {
-    background: #c4c2c250;
     border: 0.8px solid #b3a9a963;
 }
+
 .header-design {
     letter-spacing: 1px;
     padding-top: 5px;
-    /* background-color: #d6d6d6f5;
-
-    border-radius: 5px; */
+    font-weight: 700;
 }
 </style>
