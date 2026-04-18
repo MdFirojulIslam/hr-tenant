@@ -6,14 +6,14 @@ const separationsList = ref([]);
 const showDetails = ref(false);
 const selectedSeparation = ref(null);
 
-const getData = async () => {
-    try {
-        const response = await api.get("/separations-list");
-        separationsList.value = response.data;
-    } catch (error) {
-        console.error("Error fetching separations:", error);
-    }
-};
+// const getData = async () => {
+//     try {
+//         const response = await api.get("/separations-list");
+//         separationsList.value = response.data;
+//     } catch (error) {
+//         console.error("Error fetching separations:", error);
+//     }
+// };
 
 const getSeparationInfo = (separation) => {
     selectedSeparation.value = separation;
@@ -546,7 +546,7 @@ onMounted(() => {
                     </tr>
                 </thead>
 
-                <tbody>
+                <!-- <tbody>
                     <tr
                         v-for="separation in separationsList"
                         :key="separation.id"
@@ -572,7 +572,7 @@ onMounted(() => {
                             </div>
                         </td>
                     </tr>
-                </tbody>
+                </tbody> -->
             </table>
         </div>
     </div>

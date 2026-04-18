@@ -13,3 +13,6 @@ Route::delete('/roster-setup/{id}', [RosterScheduleController::class, 'destroy']
 
 
 Route::get('/roster-report-list', [RosterScheduleController::class, 'reportList']);
+Route::get('/roster-report-download', [RosterScheduleController::class, 'reportDownload']);
+
+Route::get('/calendar-date-report', [RosterScheduleController::class, 'calendarDateReport']);

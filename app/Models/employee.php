@@ -92,7 +92,7 @@ class employee extends Model
     {
         return $this->hasMany(attendence::class, 'EID');
     }
-    
+
     public function employee_asset()
     {
         return $this->hasOne(employee_asset::class, 'EID');
@@ -102,7 +102,7 @@ class employee extends Model
     {
         return $this->hasMany(town_belong::class, 'EID');
     }
-    
+
     public function app_attendance()
     {
         return $this->hasOne(town_belong::class, 'EID');
@@ -119,14 +119,14 @@ class employee extends Model
 
 
     //added by firoj
-     public function loan()
+    public function loan()
     {
         return $this->hasMany(Loan::class, 'employee_id', 'id');
     }
 
-    public function employee_salary()
+    public function salaries()
     {
-        return $this->hasOne(employee_salary::class, 'EID');
+        return $this->hasOne(salaries::class, 'employee_id');
     }
 
     public function salary_earning()
@@ -134,7 +134,8 @@ class employee extends Model
         return $this->hasMany(salary_earning::class, 'employee_id');
     }
 
-    public function salary_deduction(){
-        return $this->hasMany(salary_deduction::class,'employee_id');
+    public function salary_deduction()
+    {
+        return $this->hasMany(salary_deduction::class, 'employee_id');
     }
 }

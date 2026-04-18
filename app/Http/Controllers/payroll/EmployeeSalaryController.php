@@ -956,7 +956,13 @@ class EmployeeSalaryController extends Controller
         }
 
         // Fetch the results
-        $salaries = $salaryQuery->get();
+        $salaries = $salaryQuery->get()->map(function ($item) {
+
+            $item->salary_status = ucwords(strtolower($item->salary_status));
+            $item->payment_method = ucwords(strtolower($item->payment_method));
+
+            return $item;
+        });
 
         return response()->json($salaries);
     }
@@ -1130,6 +1136,11 @@ class EmployeeSalaryController extends Controller
             )
 
             ->first();
+
+        if ($payslip) {
+            $payslip->salary_status = ucwords(strtolower($payslip->salary_status));
+            $payslip->payment_method = ucwords(strtolower($payslip->payment_method));
+        }
 
 
         return view('payroll.payslip-print', [
@@ -1342,5 +1353,12 @@ class EmployeeSalaryController extends Controller
         $reportMonthYear = $firstDate ? Carbon::parse($firstDate)->format('F Y') : '';
 
         return [$data, $reportMonthYear];
+    }
+
+    public function getSalaryCertificateAmount($id)
+    {
+        $salaries = salaries::select('net_pay')->where('employee_id', $id)->get();
+
+        return response()->json($salaries);
     }
 }

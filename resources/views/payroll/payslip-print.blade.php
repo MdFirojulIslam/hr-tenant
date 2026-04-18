@@ -57,9 +57,11 @@
 
       <div class="col-md-6">
         <div><b>Salary Date:</b> {{ $payslip->salary_date }}</div>
-        <div><b>Payment Method:</b> {{ $payslip->payment_method }}</div>
+        <div><b>Payment Method:</b> {{ ucfirst(strtolower($payslip->payment_method)) }}</div>
         <div><b>Bank Account:</b> {{ $payslip->bank_account_no }}</div>
-        <div><b>Status:</b> {{ $payslip->salary_status }}</div>
+        <div>
+          <b>Status:</b> {{ ucfirst(strtolower($payslip->salary_status)) }}
+        </div>
       </div>
     </div>
 

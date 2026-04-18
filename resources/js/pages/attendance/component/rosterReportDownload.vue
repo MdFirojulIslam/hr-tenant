@@ -7,12 +7,13 @@ import { useStore } from "vuex";
 import Multiselect from "vue-multiselect";
 import "vue-multiselect/dist/vue-multiselect.min.css";
 
+// ---------------- PROPS / EMIT ----------------
 const props = defineProps({
     isOpen: Boolean,
 });
-
 const emit = defineEmits(["modal-close"]);
 
+// ---------------- STORE ----------------
 const store = useStore();
 const user = store.getters.getUser;
 
@@ -25,7 +26,7 @@ const emp_img = ref("");
 const searchDept = ref("");
 const from_date = ref("");
 const to_date = ref("");
-const reportFormat = ref("pdf");
+const reportFormat = ref("xlsx");
 
 const loading = ref(false);
 
@@ -40,13 +41,27 @@ const getData = async () => {
 };
 
 const getEmployee = async (deptID) => {
-    if (!deptID) return (employee.value = []);
+    if (!deptID) {
+        employee.value = [];
+        return;
+    }
 
     try {
         const res = await api.get(`/adjustment-employees/${deptID}`);
         employee.value = res.data;
     } catch (err) {
         console.error(err);
+    }
+};
+
+// ✅ FIXED: Get employee image from API
+const getEmployeeImg = async (empId) => {
+    try {
+        const res = await api.get(`/empimg/${empId}`);
+        emp_img.value = res.data?.img_url || "";
+    } catch (err) {
+        console.error(err);
+        emp_img.value = "";
     }
 };
 
@@ -57,14 +72,20 @@ const onDeptChange = () => {
     getEmployee(searchDept.value);
 };
 
-const onEmployeeChange = (emp) => {
-    emp_img.value = emp?.image || "";
+const onEmployeeChange = async (emp) => {
+    if (!emp) {
+        emp_img.value = "";
+        return;
+    }
+
+    await getEmployeeImg(emp.id);
 };
 
 const clearDepartment = () => {
     searchDept.value = "";
     selectedEmployee.value = null;
     employee.value = [];
+    emp_img.value = "";
 };
 
 // ---------------- VALIDATION ----------------
@@ -135,79 +156,114 @@ onMounted(() => {
 
             <!-- BODY -->
             <div class="modal-body">
-                <!-- Department -->
-                <div class="form-group">
-                    <label>Department</label>
-                    <div class="d-flex gap-2">
-                        <select v-model="searchDept" @change="onDeptChange">
-                            <option value="">Select Department</option>
-                            <option
-                                v-for="dept in department"
-                                :key="dept.department_id"
-                                :value="dept.department_id"
-                            >
-                                {{ dept.department_name }}
-                            </option>
-                        </select>
+                <div class="row">
+                    <!-- Department + Employee -->
+                    <div class="row align-items-start">
+                        <div class="col-md-8">
+                            <!-- Department -->
+                            <div class="form-group">
+                                <label class="form-label">Department</label>
 
-                        <button v-if="searchDept" @click="clearDepartment">
-                            ✕
+                                <div class="d-flex gap-2">
+                                    <select
+                                        v-model="searchDept"
+                                        @change="onDeptChange"
+                                        class="field-background-colour"
+                                        :class="{
+                                            'placeholder-text': !searchDept,
+                                        }"
+                                    >
+                                        <option value="">
+                                            Select Department
+                                        </option>
+                                        <option
+                                            v-for="dept in department"
+                                            :key="dept.department_id"
+                                            :value="dept.department_id"
+                                        >
+                                            {{ dept.department_name }}
+                                        </option>
+                                    </select>
+
+                                    <button
+                                        v-if="searchDept"
+                                        @click="clearDepartment"
+                                    >
+                                        ✕
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Employee -->
+                            <div class="form-group">
+                                <label class="form-label">Employee</label>
+
+                                <Multiselect
+                                    v-model="selectedEmployee"
+                                    :options="employee"
+                                    label="Full_Name"
+                                    track-by="id"
+                                    placeholder="Select employee"
+                                    @select="onEmployeeChange"
+                                    class="multiselect-design"
+                                />
+                            </div>
+                        </div>
+
+                        <!-- IMAGE -->
+                        <div class="text-center col-md-4 mt-4">
+                            <img
+                                :src="emp_img || '/default-avatar.png'"
+                                class="emp-img"
+                            />
+                        </div>
+                    </div>
+
+                    <!-- DATE -->
+                    <div class="row mb-2">
+                        <div class="col-md-6">
+                            <label class="form-label">From Date</label>
+                            <input
+                                type="date"
+                                v-model="from_date"
+                                class="form-control field-background-colour"
+                            />
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">To Date</label>
+                            <input
+                                type="date"
+                                v-model="to_date"
+                                class="form-control field-background-colour"
+                            />
+                        </div>
+                    </div>
+
+                    <!-- FORMAT -->
+                    <div class="col-md-6 mt-2">
+                        <label class="form-label">Format</label>
+                        <select v-model="reportFormat" class="form-control">
+                            <option value="xlsx">Excel</option>
+                            <option value="pdf">PDF</option>
+                        </select>
+                    </div>
+
+                    <!-- BUTTON -->
+                    <div class="col-md-6 text-end mt-5">
+                        <button class="btn cancel me-3" @click="closeModal">
+                            Cancel
+                        </button>
+
+                        <button
+                            class="btn primary"
+                            :disabled="loading"
+                            @click="downloadReport"
+                        >
+                            {{ loading ? "Downloading..." : "Download" }}
                         </button>
                     </div>
                 </div>
-
-                <!-- Employee -->
-                <div class="form-group">
-                    <label>Employee</label>
-                    <Multiselect
-                        v-model="selectedEmployee"
-                        :options="employee"
-                        label="Full_Name"
-                        track-by="id"
-                        placeholder="Select employee"
-                        @select="onEmployeeChange"
-                    />
-                </div>
-
-                <!-- Employee Image -->
-                <div class="text-center mb-3">
-                    <img v-if="emp_img" :src="emp_img" class="emp-img" />
-                </div>
-
-                <!-- Date Range -->
-                <div class="row">
-                    <div class="col">
-                        <label>From Date</label>
-                        <input type="date" v-model="from_date" />
-                    </div>
-
-                    <div class="col">
-                        <label>To Date</label>
-                        <input type="date" v-model="to_date" />
-                    </div>
-                </div>
-
-                <!-- Format -->
-                <div class="form-group">
-                    <label>Format</label>
-                    <select v-model="reportFormat">
-                        <option value="pdf">PDF</option>
-                        <option value="xlsx">Excel</option>
-                    </select>
-                </div>
-            </div>
-
-            <!-- FOOTER -->
-            <div class="modal-footer">
-                <button class="btn cancel" @click="closeModal">Cancel</button>
-
-                <button
-                    class="btn primary"
-                    :disabled="loading"
-                    @click="downloadReport"
-                >
-                    {{ loading ? "Downloading..." : "Download" }}
-                </button>
             </div>
         </div>
     </div>
@@ -234,7 +290,7 @@ onMounted(() => {
 .modal-header {
     background: #2f855a;
     color: white;
-    padding: 12px 16px;
+    padding: 10px 10px;
     display: flex;
     justify-content: space-between;
 }
@@ -258,11 +314,6 @@ input,
 select {
     width: 100%;
     padding: 6px;
-}
-
-.row {
-    display: flex;
-    gap: 10px;
 }
 
 .emp-img {
@@ -292,5 +343,72 @@ select {
 .primary {
     background: #2f855a;
     color: white;
+}
+
+.form-label {
+    font-weight: 600;
+    letter-spacing: 0.4px;
+}
+
+.field-hover:hover {
+    border-color: #80bdff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.field-height {
+    height: 35px;
+}
+
+.placeholder-text {
+    color: #999;
+    font-size: 14px;
+}
+
+.cross-icon {
+    margin-top: 29px;
+}
+
+.multiselect-design .multiselect__placeholder {
+    color: #999;
+    font-size: 14px;
+    margin-bottom: 0px;
+    align-items: center;
+}
+
+.multiselect-design .multiselect__tags {
+    min-height: 35px !important;
+    height: 35px;
+    padding: 0 8px;
+    border-radius: 5px;
+    border: 0.8px solid #b3a9a963;
+    display: flex;
+    align-items: center;
+    font-size: 14px;
+}
+
+/* Input inside the multiselect */
+.multiselect-design .multiselect__input,
+.multiselect-design .multiselect__single {
+    height: 100%;
+    line-height: 35px;
+    padding: 0;
+    margin: 0;
+    background: transparent;
+    border: 0;
+    flex: 1;
+}
+
+.multiselect-design .multiselect__select {
+    height: 35px;
+}
+
+.field-background-colour {
+    border: 0.8px solid #b3a9a963;
+}
+
+.header-design {
+    letter-spacing: 1px;
+    padding-top: 5px;
+    font-weight: 700;
 }
 </style>

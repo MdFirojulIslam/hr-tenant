@@ -2,9 +2,7 @@
 import { ref, onMounted, computed, defineAsyncComponent } from "vue";
 import { Bootstrap4Pagination } from "laravel-vue-pagination";
 import api from "@/api";
-import Swal from "sweetalert2";
 import { useStore } from "vuex";
-import { useRouter } from "vue-router";
 import Multiselect from "vue-multiselect";
 import "vue-multiselect/dist/vue-multiselect.min.css";
 

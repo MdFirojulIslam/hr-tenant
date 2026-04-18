@@ -71,34 +71,6 @@ const printFormate = async () => {
     }
 };
 
-// const printFormate = async () => {
-//     const idToFetch = searchEmp.value || user.id;
-
-//     try {
-//         const res = await api.get(`/payslip-print-view/${idToFetch}`, {
-//             params: {
-//                 year: selectedYear.value,
-//                 month: monthNumber.value,
-//             },
-//             headers: {
-//                 Accept: "text/html",
-//             },
-//         });
-
-//         const printWindow = window.open("", "_blank", "width=900,height=650");
-
-//         printWindow.document.write(res.data);
-
-//         printWindow.document.close();
-//         printWindow.focus();
-
-//         printWindow.print();
-//     } catch (err) {
-//         console.error("Failed to fetch payslip:", err);
-//         alert("Failed to load payslip for printing");
-//     }
-// };
-
 // ---------------- Fetch Departments ----------------
 const getDepartments = async () => {
     try {

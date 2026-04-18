@@ -10,7 +10,9 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use App\Models\roster_schedule;
-use App\Models\attendence;
+use App\Exports\AttendanceReport;
+use Maatwebsite\Excel\Facades\Excel;
+use Carbon\CarbonPeriod;
 
 
 class RosterScheduleController extends Controller
@@ -681,6 +683,172 @@ class RosterScheduleController extends Controller
             return $row;
         });
 
+
+        return response()->json([
+            'success' => true,
+            'data' => $result
+        ]);
+    }
+
+    public function reportDownload(Request $request)
+    {
+        if (!$request->from_date || !$request->to_date) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Date range required'
+            ], 400);
+        }
+
+        $from = $request->from_date;
+        $to = $request->to_date;
+
+        $allData = collect();
+
+        $period = CarbonPeriod::create($from, $to);
+
+        foreach ($period as $dateObj) {
+
+            $date = $dateObj->format('Y-m-d');
+
+            $request->merge(['searchDate' => $date]);
+
+            $response = $this->reportList($request);
+
+            $data = collect($response->getData()->data ?? []);
+
+            $allData = $allData->merge($data);
+        }
+
+        if ($allData->isEmpty()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No data found'
+            ]);
+        }
+
+
+        $fileName = 'attendance_report_' . $from . '_to_' . $to . '.xlsx';
+
+
+        return Excel::download(
+            new AttendanceReport($allData),
+            $fileName
+        );
+    }
+
+    public function calendarDateReport(Request $request)
+    {
+        $employeeId = Auth::user()->EID;
+
+        if (!$employeeId) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Employee ID not found in logged-in user'
+            ]);
+        }
+
+        $month = $request->month;
+        $year = $request->year;
+
+        $startDate = \Carbon\Carbon::createFromDate($year, $month, 1)->startOfMonth();
+        $endDate = \Carbon\Carbon::createFromDate($year, $month, 1)->endOfMonth();
+
+
+        // =========================
+        // MACHINE ATTENDANCE (MONTH)
+        // =========================
+        $machine_attendance_sub = DB::table('attendences')
+            ->select(
+                'EID',
+                DB::raw('Date as report_date'),
+                DB::raw('MIN(Time_In) as in_time'),
+                DB::raw('MAX(Time_Out) as out_time')
+            )
+            ->whereBetween('Date', [$startDate, $endDate])
+            ->groupBy('EID', 'Date');
+
+        // =========================
+        // APP ATTENDANCE (MONTH)
+        // =========================
+        $app_attendance_sub = DB::table('app_attendances')
+            ->select(
+                'EID',
+                DB::raw('DATE(created_at) as report_date'),
+                DB::raw("TIME(MIN(CASE WHEN LOWER(status)='in' THEN created_at END)) as in_time"),
+                DB::raw("TIME(MAX(CASE WHEN LOWER(status)='out' THEN created_at END)) as out_time")
+            )
+            ->whereBetween('created_at', [$startDate, $endDate])
+            ->groupBy('EID', DB::raw('DATE(created_at)'));
+
+        // =========================
+        // MAIN QUERY
+        // =========================
+        $query = DB::table('employees')
+
+            ->where('employees.id', $employeeId)
+
+            // ROSTER
+            ->join('roster_schedules', function ($join) use ($startDate, $endDate) {
+                $join->on('employees.id', '=', 'roster_schedules.employee_id')
+                    ->whereDate('roster_schedules.effective_from', '<=', $endDate)
+                    ->where(function ($q) use ($startDate) {
+                        $q->whereNull('roster_schedules.effective_to')
+                            ->orWhereDate('roster_schedules.effective_to', '>=', $startDate);
+                    });
+            })
+
+            // OFFICIAL + DEPARTMENT
+            ->join('officials', 'officials.EID', '=', 'employees.id')
+            ->join('departments', 'departments.id', '=', 'officials.Department_Id')
+
+            // HOLIDAY (MONTH RANGE)
+            ->leftJoin('holidays', function ($join) use ($startDate, $endDate) {
+                $join->whereDate('holidays.from_date', '<=', $endDate)
+                    ->whereDate('holidays.to_date', '>=', $startDate);
+            })
+
+            // LEAVE (MONTH RANGE)
+            ->leftJoin('leaves', function ($join) use ($startDate, $endDate) {
+                $join->on('leaves.employee_id', '=', 'employees.id')
+                    ->where('leaves.status', 'Approved')
+                    ->whereDate('leaves.from_date', '<=', $endDate)
+                    ->whereDate('leaves.to_date', '>=', $startDate);
+            })
+
+            // MACHINE JOIN
+            ->leftJoinSub($machine_attendance_sub, 'machine_att', function ($join) {
+                $join->on('machine_att.EID', '=', 'employees.id');
+            })
+
+            // APP JOIN
+            ->leftJoinSub($app_attendance_sub, 'app_att', function ($join) {
+                $join->on('app_att.EID', '=', 'employees.id')
+                    ->on('app_att.report_date', '=', 'machine_att.report_date');
+            })
+
+            // =========================
+            // SELECT FINAL DATA
+            // =========================
+            ->select(
+                'employees.id as employee_id',
+                'employees.Full_Name as employee_name',
+
+                DB::raw('COALESCE(app_att.report_date, machine_att.report_date) as report_date'),
+
+                DB::raw('COALESCE(app_att.in_time, machine_att.in_time) as actual_in'),
+                DB::raw('COALESCE(app_att.out_time, machine_att.out_time) as actual_out'),
+
+                DB::raw("
+                CASE
+                    WHEN holidays.id IS NOT NULL THEN 'Holiday'
+                    WHEN leaves.id IS NOT NULL THEN 'On Leave'
+                    WHEN COALESCE(app_att.in_time, machine_att.in_time) IS NULL THEN 'Absent'
+                    ELSE 'Present'
+                END as attendance_status
+            ")
+            );
+
+        $result = $query->get();
 
         return response()->json([
             'success' => true,

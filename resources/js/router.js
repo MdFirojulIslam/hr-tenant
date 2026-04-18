@@ -582,6 +582,14 @@ const routes = [
         component: () =>
             import("@/pages/attendance/component/createRoster.vue"),
     },
+    {
+        path: "/artisan-calendar",
+        name: "ArtisanCalendar",
+        component: () => import("./pages/attendance/artisanCalendar.vue"),
+        meta: {
+            requireAuth: true,
+        },
+    },
 ];
 
 const router = createRouter({

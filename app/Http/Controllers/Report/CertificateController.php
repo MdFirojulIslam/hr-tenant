@@ -154,24 +154,25 @@ class CertificateController extends Controller
     {
         $salary = $request->query('salary');
         $inword = $this->convertNumberToWords($salary);
-        $employee = Employee::with('official', 'official.department', 'official.designation')->where('id', $id)->first();
+        $employee = Employee::with('official', 'official.department', 'official.designation', 'salaries')->where('id', $id)->first();
+
         $pdf = Pdf::loadView('report.certificates.salary-certificate', compact('employee', 'salary', 'inword'));
         return $pdf->stream($employee->Full_Name . '-Salary Certificate.pdf');
     }
 
     public function getSalaryBreakdown($id)
     {
-        $employee = Employee::with('official', 'official.department', 'official.designation', 'employee_salary')->where('id', $id)->first();
+        $employee = Employee::with('official', 'official.department', 'official.designation', 'salaries')->where('id', $id)->first();
 
         $inword = [
-            'Basic' => $this->convertNumberToWords($employee->employee_salary->Basic),
-            'House_Rent' => $this->convertNumberToWords($employee->employee_salary->House_Rent),
-            'Conveyance' => $this->convertNumberToWords($employee->employee_salary->Conveyance),
-            'Medical_Allowance' => $this->convertNumberToWords($employee->employee_salary->Medical_Allowance),
-            'Travel_Allowance' => $this->convertNumberToWords($employee->employee_salary->Travel_Allowance),
-            'Daily_Allowance' => $this->convertNumberToWords($employee->employee_salary->Daily_Allowance),
-            'Mobile_Bill' => $this->convertNumberToWords($employee->employee_salary->Mobile_Bill),
-            'Total_Payment' => $this->convertNumberToWords($employee->employee_salary->Total_Payment),
+            'basic' => $this->convertNumberToWords($employee->salaries->basic),
+            'house_rent' => $this->convertNumberToWords($employee->salaries->house_rent),
+            'conveyance' => $this->convertNumberToWords($employee->salaries->conveyance),
+            'medical_allowance' => $this->convertNumberToWords($employee->salaries->medical_allowance),
+            'travel_allowance' => $this->convertNumberToWords($employee->salaries->travel_allowance),
+            'daily_allowance' => $this->convertNumberToWords($employee->salaries->daily_allowance),
+            'mobile_bill' => $this->convertNumberToWords($employee->salaries->mobile_bill),
+            'total_payment' => $this->convertNumberToWords($employee->salaries->total_payment),
         ];
 
         $pdf = Pdf::loadView('report.certificates.salary-breakdown', compact('employee', 'inword'));

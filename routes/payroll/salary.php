@@ -96,3 +96,5 @@ Route::get('/payslip-print-view/{id}', [EmployeeSalaryController::class, 'printP
 
 Route::get('/salary-adjustment-report', [EmployeeSalaryController::class, 'downloadSalaryAdjustmentReport']);
 Route::get('/loan-adjustment-report', [EmployeeSalaryController::class, 'downloadLoanAdjustmentReport']);
+
+Route::get('/salary-certificate-amount/{id}', [EmployeeSalaryController::class, 'getSalaryCertificateAmount']);

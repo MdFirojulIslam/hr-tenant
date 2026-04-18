@@ -32,7 +32,7 @@ class salaries extends Model
         'updated_by',
     ];
 
-    public function employee()
+    public function salaries()
     {
         return $this->belongsTo(employee::class, 'employee_id');
     }
