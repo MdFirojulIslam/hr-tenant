@@ -738,8 +738,12 @@ class RosterScheduleController extends Controller
 
     public function calendarDateReport(Request $request)
     {
-        $employeeId = Auth::user()->EID;
 
+        if (!$request->employee_id) {
+            $employeeId = Auth::user()->EID;
+        } else {
+            $employeeId = $request->employee_id;
+        }
         if (!$employeeId) {
             return response()->json([
                 'success' => false,
@@ -750,13 +754,10 @@ class RosterScheduleController extends Controller
         $month = $request->month;
         $year = $request->year;
 
+
         $startDate = \Carbon\Carbon::createFromDate($year, $month, 1)->startOfMonth();
         $endDate = \Carbon\Carbon::createFromDate($year, $month, 1)->endOfMonth();
 
-
-        // =========================
-        // MACHINE ATTENDANCE (MONTH)
-        // =========================
         $machine_attendance_sub = DB::table('attendences')
             ->select(
                 'EID',
@@ -767,9 +768,6 @@ class RosterScheduleController extends Controller
             ->whereBetween('Date', [$startDate, $endDate])
             ->groupBy('EID', 'Date');
 
-        // =========================
-        // APP ATTENDANCE (MONTH)
-        // =========================
         $app_attendance_sub = DB::table('app_attendances')
             ->select(
                 'EID',
@@ -780,13 +778,9 @@ class RosterScheduleController extends Controller
             ->whereBetween('created_at', [$startDate, $endDate])
             ->groupBy('EID', DB::raw('DATE(created_at)'));
 
-        // =========================
-        // MAIN QUERY
-        // =========================
+
         $query = DB::table('employees')
-
             ->where('employees.id', $employeeId)
-
             // ROSTER
             ->join('roster_schedules', function ($join) use ($startDate, $endDate) {
                 $join->on('employees.id', '=', 'roster_schedules.employee_id')
@@ -797,17 +791,17 @@ class RosterScheduleController extends Controller
                     });
             })
 
-            // OFFICIAL + DEPARTMENT
+
             ->join('officials', 'officials.EID', '=', 'employees.id')
             ->join('departments', 'departments.id', '=', 'officials.Department_Id')
 
-            // HOLIDAY (MONTH RANGE)
+
             ->leftJoin('holidays', function ($join) use ($startDate, $endDate) {
                 $join->whereDate('holidays.from_date', '<=', $endDate)
                     ->whereDate('holidays.to_date', '>=', $startDate);
             })
 
-            // LEAVE (MONTH RANGE)
+
             ->leftJoin('leaves', function ($join) use ($startDate, $endDate) {
                 $join->on('leaves.employee_id', '=', 'employees.id')
                     ->where('leaves.status', 'Approved')
@@ -815,28 +809,34 @@ class RosterScheduleController extends Controller
                     ->whereDate('leaves.to_date', '>=', $startDate);
             })
 
-            // MACHINE JOIN
+
             ->leftJoinSub($machine_attendance_sub, 'machine_att', function ($join) {
                 $join->on('machine_att.EID', '=', 'employees.id');
             })
 
-            // APP JOIN
+
             ->leftJoinSub($app_attendance_sub, 'app_att', function ($join) {
                 $join->on('app_att.EID', '=', 'employees.id')
                     ->on('app_att.report_date', '=', 'machine_att.report_date');
             })
 
-            // =========================
-            // SELECT FINAL DATA
-            // =========================
+
             ->select(
+
+
                 'employees.id as employee_id',
                 'employees.Full_Name as employee_name',
 
+
                 DB::raw('COALESCE(app_att.report_date, machine_att.report_date) as report_date'),
+
+
+                DB::raw("DATE_FORMAT(COALESCE(app_att.report_date, machine_att.report_date), '%W') as day_name"),
+
 
                 DB::raw('COALESCE(app_att.in_time, machine_att.in_time) as actual_in'),
                 DB::raw('COALESCE(app_att.out_time, machine_att.out_time) as actual_out'),
+
 
                 DB::raw("
                 CASE

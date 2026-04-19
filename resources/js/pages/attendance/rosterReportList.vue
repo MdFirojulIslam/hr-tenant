@@ -336,16 +336,6 @@ onMounted(() => {
     letter-spacing: 0.3px;
 }
 
-.form-label {
-    font-weight: 600;
-    letter-spacing: 0.4px;
-}
-
-.field-hover:hover {
-    border-color: #80bdff;
-    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
-}
-
 .table tbody tr:hover > td {
     background-color: #717c73c7 !important;
 }
@@ -358,6 +348,16 @@ onMounted(() => {
 
 .table thead {
     height: 30px;
+}
+
+.form-label {
+    font-weight: 600;
+    letter-spacing: 0.4px;
+}
+
+.field-hover:hover {
+    border-color: #80bdff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
 }
 
 .field-height {

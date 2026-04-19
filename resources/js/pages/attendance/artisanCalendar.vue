@@ -13,22 +13,12 @@ const employee = ref([]);
 
 const searchDept = ref("");
 const selectedEmployee = ref(null);
+const selectedEmployeeId = ref(null);
 const searchDate = ref("");
 
 /**
- * Month names
+ * Format Time
  */
-
-const formatDate = (dateStr) => {
-    if (!dateStr) return "";
-    const date = new Date(dateStr);
-    return date.toLocaleDateString("en-US", {
-        day: "2-digit",
-        month: "short",
-        year: "numeric",
-    });
-};
-
 const formatTime = (timeStr) => {
     if (!timeStr) return "";
     const [hour, minute] = timeStr.split(":");
@@ -44,7 +34,7 @@ const formatTime = (timeStr) => {
 };
 
 // -------------------------
-// GET EMPLOYEE
+// API CALLS
 // -------------------------
 const getEmployee = async (deptID) => {
     if (!deptID) {
@@ -52,25 +42,13 @@ const getEmployee = async (deptID) => {
         return;
     }
 
-    try {
-        const res = await api.get(`/adjustment-employees/${deptID}`);
-        employee.value = res.data;
-    } catch (err) {
-        console.error("Error fetching employees:", err);
-    }
+    const res = await api.get(`/adjustment-employees/${deptID}`);
+    employee.value = res.data;
 };
 
-// -------------------------
-// GET DATA (MAIN API)
-// -------------------------
 const getData = async () => {
-    try {
-        const response = await api.get(`/department-list/${user.id}`);
-
-        department.value = response.data || [];
-    } catch (error) {
-        console.error("Error fetching roster reports:", error);
-    }
+    const res = await api.get(`/department-list/${user.id}`);
+    department.value = res.data || [];
 };
 
 // -------------------------
@@ -79,6 +57,7 @@ const getData = async () => {
 const clearDepartment = async () => {
     searchDept.value = "";
     selectedEmployee.value = null;
+    selectedEmployeeId.value = null;
     employee.value = [];
     await getData();
 };
@@ -86,17 +65,21 @@ const clearDepartment = async () => {
 const onDeptChange = async () => {
     await getEmployee(searchDept.value);
     selectedEmployee.value = null;
-    getData();
+    selectedEmployeeId.value = null;
 };
 
 const onEmployeeChange = () => {
-    getData();
+    selectedEmployeeId.value = selectedEmployee.value?.id || null;
+    getMonthlyData();
 };
 
 const handleDateChange = () => {
-    getData();
+    getMonthlyData();
 };
 
+// -------------------------
+// CALENDAR
+// -------------------------
 const monthNames = [
     "January",
     "February",
@@ -112,23 +95,13 @@ const monthNames = [
     "December",
 ];
 
-/**
- * State
- */
-const selectedEmployeeId = ref(1);
 const selectedMonth = ref(new Date().getMonth() + 1);
 const selectedYear = ref(new Date().getFullYear());
 
 const attendanceData = ref([]);
 
-/**
- * Week days
- */
 const weekDays = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
 
-/**
- * Year list (±5 years)
- */
 const yearList = computed(() => {
     const currentYear = new Date().getFullYear();
     const years = [];
@@ -138,42 +111,48 @@ const yearList = computed(() => {
     return years;
 });
 
-/**
- * Dynamic calendar title
- */
 const calendarTitle = computed(() => {
     return `${monthNames[selectedMonth.value - 1]} ${selectedYear.value}`;
 });
 
-/**
- * API call
- */
+// -------------------------
+// MAIN API
+// -------------------------
 const getMonthlyData = async () => {
-    const res = await api.get("/calendar-date-report", {
-        params: {
-            month: selectedMonth.value,
-            year: selectedYear.value,
-        },
-    });
-
-    attendanceData.value = res.data.data;
+    try {
+        const res = await api.get("/calendar-date-report", {
+            params: {
+                month: selectedMonth.value,
+                year: selectedYear.value,
+                employee_id: selectedEmployeeId.value,
+                department_id: searchDept.value,
+                date: searchDate.value,
+            },
+        });
+        console.log("Calendar Data:", res.data);
+        attendanceData.value = res.data.data || [];
+    } catch (err) {
+        console.error(err);
+    }
 };
 
-/**
- * Map attendance by date
- */
+// -------------------------
+// MAP DATA
+// -------------------------
 const attendanceMap = computed(() => {
     const map = {};
     attendanceData.value.forEach((item) => {
+        if (!item.report_date) return;
+
         const day = new Date(item.report_date).getDate();
         map[day] = item;
     });
     return map;
 });
 
-/**
- * Build calendar grid
- */
+// -------------------------
+// CALENDAR GRID
+// -------------------------
 const calendarDays = computed(() => {
     const daysInMonth = new Date(
         selectedYear.value,
@@ -189,12 +168,10 @@ const calendarDays = computed(() => {
 
     const cells = [];
 
-    // empty cells before start
     for (let i = 0; i < firstDay; i++) {
         cells.push(null);
     }
 
-    // actual days
     for (let d = 1; d <= daysInMonth; d++) {
         cells.push({
             day: d,
@@ -205,16 +182,9 @@ const calendarDays = computed(() => {
     return cells;
 });
 
-/**
- * Watch changes → reload API
- */
-watch([selectedMonth, selectedYear, selectedEmployeeId], () => {
-    getMonthlyData();
-});
+// -------------------------
+watch([selectedMonth, selectedYear], getMonthlyData);
 
-/**
- * On load
- */
 onMounted(() => {
     getMonthlyData();
     getData();
@@ -224,58 +194,34 @@ onMounted(() => {
 <template>
     <div class="container-fluid p-3">
         <!-- Controls -->
-        <div class="d-flex gap-2 align-items-center mb-3">
-            <!-- Month -->
-            <select v-model="selectedMonth" class="form-select w-auto">
-                <option
-                    v-for="(month, index) in monthNames"
-                    :key="index"
-                    :value="index + 1"
-                >
-                    {{ month }}
-                </option>
-            </select>
 
-            <!-- Year -->
-            <select v-model="selectedYear" class="form-select w-auto">
-                <option v-for="year in yearList" :key="year" :value="year">
-                    {{ year }}
-                </option>
-            </select>
+        <div class="pb-3">
+            <h2 class="m-0 header-design">Artisan Calendar</h2>
         </div>
 
-        <div class="row g-3 mb-4">
-            <!-- Department -->
-            <div class="col-lg-3 position-relative">
-                <label class="form-label">Select Department</label>
+        <!-- Filters -->
+        <div class="row mb-4">
+            <div class="col-lg-3">
+                <label class="form-label">Department</label>
                 <select
-                    class="form-control field-height field-background-colour"
-                    :class="{ 'placeholder-text': !searchDept }"
                     v-model="searchDept"
+                    class="form-control field-height field-background-colour field-hover"
+                    :class="{ 'placeholder-text': !searchDept }"
                     @change="onDeptChange"
                 >
                     <option value="">Select Department</option>
                     <option
-                        v-for="dept in department"
-                        :key="dept.department_id"
-                        :value="dept.department_id"
+                        v-for="d in department"
+                        :key="d.department_id"
+                        :value="d.department_id"
                     >
-                        {{ dept.department_name }}
+                        {{ d.department_name }}
                     </option>
                 </select>
-                <button
-                    v-if="searchDept"
-                    type="button"
-                    class="btn btn-sm btn-link position-absolute top-0 end-0 me-3 cross-icon"
-                    @click="clearDepartment"
-                >
-                    <i class="fa fa-times"></i>
-                </button>
             </div>
 
-            <!-- Employee -->
             <div class="col-lg-3">
-                <label class="form-label">Select Employee</label>
+                <label class="form-label">Employee</label>
                 <Multiselect
                     v-model="selectedEmployee"
                     :options="employee"
@@ -286,66 +232,76 @@ onMounted(() => {
                     @select="onEmployeeChange"
                 />
             </div>
-
-            <!-- Date -->
-            <div class="col-lg-3">
-                <label class="form-label">Select Date</label>
-                <input
-                    type="date"
-                    class="form-control field-height field-background-colour"
-                    v-model="searchDate"
-                    :class="{ 'placeholder-text': !searchDept }"
-                    @change="handleDateChange"
-                />
+            <div class="col-lg-1">
+                <label class="form-label">Select Month</label>
+                <select
+                    v-model="selectedMonth"
+                    class="form-control field-height field-background-colour field-hover"
+                >
+                    <option
+                        v-for="(m, i) in monthNames"
+                        :key="i"
+                        :value="i + 1"
+                    >
+                        {{ m }}
+                    </option>
+                </select>
+            </div>
+            <div class="col-lg-1">
+                <label class="form-label">Select Year</label>
+                <select
+                    v-model="selectedYear"
+                    class="form-control field-height field-background-colour field-hover"
+                >
+                    <option v-for="y in yearList" :key="y" :value="y">
+                        {{ y }}
+                    </option>
+                </select>
             </div>
         </div>
-
-        <!-- Title -->
-        <h2 class="mb-3">{{ calendarTitle }}</h2>
+        <!--
+        <h3>{{ calendarTitle }}</h3> -->
 
         <!-- Calendar -->
         <div class="calendar">
-            <!-- Week Days -->
             <div class="calendar-header">
                 <div v-for="day in weekDays" :key="day" class="day-name">
                     {{ day }}
                 </div>
             </div>
 
-            <!-- Days -->
             <div class="calendar-body">
                 <div
                     v-for="(date, index) in calendarDays"
                     :key="index"
                     class="calendar-cell"
-                    :class="{ empty: !date }"
                 >
-                    <!-- Empty -->
-                    <div v-if="!date"></div>
+                    <div v-if="date">
+                        <div class="date-number">{{ date.day }}</div>
 
-                    <!-- Date -->
-                    <div v-else class="date-box">
-                        <div class="date-number">
-                            {{ date.day }}
-                        </div>
-
-                        <!-- Attendance -->
                         <div v-if="date.data" class="attendance-info">
-                            <div
-                                v-if="date.data.attendance_status === 'Holiday'"
-                                class="holiday"
-                            >
-                                {{ date.data.holiday_name }}
+                            <!-- Employee -->
+                            <!-- <div class="emp-name">
+                                {{ date.data.employee_name }}
+                            </div> -->
+
+                            <!-- Status -->
+                            <!-- <div class="status" :class="{
+                                'text-primary': date.data.attendance_status === 'Holiday',
+                                'text-success': date.data.attendance_status === 'Present',
+                                'text-danger': date.data.attendance_status === 'Absent'
+                            }">
+                                {{ date.data.attendance_status }}
+                            </div> -->
+
+                            <!-- Time -->
+                            <div class="in-time">
+                                In: {{ formatTime(date.data.actual_in) || "-" }}
                             </div>
 
-                            <div v-else>
-                                <div class="in-time">
-                                    In: {{ date.data.actual_in || "-" }}
-                                </div>
-
-                                <div class="out-time">
-                                    Out: {{ date.data.actual_out || "-" }}
-                                </div>
+                            <div class="out-time">
+                                Out:
+                                {{ formatTime(date.data.actual_out) || "-" }}
                             </div>
                         </div>
                     </div>
@@ -355,7 +311,7 @@ onMounted(() => {
     </div>
 </template>
 
-<style scoped>
+<style>
 .calendar {
     border: 1px solid #ddd;
 }
@@ -365,13 +321,11 @@ onMounted(() => {
     grid-template-columns: repeat(7, 1fr);
     background: #444;
     color: white;
-    text-align: center;
-    font-weight: bold;
 }
 
 .day-name {
     padding: 10px;
-    border-right: 1px solid #666;
+    text-align: center;
 }
 
 .calendar-body {
@@ -380,33 +334,132 @@ onMounted(() => {
 }
 
 .calendar-cell {
-    min-height: 100px;
+    min-height: 110px;
     border: 1px solid #ddd;
     padding: 5px;
 }
 
-.empty {
-    background: #f9f9f9;
-}
-
 .date-number {
     font-weight: bold;
-    margin-bottom: 5px;
+}
+
+.emp-name {
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.status {
+    font-size: 12px;
 }
 
 .in-time {
-    font-size: 12px;
+    font-size: 11px;
     color: green;
 }
 
 .out-time {
-    font-size: 12px;
+    font-size: 11px;
     color: red;
 }
 
-.holiday {
-    font-size: 12px;
-    color: blue;
-    font-weight: bold;
+.table-responsive .table,
+.table-responsive .table tbody,
+.table-responsive .table tr,
+.table-responsive .table td {
+    /* background-color: rgba(234, 236, 234, 0.2) !important; */
+    background: #ffffffd5 !important;
+    color: #000000;
+    border: 0.8px solid #7e7c7c63;
+    letter-spacing: 0.3px;
+}
+
+.table tbody tr:hover > td {
+    background-color: #717c73c7 !important;
+}
+
+.table thead th {
+    background-color: #4e4e4e;
+    font-weight: 700;
+    color: #fff;
+}
+
+.table thead {
+    height: 30px;
+}
+
+.form-label {
+    font-weight: 600;
+    letter-spacing: 0.4px;
+}
+
+.field-hover:hover {
+    border-color: #80bdff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.multiselect-design:hover .multiselect__tags {
+    border-color: #80bdff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.field-height {
+    height: 35px;
+}
+
+.placeholder-text {
+    color: #999;
+    font-size: 14px;
+}
+
+.cross-icon {
+    margin-top: 29px;
+}
+
+.multiselect-design .multiselect__placeholder {
+    color: #999;
+    font-size: 14px;
+    margin-bottom: 0px;
+    align-items: center;
+}
+
+.multiselect-design .multiselect__tags {
+    min-height: 35px !important;
+    height: 35px;
+    padding: 0 8px;
+    border-radius: 5px;
+    border: 0.8px solid #b3a9a963;
+    display: flex;
+    align-items: center;
+    font-size: 14px;
+}
+
+/* Input inside the multiselect */
+.multiselect-design .multiselect__input,
+.multiselect-design .multiselect__single {
+    height: 100%;
+    line-height: 35px;
+    padding: 0;
+    margin: 0;
+    background: transparent;
+    border: 0;
+    flex: 1;
+}
+
+.multiselect-design .multiselect__select {
+    height: 35px;
+}
+
+.field-background-colour {
+    border: 0.8px solid #b3a9a963;
+}
+
+.header-design {
+    letter-spacing: 1px;
+    padding-top: 5px;
+    font-weight: 700;
+}
+.field-hover:hover {
+    border-color: #80bdff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
 }
 </style>
