@@ -738,26 +738,24 @@ class RosterScheduleController extends Controller
 
     public function calendarDateReport(Request $request)
     {
+        $employeeId = $request->employee_id ?? Auth::user()->EID;
 
-        if (!$request->employee_id) {
-            $employeeId = Auth::user()->EID;
-        } else {
-            $employeeId = $request->employee_id;
-        }
         if (!$employeeId) {
             return response()->json([
                 'success' => false,
-                'message' => 'Employee ID not found in logged-in user'
+                'message' => 'Employee ID not found'
             ]);
         }
 
         $month = $request->month;
-        $year = $request->year;
-
+        $year  = $request->year;
 
         $startDate = \Carbon\Carbon::createFromDate($year, $month, 1)->startOfMonth();
-        $endDate = \Carbon\Carbon::createFromDate($year, $month, 1)->endOfMonth();
+        $endDate   = \Carbon\Carbon::createFromDate($year, $month, 1)->endOfMonth();
 
+        // =========================
+        // MACHINE ATTENDANCE
+        // =========================
         $machine_attendance_sub = DB::table('attendences')
             ->select(
                 'EID',
@@ -765,9 +763,13 @@ class RosterScheduleController extends Controller
                 DB::raw('MIN(Time_In) as in_time'),
                 DB::raw('MAX(Time_Out) as out_time')
             )
+            ->where('EID', $employeeId)
             ->whereBetween('Date', [$startDate, $endDate])
             ->groupBy('EID', 'Date');
 
+        // =========================
+        // APP ATTENDANCE
+        // =========================
         $app_attendance_sub = DB::table('app_attendances')
             ->select(
                 'EID',
@@ -775,80 +777,108 @@ class RosterScheduleController extends Controller
                 DB::raw("TIME(MIN(CASE WHEN LOWER(status)='in' THEN created_at END)) as in_time"),
                 DB::raw("TIME(MAX(CASE WHEN LOWER(status)='out' THEN created_at END)) as out_time")
             )
+            ->where('EID', $employeeId)
             ->whereBetween('created_at', [$startDate, $endDate])
             ->groupBy('EID', DB::raw('DATE(created_at)'));
 
-
-        $query = DB::table('employees')
+        // =========================
+        // MAIN QUERY
+        // =========================
+        $result = DB::table('employees')
             ->where('employees.id', $employeeId)
-            // ROSTER
-            ->join('roster_schedules', function ($join) use ($startDate, $endDate) {
-                $join->on('employees.id', '=', 'roster_schedules.employee_id')
-                    ->whereDate('roster_schedules.effective_from', '<=', $endDate)
-                    ->where(function ($q) use ($startDate) {
-                        $q->whereNull('roster_schedules.effective_to')
-                            ->orWhereDate('roster_schedules.effective_to', '>=', $startDate);
-                    });
-            })
-
 
             ->join('officials', 'officials.EID', '=', 'employees.id')
             ->join('departments', 'departments.id', '=', 'officials.Department_Id')
 
-
-            ->leftJoin('holidays', function ($join) use ($startDate, $endDate) {
-                $join->whereDate('holidays.from_date', '<=', $endDate)
-                    ->whereDate('holidays.to_date', '>=', $startDate);
-            })
-
-
-            ->leftJoin('leaves', function ($join) use ($startDate, $endDate) {
-                $join->on('leaves.employee_id', '=', 'employees.id')
-                    ->where('leaves.status', 'Approved')
-                    ->whereDate('leaves.from_date', '<=', $endDate)
-                    ->whereDate('leaves.to_date', '>=', $startDate);
-            })
-
-
+            // MACHINE ATTENDANCE
             ->leftJoinSub($machine_attendance_sub, 'machine_att', function ($join) {
                 $join->on('machine_att.EID', '=', 'employees.id');
             })
 
-
+            // APP ATTENDANCE (match by date)
             ->leftJoinSub($app_attendance_sub, 'app_att', function ($join) {
                 $join->on('app_att.EID', '=', 'employees.id')
                     ->on('app_att.report_date', '=', 'machine_att.report_date');
             })
 
+            // =========================
+            // ROSTER SCHEDULE JOIN
+            // =========================
+            ->leftJoin('roster_schedules', function ($join) {
+                $join->on('roster_schedules.employee_id', '=', 'employees.id')
+                    ->whereRaw("
+                    COALESCE(app_att.report_date, machine_att.report_date)
+                    BETWEEN roster_schedules.effective_from AND roster_schedules.effective_to
+                ")
+                    ->whereRaw("
+                    roster_schedules.day_name = DATE_FORMAT(
+                        COALESCE(app_att.report_date, machine_att.report_date),
+                        '%W'
+                    )
+                ");
+            })
 
+            // =========================
+            // HOLIDAYS
+            // =========================
+            ->leftJoin('holidays', function ($join) {
+                $join->whereRaw("
+                COALESCE(app_att.report_date, machine_att.report_date)
+                BETWEEN holidays.from_date AND holidays.to_date
+            ");
+            })
+
+            // =========================
+            // LEAVES
+            // =========================
+            ->leftJoin('leaves', function ($join) {
+                $join->on('leaves.employee_id', '=', 'employees.id')
+                    ->where('leaves.status', 'Approved')
+                    ->whereRaw("
+                    COALESCE(app_att.report_date, machine_att.report_date)
+                    BETWEEN leaves.from_date AND leaves.to_date
+                ");
+            })
+
+            // =========================
+            // SELECT DATA
+            // =========================
             ->select(
-
-
                 'employees.id as employee_id',
                 'employees.Full_Name as employee_name',
 
-
                 DB::raw('COALESCE(app_att.report_date, machine_att.report_date) as report_date'),
 
-
                 DB::raw("DATE_FORMAT(COALESCE(app_att.report_date, machine_att.report_date), '%W') as day_name"),
-
 
                 DB::raw('COALESCE(app_att.in_time, machine_att.in_time) as actual_in'),
                 DB::raw('COALESCE(app_att.out_time, machine_att.out_time) as actual_out'),
 
+                // ROSTER DATA
+                'roster_schedules.time_in as roster_in',
+                'roster_schedules.time_out as roster_out',
+                'roster_schedules.weekend as is_weekend',
 
+                // FINAL STATUS LOGIC
                 DB::raw("
                 CASE
-                    WHEN holidays.id IS NOT NULL THEN 'Holiday'
+                    WHEN holidays.id IS NOT NULL THEN holidays.holiday_name
                     WHEN leaves.id IS NOT NULL THEN 'On Leave'
+
+                    WHEN roster_schedules.weekend = 1
+                         OR (roster_schedules.time_in IS NULL AND roster_schedules.time_out IS NULL)
+                    THEN 'Weekend'
+
                     WHEN COALESCE(app_att.in_time, machine_att.in_time) IS NULL THEN 'Absent'
+
                     ELSE 'Present'
                 END as attendance_status
             ")
-            );
+            )
 
-        $result = $query->get();
+            ->distinct()
+            ->orderBy('report_date')
+            ->get();
 
         return response()->json([
             'success' => true,

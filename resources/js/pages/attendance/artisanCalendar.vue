@@ -14,13 +14,13 @@ const employee = ref([]);
 const searchDept = ref("");
 const selectedEmployee = ref(null);
 const selectedEmployeeId = ref(null);
-const searchDate = ref("");
 
-/**
- * Format Time
- */
+// -------------------------
+// FORMAT TIME
+// -------------------------
 const formatTime = (timeStr) => {
-    if (!timeStr) return "";
+    if (!timeStr) return "-";
+
     const [hour, minute] = timeStr.split(":");
 
     const date = new Date();
@@ -73,10 +73,6 @@ const onEmployeeChange = () => {
     getMonthlyData();
 };
 
-const handleDateChange = () => {
-    getMonthlyData();
-};
-
 // -------------------------
 // CALENDAR
 // -------------------------
@@ -111,10 +107,6 @@ const yearList = computed(() => {
     return years;
 });
 
-const calendarTitle = computed(() => {
-    return `${monthNames[selectedMonth.value - 1]} ${selectedYear.value}`;
-});
-
 // -------------------------
 // MAIN API
 // -------------------------
@@ -126,10 +118,9 @@ const getMonthlyData = async () => {
                 year: selectedYear.value,
                 employee_id: selectedEmployeeId.value,
                 department_id: searchDept.value,
-                date: searchDate.value,
             },
         });
-        console.log("Calendar Data:", res.data);
+
         attendanceData.value = res.data.data || [];
     } catch (err) {
         console.error(err);
@@ -143,7 +134,6 @@ const attendanceMap = computed(() => {
     const map = {};
     attendanceData.value.forEach((item) => {
         if (!item.report_date) return;
-
         const day = new Date(item.report_date).getDate();
         map[day] = item;
     });
@@ -151,7 +141,20 @@ const attendanceMap = computed(() => {
 });
 
 // -------------------------
-// CALENDAR GRID
+// STATUS HELPER
+// -------------------------
+const getStatusText = (data) => {
+    if (!data) return "Absent";
+
+    if (data.attendance_status === "Weekend" || data.is_weekend == 1) {
+        return "Weekend";
+    }
+
+    return data.attendance_status || "Absent";
+};
+
+// -------------------------
+// CALENDAR GRID (FIXED)
 // -------------------------
 const calendarDays = computed(() => {
     const daysInMonth = new Date(
@@ -168,14 +171,22 @@ const calendarDays = computed(() => {
 
     const cells = [];
 
+    // empty cells
     for (let i = 0; i < firstDay; i++) {
         cells.push(null);
     }
 
+    // days
     for (let d = 1; d <= daysInMonth; d++) {
+        const data = attendanceMap.value[d];
+
         cells.push({
             day: d,
-            data: attendanceMap.value[d] || null,
+            data: data || {
+                attendance_status: "Absent",
+                actual_in: null,
+                actual_out: null,
+            },
         });
     }
 
@@ -193,11 +204,7 @@ onMounted(() => {
 
 <template>
     <div class="container-fluid p-3">
-        <!-- Controls -->
-
-        <div class="pb-3">
-            <h2 class="m-0 header-design">Artisan Calendar</h2>
-        </div>
+        <h2 class="header-design">Artisan Calendar</h2>
 
         <!-- Filters -->
         <div class="row mb-4">
@@ -205,7 +212,7 @@ onMounted(() => {
                 <label class="form-label">Department</label>
                 <select
                     v-model="searchDept"
-                    class="form-control field-height field-background-colour field-hover"
+                    class="form-control field-height field-background-colour"
                     :class="{ 'placeholder-text': !searchDept }"
                     @change="onDeptChange"
                 >
@@ -227,16 +234,16 @@ onMounted(() => {
                     :options="employee"
                     label="Full_Name"
                     track-by="id"
-                    placeholder="Select employee"
                     class="multiselect-design"
                     @select="onEmployeeChange"
                 />
             </div>
+
             <div class="col-lg-1">
-                <label class="form-label">Select Month</label>
+                <label class="form-label">Month</label>
                 <select
                     v-model="selectedMonth"
-                    class="form-control field-height field-background-colour field-hover"
+                    class="form-control field-height field-background-colour"
                 >
                     <option
                         v-for="(m, i) in monthNames"
@@ -247,11 +254,12 @@ onMounted(() => {
                     </option>
                 </select>
             </div>
+
             <div class="col-lg-1">
-                <label class="form-label">Select Year</label>
+                <label class="form-label">Year</label>
                 <select
                     v-model="selectedYear"
-                    class="form-control field-height field-background-colour field-hover"
+                    class="form-control field-height field-background-colour"
                 >
                     <option v-for="y in yearList" :key="y" :value="y">
                         {{ y }}
@@ -259,8 +267,6 @@ onMounted(() => {
                 </select>
             </div>
         </div>
-        <!--
-        <h3>{{ calendarTitle }}</h3> -->
 
         <!-- Calendar -->
         <div class="calendar">
@@ -279,29 +285,29 @@ onMounted(() => {
                     <div v-if="date">
                         <div class="date-number">{{ date.day }}</div>
 
-                        <div v-if="date.data" class="attendance-info">
-                            <!-- Employee -->
-                            <!-- <div class="emp-name">
-                                {{ date.data.employee_name }}
-                            </div> -->
+                        <div class="attendance-info">
+                            <div
+                                class="status"
+                                :class="{
+                                    present:
+                                        getStatusText(date.data) === 'Present',
+                                    absent:
+                                        getStatusText(date.data) === 'Absent',
+                                    weekend:
+                                        getStatusText(date.data) === 'Weekend',
+                                    leave:
+                                        getStatusText(date.data) === 'On Leave',
+                                }"
+                            >
+                                {{ getStatusText(date.data) }}
+                            </div>
 
-                            <!-- Status -->
-                            <!-- <div class="status" :class="{
-                                'text-primary': date.data.attendance_status === 'Holiday',
-                                'text-success': date.data.attendance_status === 'Present',
-                                'text-danger': date.data.attendance_status === 'Absent'
-                            }">
-                                {{ date.data.attendance_status }}
-                            </div> -->
-
-                            <!-- Time -->
                             <div class="in-time">
-                                In: {{ formatTime(date.data.actual_in) || "-" }}
+                                In: {{ formatTime(date.data.actual_in) }}
                             </div>
 
                             <div class="out-time">
-                                Out:
-                                {{ formatTime(date.data.actual_out) || "-" }}
+                                Out: {{ formatTime(date.data.actual_out) }}
                             </div>
                         </div>
                     </div>
@@ -343,13 +349,28 @@ onMounted(() => {
     font-weight: bold;
 }
 
-.emp-name {
-    font-size: 12px;
-    font-weight: 600;
-}
-
 .status {
     font-size: 12px;
+}
+
+.present {
+    color: green;
+    font-weight: bold;
+}
+
+.absent {
+    color: red;
+    font-weight: bold;
+}
+
+.weekend {
+    color: orange;
+    font-weight: bold;
+}
+
+.leave {
+    color: blue;
+    font-weight: bold;
 }
 
 .in-time {
@@ -362,42 +383,15 @@ onMounted(() => {
     color: red;
 }
 
-.table-responsive .table,
-.table-responsive .table tbody,
-.table-responsive .table tr,
-.table-responsive .table td {
-    /* background-color: rgba(234, 236, 234, 0.2) !important; */
-    background: #ffffffd5 !important;
-    color: #000000;
-    border: 0.8px solid #7e7c7c63;
-    letter-spacing: 0.3px;
-}
-
-.table tbody tr:hover > td {
-    background-color: #717c73c7 !important;
-}
-
-.table thead th {
-    background-color: #4e4e4e;
+.header-design {
     font-weight: 700;
-    color: #fff;
 }
-
-.table thead {
-    height: 30px;
-}
-
 .form-label {
     font-weight: 600;
     letter-spacing: 0.4px;
 }
 
 .field-hover:hover {
-    border-color: #80bdff;
-    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
-}
-
-.multiselect-design:hover .multiselect__tags {
     border-color: #80bdff;
     box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
 }
@@ -457,9 +451,5 @@ onMounted(() => {
     letter-spacing: 1px;
     padding-top: 5px;
     font-weight: 700;
-}
-.field-hover:hover {
-    border-color: #80bdff;
-    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
 }
 </style>
