@@ -16,13 +16,30 @@ const selectedEmployee = ref(null);
 const selectedEmployeeId = ref(null);
 
 // -------------------------
+// MONTH NAME
+// -------------------------
+const monthNames = [
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
+];
+
+// -------------------------
 // FORMAT TIME
 // -------------------------
 const formatTime = (timeStr) => {
-    if (!timeStr) return "-";
+    if (!timeStr) return "";
 
     const [hour, minute] = timeStr.split(":");
-
     const date = new Date();
     date.setHours(hour, minute);
 
@@ -34,7 +51,7 @@ const formatTime = (timeStr) => {
 };
 
 // -------------------------
-// API CALLS
+// API
 // -------------------------
 const getEmployee = async (deptID) => {
     if (!deptID) {
@@ -52,16 +69,6 @@ const getData = async () => {
 };
 
 // -------------------------
-// EVENTS
-// -------------------------
-const clearDepartment = async () => {
-    searchDept.value = "";
-    selectedEmployee.value = null;
-    selectedEmployeeId.value = null;
-    employee.value = [];
-    await getData();
-};
-
 const onDeptChange = async () => {
     await getEmployee(searchDept.value);
     selectedEmployee.value = null;
@@ -74,23 +81,6 @@ const onEmployeeChange = () => {
 };
 
 // -------------------------
-// CALENDAR
-// -------------------------
-const monthNames = [
-    "January",
-    "February",
-    "March",
-    "April",
-    "May",
-    "June",
-    "July",
-    "August",
-    "September",
-    "October",
-    "November",
-    "December",
-];
-
 const selectedMonth = ref(new Date().getMonth() + 1);
 const selectedYear = ref(new Date().getFullYear());
 
@@ -98,17 +88,8 @@ const attendanceData = ref([]);
 
 const weekDays = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
 
-const yearList = computed(() => {
-    const currentYear = new Date().getFullYear();
-    const years = [];
-    for (let i = currentYear - 5; i <= currentYear + 5; i++) {
-        years.push(i);
-    }
-    return years;
-});
-
 // -------------------------
-// MAIN API
+// API CALL
 // -------------------------
 const getMonthlyData = async () => {
     try {
@@ -128,33 +109,47 @@ const getMonthlyData = async () => {
 };
 
 // -------------------------
-// MAP DATA
+// MAP DATA (Duplicate FIX)
 // -------------------------
 const attendanceMap = computed(() => {
     const map = {};
+
     attendanceData.value.forEach((item) => {
         if (!item.report_date) return;
+
         const day = new Date(item.report_date).getDate();
-        map[day] = item;
+
+        // ✅ prevent overwrite
+        if (!map[day]) {
+            map[day] = item;
+        }
     });
+
     return map;
 });
 
 // -------------------------
-// STATUS HELPER
+// STATUS LOGIC
 // -------------------------
 const getStatusText = (data) => {
-    if (!data) return "Absent";
+    if (!data) return "";
 
-    if (data.attendance_status === "Weekend" || data.is_weekend == 1) {
-        return "Weekend";
-    }
+    const status = data.attendance_status;
 
-    return data.attendance_status || "Absent";
+    if (data.is_weekend == 1 && status === "Weekend") return "Weekend";
+
+    if (status === "On Leave") return "On Leave";
+
+    if (status === "Present") return "Present";
+
+    if (status === "Absent") return "Absent";
+
+    // ✅ Holiday (default)
+    return status;
 };
 
 // -------------------------
-// CALENDAR GRID (FIXED)
+// CALENDAR FULL MONTH
 // -------------------------
 const calendarDays = computed(() => {
     const daysInMonth = new Date(
@@ -176,17 +171,12 @@ const calendarDays = computed(() => {
         cells.push(null);
     }
 
-    // days
     for (let d = 1; d <= daysInMonth; d++) {
-        const data = attendanceMap.value[d];
+        const data = attendanceMap.value[d] || null;
 
         cells.push({
             day: d,
-            data: data || {
-                attendance_status: "Absent",
-                actual_in: null,
-                actual_out: null,
-            },
+            data: data,
         });
     }
 
@@ -207,16 +197,16 @@ onMounted(() => {
         <h2 class="header-design">Artisan Calendar</h2>
 
         <!-- Filters -->
-        <div class="row mb-4">
+        <div class="row my-4">
             <div class="col-lg-3">
                 <label class="form-label">Department</label>
                 <select
                     v-model="searchDept"
-                    class="form-control field-height field-background-colour"
+                    class="form-control field-height field-background-colour field-hover"
                     :class="{ 'placeholder-text': !searchDept }"
                     @change="onDeptChange"
                 >
-                    <option value="">Select Department</option>
+                    <option value="">Select</option>
                     <option
                         v-for="d in department"
                         :key="d.department_id"
@@ -243,7 +233,7 @@ onMounted(() => {
                 <label class="form-label">Month</label>
                 <select
                     v-model="selectedMonth"
-                    class="form-control field-height field-background-colour"
+                    class="form-control field-height field-background-colour field-hover"
                 >
                     <option
                         v-for="(m, i) in monthNames"
@@ -259,10 +249,10 @@ onMounted(() => {
                 <label class="form-label">Year</label>
                 <select
                     v-model="selectedYear"
-                    class="form-control field-height field-background-colour"
+                    class="form-control field-height field-background-colour field-hover"
                 >
-                    <option v-for="y in yearList" :key="y" :value="y">
-                        {{ y }}
+                    <option v-for="y in 10" :key="y" :value="2020 + y">
+                        {{ 2020 + y }}
                     </option>
                 </select>
             </div>
@@ -271,8 +261,8 @@ onMounted(() => {
         <!-- Calendar -->
         <div class="calendar">
             <div class="calendar-header">
-                <div v-for="day in weekDays" :key="day" class="day-name">
-                    {{ day }}
+                <div v-for="d in weekDays" :key="d" class="day-name">
+                    {{ d }}
                 </div>
             </div>
 
@@ -285,29 +275,53 @@ onMounted(() => {
                     <div v-if="date">
                         <div class="date-number">{{ date.day }}</div>
 
-                        <div class="attendance-info">
+                        <div v-if="date.data" class="attendance-info">
+                            <!-- Weekend -->
                             <div
-                                class="status"
-                                :class="{
-                                    present:
-                                        getStatusText(date.data) === 'Present',
-                                    absent:
-                                        getStatusText(date.data) === 'Absent',
-                                    weekend:
-                                        getStatusText(date.data) === 'Weekend',
-                                    leave:
-                                        getStatusText(date.data) === 'On Leave',
-                                }"
+                                v-if="getStatusText(date.data) === 'Weekend'"
+                                class="status weekend"
                             >
+                                Weekend
+                            </div>
+
+                            <!-- Leave -->
+                            <div
+                                v-else-if="
+                                    getStatusText(date.data) === 'On Leave'
+                                "
+                                class="status leave"
+                            >
+                                On Leave
+                            </div>
+
+                            <!-- Absent -->
+                            <div
+                                v-else-if="
+                                    getStatusText(date.data) === 'Absent'
+                                "
+                                class="status absent"
+                            >
+                                Absent
+                            </div>
+
+                            <!-- Present -->
+                            <div
+                                v-else-if="
+                                    getStatusText(date.data) === 'Present'
+                                "
+                                class="time-wrapper"
+                            >
+                                <div class="in-time">
+                                    {{ formatTime(date.data.actual_in) }}
+                                </div>
+                                <div class="out-time">
+                                    {{ formatTime(date.data.actual_out) }}
+                                </div>
+                            </div>
+
+                            <!-- Holiday -->
+                            <div v-else class="status holiday">
                                 {{ getStatusText(date.data) }}
-                            </div>
-
-                            <div class="in-time">
-                                In: {{ formatTime(date.data.actual_in) }}
-                            </div>
-
-                            <div class="out-time">
-                                Out: {{ formatTime(date.data.actual_out) }}
                             </div>
                         </div>
                     </div>
@@ -340,7 +354,7 @@ onMounted(() => {
 }
 
 .calendar-cell {
-    min-height: 110px;
+    min-height: 80px;
     border: 1px solid #ddd;
     padding: 5px;
 }
@@ -349,46 +363,55 @@ onMounted(() => {
     font-weight: bold;
 }
 
+/* STATUS */
 .status {
+    text-align: center;
     font-size: 12px;
-}
-
-.present {
-    color: green;
     font-weight: bold;
 }
 
 .absent {
     color: red;
-    font-weight: bold;
 }
 
 .weekend {
     color: orange;
-    font-weight: bold;
 }
 
 .leave {
     color: blue;
-    font-weight: bold;
+}
+
+.holiday {
+    color: purple;
+}
+
+/* TIME CENTER */
+.time-wrapper {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 60px;
 }
 
 .in-time {
-    font-size: 11px;
+    font-size: 12px;
     color: green;
 }
-
 .out-time {
-    font-size: 11px;
+    font-size: 12px;
     color: red;
 }
 
-.header-design {
-    font-weight: 700;
-}
 .form-label {
     font-weight: 600;
     letter-spacing: 0.4px;
+}
+
+.multiselect-design .multiselect__tags:hover {
+    border-color: #80bdff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
 }
 
 .field-hover:hover {
