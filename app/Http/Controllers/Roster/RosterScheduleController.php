@@ -17,6 +17,7 @@ use App\Models\app_attendance;
 use App\Models\attendence;
 use App\Models\holiday;
 use App\Models\leave;
+use App\Models\employee;
 
 
 class RosterScheduleController extends Controller
@@ -467,16 +468,10 @@ class RosterScheduleController extends Controller
         $role_id = Auth::user()->role_id;
         $date = $request->searchDate;
 
-
         $dayName = \Carbon\Carbon::parse($date)->format('l');
-
 
         if ($role_id == 1) {
 
-
-            // -------------------------
-            // MACHINE ATTENDANCE
-            // -------------------------
             $machine_attendance_sub = DB::table('attendences')
                 ->select(
                     'EID',
@@ -485,7 +480,6 @@ class RosterScheduleController extends Controller
                 )
                 ->whereDate('Date', $date)
                 ->groupBy('EID');
-
 
             $app_attendance_sub = DB::table('app_attendances')
                 ->select(
@@ -496,12 +490,7 @@ class RosterScheduleController extends Controller
                 ->whereDate('created_at', $date)
                 ->groupBy('EID');
 
-
-            // -------------------------
-            // MAIN QUERY
-            // -------------------------
             $query = DB::table('employees')
-
 
                 ->join('roster_schedules', function ($join) use ($date, $dayName) {
                     $join->on('employees.id', '=', 'roster_schedules.employee_id')
@@ -513,16 +502,13 @@ class RosterScheduleController extends Controller
                         ->where('roster_schedules.day_name', $dayName);
                 })
 
-
                 ->join('officials', 'officials.EID', '=', 'employees.id')
                 ->join('departments', 'departments.id', '=', 'officials.Department_Id')
-
 
                 ->leftJoin('holidays', function ($join) use ($date) {
                     $join->whereDate('holidays.from_date', '<=', $date)
                         ->whereDate('holidays.to_date', '>=', $date);
                 })
-
 
                 ->leftJoin('leaves', function ($join) use ($date) {
                     $join->on('leaves.employee_id', '=', 'employees.id')
@@ -531,16 +517,13 @@ class RosterScheduleController extends Controller
                         ->whereDate('leaves.to_date', '>=', $date);
                 })
 
-
                 ->leftJoinSub($machine_attendance_sub, 'machine_att', function ($join) {
                     $join->on('machine_att.EID', '=', 'employees.id');
                 })
 
-
                 ->leftJoinSub($app_attendance_sub, 'app_att', function ($join) {
                     $join->on('app_att.EID', '=', 'employees.id');
                 })
-
 
                 ->select(
                     DB::raw("'$date' as report_date"),
@@ -607,7 +590,6 @@ class RosterScheduleController extends Controller
                     END as working_minutes
                 "),
 
-
                     DB::raw("
                     CASE
                         WHEN holidays.id IS NOT NULL THEN holidays.holiday_name
@@ -619,8 +601,6 @@ class RosterScheduleController extends Controller
                 ")
                 )
 
-
-                // ✅ FILTERS (IMPORTANT FIX)
                 ->when($request->department_id, function ($q) use ($request) {
                     $q->where('officials.Department_Id', $request->department_id);
                 })
@@ -630,8 +610,6 @@ class RosterScheduleController extends Controller
                     $q->where('employees.id', $request->employee_id);
                 });
 
-
-            // ✅ EXECUTE QUERY
             $result = $query->get();
         }
 
@@ -694,55 +672,9 @@ class RosterScheduleController extends Controller
         ]);
     }
 
-    public function reportDownload(Request $request)
-    {
-        if (!$request->from_date || !$request->to_date) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Date range required'
-            ], 400);
-        }
-
-        $from = $request->from_date;
-        $to = $request->to_date;
-
-        $allData = collect();
-
-        $period = CarbonPeriod::create($from, $to);
-
-        foreach ($period as $dateObj) {
-
-            $date = $dateObj->format('Y-m-d');
-
-            $request->merge(['searchDate' => $date]);
-
-            $response = $this->reportList($request);
-
-            $data = collect($response->getData()->data ?? []);
-
-            $allData = $allData->merge($data);
-        }
-
-        if ($allData->isEmpty()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'No data found'
-            ]);
-        }
-
-
-        $fileName = 'attendance_report_' . $from . '_to_' . $to . '.xlsx';
-
-
-        return Excel::download(
-            new AttendanceReport($allData),
-            $fileName
-        );
-    }
 
     public function calendarDateReport(Request $request)
     {
-
         $employee_id = $request->employee_id ?? Auth::user()->EID;
 
         if (!$employee_id) {
@@ -751,91 +683,152 @@ class RosterScheduleController extends Controller
                 'message' => 'Employee ID not found'
             ]);
         }
+
         $month = $request->month;
         $year  = $request->year;
 
-        $startDate = \Carbon\Carbon::CreateFromDate($year, $month, 1)->startOfMonth();
-        $endDate = \Carbon\Carbon::CreateFromDate($year, $month, 1)->endOfMonth();
+        $startDate = \Carbon\Carbon::createFromDate($year, $month, 1)->startOfMonth();
+        $endDate   = $startDate->copy()->endOfMonth();
 
-        $attendanceEmployeeIds = app_attendance::where('status', 'in')
-            ->distinct()
-            ->pluck('EID')
-            ->toArray();
+        // =======================
+        // Employee Info
+        // =======================
+        $employee_info = employee::where('id', $employee_id)
+            ->select(
+                'id as employee_id',
+                'Full_Name as employee_name',
+                'Employee_Id as official_id'
+            )
+            ->first();
 
-        $hasAttendanceApp = in_array($employee_id, $attendanceEmployeeIds); //Returns true or false
+        if (!$employee_info) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Employee not found'
+            ]);
+        }
 
+        // =======================
+        // Attendance Source Check
+        // =======================
+        $hasAttendanceApp = app_attendance::where('EID', $employee_id)
+            ->where('status', 'in')
+            ->exists();
+
+        // =======================
+        // Attendance (ONLY DIFFERENCE)
+        // =======================
         if ($hasAttendanceApp) {
-            $appAttendanceTime = app_attendance::where('EID', $employee_id)
+            $attendance = app_attendance::where('EID', $employee_id)
                 ->whereBetween('created_at', [$startDate, $endDate])
                 ->whereIn('status', ['in', 'out'])
-                ->distinct()
                 ->select(
-                    'EID as employee_id',
                     DB::raw('DATE(created_at) as report_date'),
                     DB::raw("TIME(MIN(CASE WHEN status='in' THEN created_at END)) as in_time"),
                     DB::raw("TIME(MAX(CASE WHEN status='out' THEN created_at END)) as out_time")
                 )
-                ->groupBy('EID', DB::raw('DATE(created_at)'))
+                ->groupBy(DB::raw('DATE(created_at)'))
                 ->get()
-                ->toArray();
-            $leaveStatus = leave::where('employee_id', $employee_id)
-                ->where('status', 'Approved')
-                ->whereBetween('from_date', [$startDate, $endDate])
-                ->select(
-                    'employee_id',
-                    'from_date',
-                    'to_date'
-                )
-                ->get()
-                ->toArray();
-            $holidaysName = holiday::whereBetween('from_date', [$startDate, $endDate])
-                ->select(
-                    'holiday_name',
-                    'from_date',
-                    'to_date'
-                )
-                ->get()
-                ->toArray();
-            dd($leaveStatus, $holidaysName);
+                ->keyBy('report_date');
         } else {
-            $machineAttendanceTime = attendence::where('EID', $employee_id)
+            $attendance = attendence::where('EID', $employee_id)
                 ->whereBetween('created_at', [$startDate, $endDate])
                 ->whereIn('Status', ['P', 'L'])
-                ->Distinct()
                 ->select(
-                    'EID as employee_id',
                     DB::raw('DATE(created_at) as report_date'),
                     DB::raw('MIN(Time_In) as in_time'),
                     DB::raw('MAX(Time_Out) as out_time')
                 )
-                ->groupBy('EID', DB::raw('DATE(created_at)'))
+                ->groupBy(DB::raw('DATE(created_at)'))
                 ->get()
-                ->toArray();
-            $leaveStatus = leave::where('employee_id', $employee_id)
-                ->where('status', 'Approved')
-                ->whereBetween('from_date', [$startDate, $endDate])
-                ->select(
-                    'employee_id',
-                    'from_date',
-                    'to_date'
-                )
-                ->get()
-                ->toArray();
-            $holidaysName = holiday::whereBetween('from_date', [$startDate, $endDate])
-                ->select(
-                    'holiday_name',
-                    'from_date',
-                    'to_date'
-                )
-                ->get()
-                ->toArray();
-            dd($holidaysName);
+                ->keyBy('report_date');
         }
 
-        // return response()->json([
-        //     'success' => true,
-        //     'data' => $result;
-        // ]);
+        // =======================
+        // Leaves (Optimized)
+        // =======================
+        $leaves = leave::where('employee_id', $employee_id)
+            ->where('status', 'Approved')
+            ->where(function ($q) use ($startDate, $endDate) {
+                $q->whereBetween('from_date', [$startDate, $endDate])
+                    ->orWhereBetween('to_date', [$startDate, $endDate]);
+            })
+            ->get();
+
+        $leaveDates = [];
+        foreach ($leaves as $leave) {
+            for ($d = \Carbon\Carbon::parse($leave->from_date); $d <= $leave->to_date; $d->addDay()) {
+                $leaveDates[$d->format('Y-m-d')] = 'Leave';
+            }
+        }
+
+        // =======================
+        // Holidays (Optimized)
+        // =======================
+        $holidays = holiday::where(function ($q) use ($startDate, $endDate) {
+            $q->whereBetween('from_date', [$startDate, $endDate])
+                ->orWhereBetween('to_date', [$startDate, $endDate]);
+        })->get();
+
+        $holidayDates = [];
+        foreach ($holidays as $holiday) {
+            for ($d = \Carbon\Carbon::parse($holiday->from_date); $d <= $holiday->to_date; $d->addDay()) {
+                $holidayDates[$d->format('Y-m-d')] = $holiday->holiday_name;
+            }
+        }
+
+        // =======================
+        // Roster
+        // =======================
+        $rosters = roster_schedule::where('employee_id', $employee_id)
+            ->whereNull('Time_in')
+            ->whereNull('Time_out')
+            ->pluck('day_name')
+            ->toArray();
+
+        // =======================
+        // Build Calendar
+        // =======================
+        $period = \Carbon\CarbonPeriod::create($startDate, $endDate);
+
+        $finalData = [];
+
+        foreach ($period as $date) {
+
+            $dateStr = $date->format('Y-m-d');
+            $dayName = $date->format('l');
+
+            $status = 'Absent';
+
+            if (isset($attendance[$dateStr])) {
+                $status = 'Present';
+            }
+
+            if (isset($leaveDates[$dateStr])) {
+                $status = $leaveDates[$dateStr];
+            }
+
+            if (isset($holidayDates[$dateStr])) {
+                $status = $holidayDates[$dateStr];
+            }
+
+            if (in_array($dayName, $rosters)) {
+                $status = 'Off Day';
+            }
+
+            $finalData[] = [
+                'date'      => $dateStr,
+                'day_name'  => $dayName,
+                'in_time'   => $attendance[$dateStr]->in_time ?? null,
+                'out_time'  => $attendance[$dateStr]->out_time ?? null,
+                'status'    => $status
+            ];
+        }
+        return response()->json([
+            'success' => true,
+            'employee_info' => $employee_info,
+            'data' => $finalData
+        ]);
     }
 
     // public function calendarDateReport(Request $request)
