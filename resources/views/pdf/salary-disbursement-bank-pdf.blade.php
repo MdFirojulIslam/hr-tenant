@@ -50,19 +50,7 @@
       display: block;
     }
 
-    /* Footer */
-    footer {
-      position: fixed;
-      bottom: -60px;
-      left: 0;
-      right: 0;
-      text-align: center;
-      font-size: 10px;
-    }
 
-    footer .page:after {
-      content: counter(page) " of " counter(pages);
-    }
 
     /* Main table */
     table {
@@ -98,11 +86,15 @@
     }
 
     .signature {
-      margin-top: 70px;
+      margin-top: 40px;
+    }
+
+    .make-uppercase {
+      text-transform: capitalize;
     }
 
     .signature-gap {
-      margin-bottom: 70px;
+      margin-bottom: 40px;
     }
 
     p {
@@ -135,16 +127,16 @@
   <table>
     <thead>
       <tr>
-        <th width="10%">EID</th>
+        <th width="10%">SL.No</th>
         <th width="30%">Name</th>
-        <th width="30%">Bank Account</th>
+        <th width="30%">Bank AC No</th>
         <th width="15%">Amount</th>
       </tr>
     </thead>
     <tbody>
       @foreach($data as $row)
       <tr>
-        <td class="text-center">ABNB{{ $row->employee_id }}</td>
+        <td class="text-center">{{ $loop->iteration }}</td>
         <td>{{ $row->full_name }}</td>
         <td class="text-center">{{ $row->bank_account_no }}</td>
         <td class="text-center">{{ number_format($row->net_pay, 2) }}</td>
@@ -160,7 +152,10 @@
   </table>
 
   <!-- Section 3: Footer / Signature (only once) -->
-  <p style="margin-top: 45px;">
+  <p style="margin-top: 25px;">
+    <strong class="make-uppercase"> Inwords: {{ $grandTotalInWords }} Taka Only</strong>
+  </p>
+  <p style="margin-top: 30px;">
     According to the statement mentioned above, you are requested to debit from our
     Artisan Business Network Bangladesh,
     A/C No.: <strong>3101496682001</strong>
@@ -173,10 +168,6 @@
     Signature & Seal
   </div>
 
-  <!-- Page numbers -->
-  <footer>
-    <span class="page">Page </span>
-  </footer>
 </body>
 
 

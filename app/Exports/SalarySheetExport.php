@@ -72,8 +72,8 @@ class SalarySheetExport implements
                 'salary_sheets.leave_without_pay',
                 'salary_sheets.deduction_adjustment',
                 'salary_sheets.total_deduction',
-                'salary_sheets.monthly_loan_repayments',
                 'salary_sheets.net_pay',
+                'salary_sheets.monthly_loan_repayments',
                 'salary_sheets.payment_method',
                 'salary_sheets.bank_account_no'
             )
@@ -120,8 +120,8 @@ class SalarySheetExport implements
             $row->leave_without_pay,
             $row->deduction_adjustment,
             $row->total_deduction,
-            $row->monthly_loan_repayments,
             (float) $row->net_pay,
+            $row->monthly_loan_repayments,
             ucfirst($row->payment_method),
             (string) $row->bank_account_no,
         ];
@@ -163,8 +163,8 @@ class SalarySheetExport implements
                 'Leave Without Pay',
                 'Advance/Other Deduction',
                 'Total Deduction',
-                'Monthly Loan Repayment',
                 'Net Pay',
+                'Monthly Loan Repayment',
                 'Payment Method',
                 'Bank Account No'
             ]

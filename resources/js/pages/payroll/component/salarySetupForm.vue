@@ -133,7 +133,6 @@ const total_payment = computed(
         Number(form.value.consolidated) +
         Number(form.value.festival_bonus) +
         Number(form.value.travel_allowance) +
-        Number(form.value.overtime) +
         Number(form.value.daily_allowance) +
         Number(form.value.mobile_bill) +
         Number(form.value.other_allowance),
@@ -144,10 +143,7 @@ const total_deduction = computed(
     () =>
         Number(form.value.provident_fund) +
         Number(form.value.income_tax) +
-        Number(form.value.revenue_stamp) +
-        Number(form.value.leave_without_pay) +
-        Number(form.value.penalty_other_deduction) +
-        Number(form.value.advance),
+        Number(form.value.revenue_stamp),
 );
 watch(total_deduction, (val) => (form.value.total_deduction = val));
 
@@ -210,17 +206,13 @@ watch(
             form.value.consolidated = item.consolidated || "";
             form.value.festival_bonus = item.festival_bonus || "";
             form.value.travel_allowance = item.travel_allowance || "";
-            form.value.overtime = item.overtime || "";
             form.value.daily_allowance = item.daily_allowance || "";
             form.value.mobile_bill = item.mobile_bill || "";
             form.value.other_allowance = item.other_allowance || "";
             form.value.provident_fund = item.provident_fund || "";
             form.value.income_tax = item.income_tax || "";
             form.value.revenue_stamp = item.revenue_stamp || "";
-            form.value.leave_without_pay = item.leave_without_pay || "";
-            form.value.penalty_other_deduction =
-                item.penalty_other_deduction || "";
-            form.value.advance = item.advance || "";
+
             form.value.total_deduction = item.total_deduction || 0;
             form.value.total_earning = item.total_payment || 0;
             form.value.net_pay = item.net_pay || "";
@@ -254,16 +246,12 @@ const resetForm = () => {
         consolidated: "0",
         festival_bonus: "0",
         travel_allowance: "0",
-        overtime: "0",
         daily_allowance: "0",
         mobile_bill: "0",
         other_allowance: "0",
         total_payment: "",
         provident_fund: "0",
         income_tax: "0",
-        revenue_stamp: "0",
-        leave_without_pay: "0",
-        penalty_other_deduction: "0",
         advance: "0",
         net_pay: "",
         salary_type: "",
