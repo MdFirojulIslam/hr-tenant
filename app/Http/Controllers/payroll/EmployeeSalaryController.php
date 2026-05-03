@@ -402,10 +402,13 @@ class EmployeeSalaryController extends Controller
             ->get();
 
         $net_total = $salaries->sum(fn($s) => (float) $s->net_pay);
-
+        $bank_total = $salaries->sum(fn($s) => (float) $s->bank_account_no ? $s->net_pay : 0);
+        $cash_total = $salaries->sum(fn($s) => (float) !$s->bank_account_no ? $s->net_pay : 0);
         return response()->json([
             'salaries' => $salaries,
-            'net_total' => $net_total
+            'net_total' => $net_total,
+            'bank_total' => $bank_total,
+            'cash_total' => $cash_total
         ]);
     }
 
@@ -647,6 +650,7 @@ class EmployeeSalaryController extends Controller
             ->join('employees', 'employees.id', '=', 'salary_sheets.employee_id')
             ->join('officials', 'officials.EID', '=', 'salary_sheets.employee_id')
             ->join('departments', 'departments.id', '=', 'officials.Department_Id')
+            ->join('designations', 'designations.id', '=', 'officials.Designation_Id')
             ->where('salary_sheets.payment_method', 'cash')
             ->whereNotNull('salary_sheets.disbursement_status')
             ->whereYear('salary_sheets.salary_date', $year)
@@ -654,6 +658,7 @@ class EmployeeSalaryController extends Controller
             ->select(
                 'employees.Employee_Id as employee_id',
                 'employees.Full_Name as full_name',
+                'designations.Name as designation',
                 'salary_sheets.payment_method',
                 'salary_sheets.net_pay'
             )->orderBy('departments.id')
@@ -676,6 +681,7 @@ class EmployeeSalaryController extends Controller
 
         return $pdf->download("Salary_Disbursement_{$monthName}_{$year}.pdf");
     }
+
 
     public function SalaryDisbursementBankXLSX(Request $request)
     {
@@ -750,6 +756,7 @@ class EmployeeSalaryController extends Controller
             ->join('employees', 'employees.id', '=', 'salary_sheets.employee_id')
             ->join('officials', 'officials.EID', '=', 'salary_sheets.employee_id')
             ->join('departments', 'departments.id', '=', 'officials.Department_Id')
+            ->join('designations', 'designations.id', '=', 'officials.Designation_Id')
             ->where('salary_sheets.payment_method', 'cash')
             ->whereYear('salary_sheets.salary_date', $year)
             ->whereMonth('salary_sheets.salary_date', $month)
@@ -757,6 +764,7 @@ class EmployeeSalaryController extends Controller
             ->select(
                 'employees.Employee_Id as employee_id',
                 'employees.Full_Name as full_name',
+                'designations.Name as designation',
                 DB::raw('"Cash" as bank_account_no'),
                 'salary_sheets.net_pay'
             )->orderBy('departments.id')
@@ -765,7 +773,7 @@ class EmployeeSalaryController extends Controller
         $subtotal = $data->sum('net_pay');
         $inWords = HelperFunctionController::numberToWords($subtotal);
         return Excel::download(
-            new SalaryDisbursementCashExport($data, "Salary Disbursement (Cash)", "{$monthName} {$year}", $subtotal, $inWords),
+            new SalaryDisbursementCashExport($data, $monthName, $year, $subtotal, $inWords),
             "Salary_Disbursement_Cash_{$monthName}_{$year}.xlsx"
         );
     }
@@ -818,7 +826,7 @@ class EmployeeSalaryController extends Controller
         ]);
 
         // ================= HEADER =================
-        $section->addText("Date: " . Carbon::now()->format('dS F Y'));
+        $section->addText("Date: " . Carbon::now()->format('d F Y'));
         $section->addTextBreak(1);
 
         $section->addText("The Manager");
@@ -837,7 +845,7 @@ class EmployeeSalaryController extends Controller
         $section->addText("Dear Sir,");
         $section->addTextBreak(1);
 
-        $section->addText("Please arrange to transfer salary as follows:");
+        $section->addText("Please arrange to transfer salary to our individual staff account as follows:");
         $section->addTextBreak(1);
 
         // ================= TABLE STYLE =================
@@ -878,10 +886,41 @@ class EmployeeSalaryController extends Controller
 
         // ================= IN WORDS =================
         $section->addText(
-            "Inwords: " . ucwords($words) . " Taka Only",
+            "Inword: " . ucwords($words) . " Taka Only",
             ['bold' => true],
             ['spaceBefore' => 120, 'spaceAfter' => 200]
         );
+
+        $section->addText(
+            "According to above mention statement, you are requested to debit from our Artisan Business Network",
+            ['bold' => false],
+            ['spaceBefore' => 120, 'spaceAfter' => 200]
+        );
+
+        $section->addText(
+            "Bangladesh, A/C No.: 3101496682001",
+            ['bold' => false],
+            ['spaceBefore' => 120, 'spaceAfter' => 200]
+        );
+
+        $section->addText(
+            "Your Sincerely,",
+            ['bold' => true],
+            ['spaceBefore' => 120, 'spaceAfter' => 200]
+        );
+
+        $section->addText(
+            "_______________________",
+            ['bold' => false],
+            ['spaceBefore' => 120, 'spaceAfter' => 200]
+        );
+
+        $section->addText(
+            htmlspecialchars("Signature & Seal", ENT_QUOTES, 'UTF-8'),
+            ['bold' => true],
+            ['spaceBefore' => 120, 'spaceAfter' => 200]
+        );
+
 
 
         // ================= CLEAN OUTPUT BUFFER =================
@@ -901,96 +940,6 @@ class EmployeeSalaryController extends Controller
 
 
 
-    // public function SalaryDisbursementBankWORD(Request $request)
-    // {
-    //     $year = $request->year;
-    //     $month = $request->month;
-    //     $monthName = date('F', mktime(0, 0, 0, $month, 10));
-
-    //     $data = DB::table('salary_sheets')
-    //         ->join('employees', 'employees.id', '=', 'salary_sheets.employee_id')
-    //         ->join('officials', 'officials.EID', '=', 'salary_sheets.employee_id')
-    //         ->join('departments', 'departments.id', '=', 'officials.Department_Id')
-    //         ->where('salary_sheets.payment_method', 'bank')
-    //         ->whereYear('salary_sheets.salary_date', $year)
-    //         ->whereMonth('salary_sheets.salary_date', $month)
-    //         ->whereNotNull('salary_sheets.disbursement_status')
-    //         ->select(
-    //             DB::raw("CONCAT('ABNB', employees.Employee_Id) as employee_id"),
-    //             'employees.Full_Name',
-    //             'salary_sheets.bank_account_no',
-    //             'salary_sheets.net_pay'
-    //         )->orderBy('departments.id')
-    //         ->get();
-
-    //     $grandTotal = $data->sum('net_pay');
-
-    //     $phpWord = new PhpWord();
-
-    //     // Add Section
-    //     $section = $phpWord->addSection([
-    //         'marginTop' => 600,
-    //         'marginBottom' => 600,
-    //         'marginLeft' => 600,
-    //         'marginRight' => 600,
-    //     ]);
-
-    //     // Add Title
-    //     $section->addText(
-    //         "Salary Disbursement (Bank) - {$monthName} {$year}",
-    //         ['bold' => true, 'size' => 16],
-    //         ['alignment' => \PhpOffice\PhpWord\SimpleType\Jc::CENTER]
-    //     );
-
-    //     $section->addTextBreak(1);
-
-    //     // Add Table
-    //     $tableStyle = [
-    //         'borderSize' => 6,
-    //         'borderColor' => '000000',
-    //         'cellMargin' => 80,
-    //     ];
-
-    //     $firstRowStyle = ['bgColor' => 'CCCCCC'];
-
-    //     $phpWord->addTableStyle('SalaryTable', $tableStyle, $firstRowStyle);
-    //     $table = $section->addTable('SalaryTable');
-
-    //     // Table Header
-    //     $table->addRow();
-    //     $table->addCell(1000)->addText('S/N', ['bold' => true]);
-    //     $table->addCell(2000)->addText('Employee ID', ['bold' => true]);
-    //     $table->addCell(4000)->addText('Employee Name', ['bold' => true]);
-    //     $table->addCell(3000)->addText('Bank Account', ['bold' => true]);
-    //     $table->addCell(2000)->addText('Net Salary', ['bold' => true]);
-
-    //     // Table Rows
-    //     foreach ($data as $index => $row) {
-    //         $table->addRow();
-    //         $table->addCell(1000)->addText($index + 1);
-    //         $table->addCell(2000)->addText($row->employee_id);
-    //         $table->addCell(4000)->addText($row->Full_Name);
-    //         $table->addCell(3000)->addText($row->bank_account_no ?? 'Cash');
-    //         $table->addCell(2000)->addText(number_format($row->net_pay, 2));
-    //     }
-
-    //     // Grand Total
-    //     $table->addRow();
-    //     $table->addCell(1000, ['gridSpan' => 4])->addText('Grand Total', ['bold' => true]);
-    //     $table->addCell(2000)->addText(number_format($grandTotal, 2), ['bold' => true]);
-
-    //     // Save File
-    //     $fileName = "Salary_Disbursement_Bank_{$monthName}_{$year}.docx";
-    //     $path = storage_path($fileName);
-
-    //     $phpWord->save($path, 'Word2007');
-
-    //     return response()->download($path)->deleteFileAfterSend(true);
-    // }
-
-
-
-
     public function SalaryDisbursementCashWORD(Request $request)
     {
         $year  = $request->year;
@@ -1004,6 +953,7 @@ class EmployeeSalaryController extends Controller
             ->join('employees', 'employees.id', '=', 'salary_sheets.employee_id')
             ->join('officials', 'officials.EID', '=', 'salary_sheets.employee_id')
             ->join('departments', 'departments.id', '=', 'officials.Department_Id')
+            ->join('designations', 'designations.id', '=', 'officials.Designation_Id')
             ->where('salary_sheets.payment_method', 'cash')
             ->whereYear('salary_sheets.salary_date', $year)
             ->whereMonth('salary_sheets.salary_date', $month)
@@ -1011,6 +961,7 @@ class EmployeeSalaryController extends Controller
             ->select(
                 DB::raw("CONCAT('ABNB', employees.Employee_Id) as employee_id"),
                 'employees.Full_Name as full_name',
+                'designations.Name as designation',
                 'salary_sheets.net_pay'
             )
             ->orderBy('departments.id')
@@ -1019,22 +970,42 @@ class EmployeeSalaryController extends Controller
         // Grand total
         $grandTotal = $salaries->sum('net_pay');
 
+        $amount = number_format($grandTotal, 2, '.', '');
+        [$taka, $paisa] = explode('.', $amount);
+        $words = HelperFunctionController::numberToWords((int)$taka);
+
+        if ((int)$paisa > 0) {
+            $words .= ' and ' . HelperFunctionController::numberToWords((int)$paisa) . ' paisa';
+        }
         // Create Word file
         $phpWord = new PhpWord();
-        $section = $phpWord->addSection();
+        $section = $phpWord->addSection([
+            'paperSize' => 'A4',
+            'orientation' => 'portrait',
+
+            'marginTop'    => 1200,
+            'marginBottom' => 800,
+            'marginLeft'   => 600,
+            'marginRight'  => 600,
+        ]);
 
         // Title
         $section->addText(
             "Salary Disbursement (Cash) - {$monthName} {$year}",
-            ['bold' => true, 'size' => 14]
+            ['bold' => false, 'size' => 16]
         );
+        $section->addText(
+            "ARTISAN BUSINESS NETWORK BANGLADESH",
+            ['bold' => false, 'size' => 12]
+        );
+
         $section->addTextBreak(1);
 
         // Table style
         $tableStyle = [
             'borderSize' => 6,
             'borderColor' => '000000',
-            'cellMargin' => 80,
+            'cellMargin' => 50,
         ];
         $phpWord->addTableStyle('CashTable', $tableStyle);
 
@@ -1042,26 +1013,64 @@ class EmployeeSalaryController extends Controller
 
         // Table header
         $table->addRow();
-        $table->addCell(2000)->addText('Employee ID', ['bold' => true]);
+        $table->addCell(1000)->addText('SL', ['bold' => true]);
         $table->addCell(4000)->addText('Employee Name', ['bold' => true]);
-        $table->addCell(2000)->addText('Payment Method', ['bold' => true]);
-        $table->addCell(2000)->addText('Net Salary', ['bold' => true]);
+        $table->addCell(2500)->addText('Designation', ['bold' => true]);
+        $table->addCell(2500)->addText('Payment Method', ['bold' => true]);
+        $table->addCell(1500)->addText('Net Salary', ['bold' => true]);
+        $table->addCell(1500)->addText('Signature', ['bold' => true]);
 
         // Table data
-        foreach ($salaries as $salary) {
+        foreach ($salaries as $i => $salary) {
             $table->addRow();
-            $table->addCell(2000)->addText($salary->employee_id);
+            $table->addCell(1000)->addText($i + 1);
             $table->addCell(4000)->addText($salary->full_name);
-            $table->addCell(2000)->addText('Cash');
-            $table->addCell(2000)->addText(number_format($salary->net_pay, 2));
+            $table->addCell(2500)->addText($salary->designation);
+            $table->addCell(2500)->addText('Cash');
+            $table->addCell(1500)->addText(number_format($salary->net_pay, 2));
+            $table->addCell(1500)->addText('');
         }
 
         // Grand total row
         $table->addRow();
-        $table->addCell(8000, ['gridSpan' => 3])
+        $table->addCell(8500, ['gridSpan' => 4])
             ->addText('Grand Total', ['bold' => true]);
-        $table->addCell(2000)
+        $table->addCell(1500, ['gridSpan' => 2])
             ->addText(number_format($grandTotal, 2), ['bold' => true]);
+
+        $section->addTextBreak(1);
+
+        // ================= IN WORDS =================
+        $section->addText(
+            "Taka: " . ucwords($words) . " Taka Only",
+            ['bold' => true],
+            ['spaceBefore' => 120, 'spaceAfter' => 200]
+        );
+
+
+        // ================= SIGNATURE SECTION =================
+        $signatureTable = $section->addTable([
+            'borderSize' => 0,
+            'borderColor' => 'FFFFFF',
+            'width' => 10000,
+            'unit' => \PhpOffice\PhpWord\SimpleType\TblWidth::TWIP
+        ]);
+
+        $signatureTable->addRow();
+
+        // Left side
+        $signatureTable->addCell(5000)->addText(
+            "Recommended by",
+            [],
+            ['alignment' => \PhpOffice\PhpWord\SimpleType\Jc::START]
+        );
+
+        // Right side
+        $signatureTable->addCell(5000)->addText(
+            "Approved by CEO/Managing Director",
+            [],
+            ['alignment' => \PhpOffice\PhpWord\SimpleType\Jc::END]
+        );
 
         // File name & path
         $fileName = "Salary_Disbursement_Cash_{$monthName}_{$year}.docx";

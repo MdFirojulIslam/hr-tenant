@@ -153,19 +153,18 @@
 
   <!-- Section 3: Footer / Signature (only once) -->
   <p style="margin-top: 25px;">
-    <strong class="make-uppercase"> Inwords: {{ $grandTotalInWords }} Taka Only</strong>
+    <strong class="make-uppercase"> Inword: {{ $grandTotalInWords }} Taka Only</strong>
   </p>
   <p style="margin-top: 30px;">
-    According to the statement mentioned above, you are requested to debit from our
-    Artisan Business Network Bangladesh,
-    A/C No.: <strong>3101496682001</strong>
+    According to above mention statement, you are requested to debit from our <strong>Artisan Business Network Bangladesh,
+      A/C No.: 3101496682001</strong>
   </p>
 
   <div class="signature">
-    <p class="signature-gap">Yours Sincerely</p>
+    <p class="signature-gap"><strong>Your Sincerely</strong></p>
     <br><br>
     ___________________________<br>
-    Signature & Seal
+    <strong>Signature & Seal</strong>
   </div>
 
 </body>

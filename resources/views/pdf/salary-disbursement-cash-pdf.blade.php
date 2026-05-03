@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!-- <!DOCTYPE html>
 <html>
 
 <head>
@@ -104,8 +104,6 @@
 </head>
 
 <body>
-
-  <!-- Section 1: Header content (only once) -->
   <div class="first-page-header">
     <p class="date-gap">Date: {{ \Carbon\Carbon::now()->format('dS F Y') }}</p>
 
@@ -123,7 +121,6 @@
     </p>
   </div>
 
-  <!-- Section 2: Table -->
   <table>
     <thead>
       <tr>
@@ -150,8 +147,6 @@
       </tr>
     </tfoot>
   </table>
-
-  <!-- Section 3: Footer / Signature (only once) -->
   <p style="margin-top: 25px;">
     <strong class="make-uppercase"> Inwords: {{ $grandTotalInWords }} Taka Only</strong>
   </p>
@@ -171,13 +166,12 @@
 </body>
 
 
-</html>
+</html> -->
 
 
 
 
 
-<!-- <!DOCTYPE html>
 <html>
 
 <head>
@@ -249,10 +243,23 @@
       text-align: right;
     }
 
-    .signature {
-      margin-top: 80px;
+    .make-uppercase {
+      text-transform: capitalize;
     }
 
+    .signature-row {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 100px;
+    }
+
+    .left {
+      text-align: left;
+    }
+
+    .right {
+      text-align: right;
+    }
 
     p {
       margin: 0;
@@ -264,17 +271,18 @@
 
   <div class="first-page-header">
     <h3>Salary for the month of {{ $monthName }} {{ $year }}</h3>
-
-    <h5>Artisan Business Network Bangladesh</h5>
+    <h4>Artisan Business Network Bangladesh</h4>
   </div>
 
   <table>
     <thead>
       <tr>
-        <th width="10%">SL.No</th>
-        <th width="30%">Name</th>
-        <th width="30%">Payment Method</th>
-        <th width="15%">Amount</th>
+        <th width="7%">SL.No</th>
+        <th width="25%">Name</th>
+        <th width="27%">Designation</th>
+        <th width="18%">Payment Method</th>
+        <th width="10%">Amount</th>
+        <th width="13%">Signature</th>
       </tr>
     </thead>
 
@@ -283,29 +291,43 @@
       <tr>
         <td class="text-center">{{ $loop->iteration }}</td>
         <td>{{ $row->full_name }}</td>
+        <td>{{ $row->designation }}</td>
         <td class="text-center">{{ $row->payment_method }}</td>
-        <td class="text-right">{{ number_format($row->net_pay, 2) }}</td>
+        <td class="text-center">{{ rtrim(rtrim(number_format($row->net_pay, 2), '0'), '.') }}</td>
+        <td></td>
       </tr>
       @endforeach
     </tbody>
 
     <tfoot>
       <tr>
-        <th colspan="3" class="text-right">Total</th>
-        <th class="text-right">{{ number_format($grandTotal, 2) }}</th>
+        <th colspan="4" class="text-right">Total</th>
+        <th colspan="2" style="text-align: left;">{{ rtrim(rtrim(number_format($grandTotal, 2), '0'), '.') }}</th>
       </tr>
     </tfoot>
   </table>
 
 
+  <p style="margin-top: 25px;">
+    <strong class="make-uppercase"> Taka: {{ $grandTotalInWords }} Taka Only</strong>
+  </p>
+
+
 
   <div class="signature">
+    <div class="signature-row">
+      <div class="left">
+        <p class="signature-gap">Recommended by</p>
+      </div>
 
-    ___________________________<br>
-    Signature &amp; Seal
+      <div class="right">
+        <p class="signature-gap">Approved by CEO/Managing Director</p>
+      </div>
+    </div>
   </div>
+
 
 
 </body>
 
-</html> -->
+</html>

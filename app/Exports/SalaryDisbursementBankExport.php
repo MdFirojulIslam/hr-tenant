@@ -59,7 +59,7 @@ class SalaryDisbursementBankExport extends DefaultValueBinder implements FromArr
     $rows = [];
 
     // Header and layout
-    $rows[] = ['Date: ' . date('dS F Y')];
+    $rows[] = ['Date: ' . date('d F Y')];
     $rows[] = ['The Manager'];
     $rows[] = ['The City Bank Ltd'];
     $rows[] = ['Gulshan Branch, Dhaka'];
@@ -83,11 +83,11 @@ class SalaryDisbursementBankExport extends DefaultValueBinder implements FromArr
     // Footer
     $rows[] = ['', '', 'Total', number_format($this->subtotal, 2)];
     $rows[] = [];
-    $rows[] = ['Inwords: ' . $this->inWords . ' Taka Only'];
+    $rows[] = ['Inword: ' . $this->inWords . ' Taka Only'];
     $rows[] = [];
-    $rows[] = ['According to the statement mentioned above, you are requested to debit from our Artisan Business Network Bangladesh, A/C No.: 3101496682001'];
+    $rows[] = ['According to above mention statement, you are requested to debit from our Artisan Business Network Bangladesh, A/C No.: 3101496682001'];
     $rows[] = [];
-    $rows[] = ['Yours Sincerely'];
+    $rows[] = ['Your Sincerely'];
     $rows[] = [];
     $rows[] = ['___________________________'];
     $rows[] = ['Signature & Seal'];

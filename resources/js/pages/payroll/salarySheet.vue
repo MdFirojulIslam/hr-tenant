@@ -10,6 +10,10 @@ const selectedYear = ref(new Date().getFullYear());
 const searchQuery = ref("");
 const isDisbursed = ref(false);
 const netTotal = ref(0);
+const bankTotal = ref(0);
+const cashTotal = ref(0);
+const bankFormat = ref("");
+const cashFormat = ref("");
 
 const years = ref([
     "2022",
@@ -58,6 +62,8 @@ const getData = async () => {
 
         salaries.value = response.data.salaries;
         netTotal.value = response.data.net_total;
+        bankTotal.value = response.data.bank_total;
+        cashTotal.value = response.data.cash_total;
 
         isDisbursed.value =
             salaries.value.length > 0 &&
@@ -140,6 +146,44 @@ const downloadSalary = async () => {
             title: "Download failed!",
             text: "Please try again.",
         });
+    }
+};
+
+const downloadBank = async (type) => {
+    try {
+        const response = await api.get(`/salary-disbursement-bank-${type}`, {
+            responseType: "blob",
+            params: {
+                year: selectedYear.value,
+                month: selectedMonth.value,
+            },
+        });
+
+        downloadFile(
+            response,
+            `Salary_Disbursement_Bank_${selectedYear.value}_${selectedMonth.value}.${type === "word" ? "docx" : type}`,
+        );
+    } catch {
+        Swal.fire("Download failed!", "Please try again.", "error");
+    }
+};
+
+const downloadCash = async (type) => {
+    try {
+        const response = await api.get(`/salary-disbursement-cash-${type}`, {
+            responseType: "blob",
+            params: {
+                year: selectedYear.value,
+                month: selectedMonth.value,
+            },
+        });
+
+        downloadFile(
+            response,
+            `Salary_Disbursement_Cash_${selectedYear.value}_${selectedMonth.value}.${type === "word" ? "docx" : type}`,
+        );
+    } catch {
+        Swal.fire("Download failed!", "Please try again.", "error");
     }
 };
 
@@ -227,6 +271,42 @@ onMounted(() => getData());
                         {{ netTotal }}
                     </div>
                 </div>
+            </div>
+
+            <div class="col-6 col-md-1">
+                <label class="label-class">Bank Total</label>
+                <div class="total-amount">{{ bankTotal }}</div>
+            </div>
+
+            <div class="col-6 col-md-1">
+                <label class="label-class">Cash Total</label>
+                <div class="total-amount">{{ cashTotal }}</div>
+            </div>
+
+            <div class="col-12 col-md-1 ms-auto">
+                <label class="label-class">Download Bank</label>
+                <select
+                    class="form-control border-color selected-option"
+                    v-model="bankFormat"
+                >
+                    <option disabled value="">Select Format</option>
+                    <option value="pdf">PDF</option>
+                    <option value="xlsx">Excel</option>
+                    <option value="word">Word</option>
+                </select>
+            </div>
+
+            <div class="col-12 col-md-1">
+                <label class="label-class">Download Cash</label>
+                <select
+                    class="form-control border-color selected-option"
+                    v-model="cashFormat"
+                >
+                    <option disabled value="">Select Format</option>
+                    <option value="pdf">PDF</option>
+                    <option value="xlsx">Excel</option>
+                    <option value="word">Word</option>
+                </select>
             </div>
 
             <div class="col-6 col-md-1 ms-auto disburse-button">

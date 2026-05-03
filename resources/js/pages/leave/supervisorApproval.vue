@@ -29,8 +29,8 @@ const error = ref(null);
 // Modal and edit state
 const editModal = ref(false);
 const selectedLeave = ref(null);
-const EditLeaveModal = defineAsyncComponent(() =>
-    import("@/pages/leave/component/statusUpdateForm.vue")
+const EditLeaveModal = defineAsyncComponent(
+    () => import("@/pages/leave/component/statusUpdateForm.vue"),
 );
 
 // Helper functions
@@ -151,7 +151,7 @@ const filteredData = computed(() =>
         const statusMatch =
             !selectedStatus.value || item.status == selectedStatus.value;
         return deptMatch && empMatch && typeMatch && statusMatch;
-    })
+    }),
 );
 
 // Initialize selected query from URL
@@ -162,7 +162,7 @@ const setQuerySelection = async () => {
 
     if (route.query.department_name) {
         const dept = department.value.find(
-            (d) => d.Name === route.query.department_name
+            (d) => d.Name === route.query.department_name,
         );
         if (dept) {
             selectedDept.value = dept.id;
@@ -171,7 +171,7 @@ const setQuerySelection = async () => {
 
             if (route.query.full_name) {
                 const emp = employeesByDept.value.find(
-                    (e) => e.Full_Name === route.query.full_name
+                    (e) => e.Full_Name === route.query.full_name,
                 );
                 if (emp) {
                     selectedEmp.value = emp.id;
@@ -474,7 +474,7 @@ onMounted(async () => {
                                                 v-if="l.attachment_url"
                                                 @click.stop="
                                                     openAttachment(
-                                                        l.attachment_url
+                                                        l.attachment_url,
                                                     )
                                                 "
                                                 class="btn btn-info btn-sm mx-1"
@@ -501,7 +501,7 @@ onMounted(async () => {
                                                 @click.stop="
                                                     editLeaveStatus(
                                                         l.leave_id,
-                                                        'Approved (SV)'
+                                                        'Approved (SV)',
                                                     )
                                                 "
                                             >
@@ -522,7 +522,7 @@ onMounted(async () => {
                                                 @click="
                                                     editLeaveStatus(
                                                         l.leave_id,
-                                                        'Rejected'
+                                                        'Rejected',
                                                     )
                                                 "
                                             >

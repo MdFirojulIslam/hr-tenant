@@ -10,16 +10,16 @@ use PhpOffice\PhpSpreadsheet\Style\Alignment;
 class SalaryDisbursementCashExport implements FromArray, WithEvents
 {
   protected $data;
-  protected $title;
-  protected $period;
+  protected $monthName;
+  protected $year;
   protected $subtotal;
   protected $inWords;
 
-  public function __construct($monthName, $year, $period, $subtotal, $inWords)
+  public function __construct($data, $monthName, $year, $subtotal, $inWords)
   {
-    $this->data = $monthName;
-    $this->title = $year;
-    $this->period = $period;
+    $this->data = $data;
+    $this->monthName = $monthName;
+    $this->year = $year;
     $this->subtotal = $subtotal;
     $this->inWords = $inWords;
   }
@@ -29,37 +29,31 @@ class SalaryDisbursementCashExport implements FromArray, WithEvents
     $rows = [];
 
     // ================= HEADER =================
-    $rows[] = ['Date: ' . date('dS F Y')];
-    $rows[] = ['ARTISAN BUSINESS NETWORK BANGLADESH'];
-    $rows[] = ['Subject: ' . $this->title . ' for ' . $this->period];
     $rows[] = ['Salary Month of ' . $this->monthName . ' ' . $this->year];
-    $rows[] = [];
-    $rows[] = ['Dear Sir,'];
-    $rows[] = ['Please arrange to disburse cash salary as follows:'];
-    $rows[] = [];
+    $rows[] = ['ARTISAN BUSINESS NETWORK BANGLADESH'];
+
 
     // ================= TABLE HEADER =================
-    $rows[] = ['SL.No', 'Name', 'Payment Method', 'Amount'];
+    $rows[] = ['SL.No', 'Name', 'Designation', 'Payment Method', 'Amount', 'Signature'];
 
     // ================= DATA =================
     foreach ($this->data as $index => $row) {
       $rows[] = [
         $index + 1,
         $row->full_name,
+        $row->designation,
         'Cash', // fixed payment method
         number_format($row->net_pay, 2),
+        ''
       ];
     }
 
     // ================= TOTAL =================
-    $rows[] = ['', '', 'Total', number_format($this->subtotal, 2)];
+    $rows[] = ['', '', '', 'Total', number_format($this->subtotal, 2), ''];
     $rows[] = [];
-    $rows[] = ['Inwords: ' . $this->inWords . ' Taka Only'];
+    $rows[] = ['Taka: ' . $this->inWords . ' Taka Only'];
     $rows[] = [];
-    $rows[] = ['Yours Sincerely'];
-    $rows[] = [];
-    $rows[] = ['___________________________'];
-    $rows[] = ['Signature & Seal'];
+    $rows[] = ['Recommended by', '', '', '', '', 'Approved by CEO/Managing Director'];
 
     return $rows;
   }
@@ -78,23 +72,23 @@ class SalaryDisbursementCashExport implements FromArray, WithEvents
         $sheet->getColumnDimension('D')->setWidth(15);
 
         // ================= HEADER STYLE =================
-        $sheet->getStyle('A10:D10')->getFont()->setBold(true);
+        $sheet->getStyle('A3:D3')->getFont()->setBold(true);
 
         // ================= ROW CALC =================
-        $dataStart = 11;
+        $dataStart = 4;
         $dataEnd = $dataStart + count($this->data) - 1;
         $totalRow = $dataEnd + 1;
-
+        $totalRowEnd = $totalRow + 1;
         // ================= TOTAL BOLD =================
-        $sheet->getStyle("A{$totalRow}:D{$totalRow}")
+        $sheet->getStyle("A{$totalRowEnd}:D{$totalRowEnd}")
           ->getFont()->setBold(true);
 
         // ================= ALIGNMENT =================
-        $sheet->getStyle("A{$dataStart}:A{$dataEnd}")
+        $sheet->getStyle("A{$dataStart}:A{$totalRow}")
           ->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
 
         $sheet->getStyle("C{$dataStart}:C{$dataEnd}")
-          ->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+          ->getAlignment()->setHorizontal(Alignment::HORIZONTAL_LEFT);
       }
     ];
   }

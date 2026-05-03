@@ -46,30 +46,32 @@ class HelperFunctionController extends Controller
         if ($number < 21) return $words[$number];
 
         if ($number < 100) {
-            $tens = $words[10 * floor($number / 10)];
+            // FIX: Cast floor result to (int)
+            $tens = $words[(int)(10 * floor($number / 10))];
             $units = $number % 10;
             return $units ? $tens . ' ' . $words[$units] : $tens;
         }
 
         if ($number < 1000) {
-            return $words[floor($number / 100)] . ' hundred ' .
+            // FIX: Cast floor result to (int)
+            return $words[(int)floor($number / 100)] . ' hundred ' .
                 self::numberToWords($number % 100);
         }
 
         // THOUSAND
         if ($number < 100000) {
-            return self::numberToWords(floor($number / 1000)) . ' thousand ' .
+            return self::numberToWords((int)floor($number / 1000)) . ' thousand ' .
                 self::numberToWords($number % 1000);
         }
 
-        // LAKH (FIXED ✅)
+        // LAKH
         if ($number < 10000000) {
-            return self::numberToWords(floor($number / 100000)) . ' lakh ' .
+            return self::numberToWords((int)floor($number / 100000)) . ' lac ' .
                 self::numberToWords($number % 100000);
         }
 
         // CRORE
-        return self::numberToWords(floor($number / 10000000)) . ' crore ' .
+        return self::numberToWords((int)floor($number / 10000000)) . ' crore ' .
             self::numberToWords($number % 10000000);
     }
 }
