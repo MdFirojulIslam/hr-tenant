@@ -8,6 +8,7 @@ import "vue-multiselect/dist/vue-multiselect.min.css";
 const store = useStore();
 const user = store.getters.getUser;
 
+// -------------------------
 const department = ref([]);
 const employee = ref([]);
 
@@ -15,8 +16,6 @@ const searchDept = ref("");
 const selectedEmployee = ref(null);
 const selectedEmployeeId = ref(null);
 
-// -------------------------
-// MONTH NAME
 // -------------------------
 const monthNames = [
     "January",
@@ -34,11 +33,8 @@ const monthNames = [
 ];
 
 // -------------------------
-// FORMAT TIME
-// -------------------------
 const formatTime = (timeStr) => {
     if (!timeStr) return "";
-
     const [hour, minute] = timeStr.split(":");
     const date = new Date();
     date.setHours(hour, minute);
@@ -51,91 +47,43 @@ const formatTime = (timeStr) => {
 };
 
 // -------------------------
-// API
-// -------------------------
-const getEmployee = async (deptID) => {
-    if (!deptID) {
-        employee.value = [];
-        return;
-    }
-
-    const res = await api.get(`/adjustment-employees/${deptID}`);
-    employee.value = res.data;
-};
-
-const getData = async () => {
-    const res = await api.get(`/department-list/${user.id}`);
-    department.value = res.data || [];
-};
-
-// -------------------------
-const onDeptChange = async () => {
-    await getEmployee(searchDept.value);
-    selectedEmployee.value = null;
-    selectedEmployeeId.value = null;
-};
-
-const onEmployeeChange = () => {
-    selectedEmployeeId.value = selectedEmployee.value?.id || null;
-    getMonthlyData();
-};
-
-// -------------------------
 const selectedMonth = ref(new Date().getMonth() + 1);
 const selectedYear = ref(new Date().getFullYear());
 
-const attendanceData = ref([]);
+const attendanceData = ref({});
 
 const weekDays = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
 
 // -------------------------
-// API CALL
+// ✅ FIX: employee select handler
+const onEmployeeChange = (val) => {
+    selectedEmployeeId.value = val?.id || null;
+};
+
+// -------------------------
+// ✅ FIX: department change handler
+const onDeptChange = () => {
+    selectedEmployee.value = null;
+    selectedEmployeeId.value = null;
+};
+
 // -------------------------
 const getMonthlyData = async () => {
-    try {
-        const res = await api.get("/calendar-date-report", {
-            params: {
-                month: selectedMonth.value,
-                year: selectedYear.value,
-                employee_id: selectedEmployeeId.value,
-                department_id: searchDept.value,
-            },
-        });
-        console.log("API Response:", res.data);
-        attendanceData.value = res.data.data || [];
-    } catch (err) {
-        console.error(err);
-    }
-};
-
-// -------------------------
-// MAP DATA (Duplicate FIX)
-// -------------------------
-const attendanceMap = computed(() => {
-    const map = {};
-
-    // 1. Put API data into map
-    attendanceData.value.forEach((item) => {
-        if (!item.date) return;
-
-        const day = new Date(item.date).getDate();
-        map[day] = item;
+    const res = await api.get("/calendar-date-report", {
+        params: {
+            month: selectedMonth.value,
+            year: selectedYear.value,
+            employee_id: selectedEmployeeId.value,
+            department_id: searchDept.value,
+        },
     });
 
-    // 2. IMPORTANT: do NOT auto-create Absent here
-    return map;
-});
-
-// -------------------------
-// STATUS LOGIC
-// -------------------------
-const getStatusText = (data) => {
-    if (!data) return "";
-    return data.status;
+    attendanceData.value = res?.data?.data ?? {};
 };
 
 // -------------------------
-// CALENDAR FULL MONTH
+const attendanceMap = computed(() => attendanceData.value || {});
+
 // -------------------------
 const calendarDays = computed(() => {
     const daysInMonth = new Date(
@@ -151,41 +99,32 @@ const calendarDays = computed(() => {
     ).getDay();
 
     const cells = [];
-
-    // 👇 REAL CURRENT DATE (important)
     const today = new Date();
-    const currentYear = today.getFullYear();
-    const currentMonth = today.getMonth() + 1; // JS: 0-based
-    const currentDay = today.getDate();
 
+    // empty cells
     for (let i = 0; i < firstDay; i++) {
         cells.push(null);
     }
 
     for (let d = 1; d <= daysInMonth; d++) {
-        // 🔥 FUTURE DATE CHECK
-        const isFuture =
-            selectedYear.value > currentYear ||
-            (selectedYear.value === currentYear &&
-                selectedMonth.value > currentMonth) ||
-            (selectedYear.value === currentYear &&
-                selectedMonth.value === currentMonth &&
-                d > currentDay);
+        const currentDate = new Date(
+            selectedYear.value,
+            selectedMonth.value - 1,
+            d,
+        );
 
-        // 👉 FUTURE DAYS = COMPLETELY EMPTY
-        if (isFuture) {
-            cells.push({
-                day: d,
-                data: null,
-            });
-            continue;
-        }
+        const isFuture = currentDate > today;
 
-        const data = attendanceMap.value[d];
+        // ✅ IMPORTANT FIX (timezone issue solved)
+        const key = currentDate.toLocaleDateString("en-CA");
+
+        const data = attendanceMap.value[key];
 
         cells.push({
             day: d,
+            dateKey: key,
             data: data || null,
+            isFuture,
         });
     }
 
@@ -193,11 +132,11 @@ const calendarDays = computed(() => {
 });
 
 // -------------------------
-watch([selectedMonth, selectedYear], getMonthlyData);
+watch([selectedMonth, selectedYear, selectedEmployeeId], getMonthlyData);
 
+// -------------------------
 onMounted(() => {
     getMonthlyData();
-    getData();
 });
 </script>
 
@@ -274,6 +213,7 @@ onMounted(() => {
                     {{ d }}
                 </div>
             </div>
+
             <div class="calendar-body">
                 <div
                     v-for="(date, index) in calendarDays"
@@ -282,70 +222,31 @@ onMounted(() => {
                 >
                     <div v-if="date">
                         <div class="date-number">{{ date.day }}</div>
-                        <div v-if="date.data" class="attendance-info">
-                            <div
-                                v-if="date.data.day_name === 'Friday'"
-                                class="status weekend"
-                            >
-                                Weekend
-                            </div>
-                            <div
-                                v-else-if="
-                                    date.data.day_name !== 'Friday' &&
-                                    date.data.status !== 'Absent' &&
-                                    date.data.status !== 'Present'
-                                "
-                                class="status leave"
-                            >
-                                {{ date.data.status }}
-                            </div>
-                            <div
-                                v-else-if="date.data.status === 'Absent'"
-                                class="status absent"
-                            >
-                                Absent
-                            </div>
-                            <div
-                                v-if="date.data.status === 'Present'"
-                                class="time-wrapper"
-                            >
-                                <div class="in-time">
-                                    {{ formatTime(date.data.in_time) }}
-                                </div>
-                                <div class="out-time">
-                                    {{ formatTime(date.data.out_time) }}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <!-- <div v-if="date">
-                        <div class="date-number">{{ date.day }}</div>
 
                         <div v-if="date.data" class="attendance-info">
                             <div
-                                v-if="getStatusText(date.data) === 'Weekend'"
+                                v-if="date.data.type === 'leave'"
+                                class="status leave"
+                            >
+                                {{ date.data.purpose }}
+                            </div>
+
+                            <div
+                                v-else-if="date.data.type === 'holiday'"
+                                class="status holiday"
+                            >
+                                {{ date.data.holiday_name }}
+                            </div>
+
+                            <div
+                                v-else-if="date.data.type === 'weekend'"
                                 class="status weekend"
                             >
                                 Weekend
                             </div>
+
                             <div
-                                v-else-if="
-                                    getStatusText(date.data) === 'On Leave'
-                                "
-                                class="status leave"
-                            >
-                                On Leave
-                            </div>
-                            <div
-                                v-else-if="
-                                    getStatusText(date.data) === 'Absent'
-                                "
-                                class="status absent"
-                            >
-                                Absent
-                            </div>
-                            <div
-                                v-if="date.data.status === 'Present'"
+                                v-else-if="date.data.type === 'present'"
                                 class="time-wrapper"
                             >
                                 <div class="in-time">
@@ -355,11 +256,17 @@ onMounted(() => {
                                     {{ formatTime(date.data.out_time) }}
                                 </div>
                             </div>
-                            <div v-else class="status holiday">
-                                {{ getStatusText(date.data) }}
+
+                            <div
+                                v-else-if="date.data.type === 'absent'"
+                                class="status absent"
+                            >
+                                Absent
                             </div>
+
+                            <div v-else class="status">-</div>
                         </div>
-                    </div> -->
+                    </div>
                 </div>
             </div>
         </div>

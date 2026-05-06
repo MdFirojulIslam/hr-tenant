@@ -19,6 +19,7 @@ use App\Models\holiday;
 use App\Models\leave;
 use App\Models\employee;
 
+use App\Models\official;
 
 class RosterScheduleController extends Controller
 {
@@ -687,147 +688,185 @@ class RosterScheduleController extends Controller
         $month = $request->month;
         $year  = $request->year;
 
-        $startDate = \Carbon\Carbon::createFromDate($year, $month, 1)->startOfMonth();
-        $endDate   = $startDate->copy()->endOfMonth();
+        // $startDate = date('Y-m-01', strtotime("$year-$month-01"));
+        // $endDate   = date('Y-m-t', strtotime("$year-$month-01"));
 
-        // =======================
-        // Employee Info
-        // =======================
-        $employee_info = employee::where('id', $employee_id)
-            ->select(
-                'id as employee_id',
-                'Full_Name as employee_name',
-                'Employee_Id as official_id'
-            )
-            ->first();
+        $startDate = \Carbon\Carbon::parse(date('Y-m-01', strtotime("$year-$month-01")));
+        $endDate   = \Carbon\Carbon::parse(date('Y-m-t', strtotime("$year-$month-01")));
+        $today = \Carbon\Carbon::today();
 
-        if (!$employee_info) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Employee not found'
-            ]);
+        $joblocationInfo = official::where('EID', $employee_id)->value('Job_Location_Id');
+
+        $holidays = holiday::select('from_date', 'to_date', 'holiday_name')
+            ->where('from_date', '<=', $endDate)
+            ->where('to_date', '>=', $startDate)
+            ->get();
+
+        $holidayDates = [];
+
+        foreach ($holidays as $holyday) {
+            $start = \Carbon\Carbon::parse($holyday->from_date)->max($startDate);
+            $end   = \Carbon\Carbon::parse($holyday->to_date)->min($endDate);
+            while ($start->lte($end)) {
+                $date = $start->format('Y-m-d');
+                $holidayDates[$date] = $holyday->holiday_name ?? 'Holiday';
+                $start->addDay();
+            }
         }
 
-        // =======================
-        // Attendance Source Check
-        // =======================
-        $hasAttendanceApp = app_attendance::where('EID', $employee_id)
-            ->where('status', 'in')
-            ->exists();
-
-        // =======================
-        // Attendance (ONLY DIFFERENCE)
-        // =======================
-        if ($hasAttendanceApp) {
-            $attendance = app_attendance::where('EID', $employee_id)
-                ->whereBetween('created_at', [$startDate, $endDate])
-                ->whereIn('status', ['in', 'out'])
-                ->select(
-                    DB::raw('DATE(created_at) as report_date'),
-                    DB::raw("TIME(MIN(CASE WHEN status='in' THEN created_at END)) as in_time"),
-                    DB::raw("TIME(MAX(CASE WHEN status='out' THEN created_at END)) as out_time")
-                )
-                ->groupBy(DB::raw('DATE(created_at)'))
-                ->get()
-                ->keyBy('report_date');
-        } else {
-            $attendance = attendence::where('EID', $employee_id)
-                ->whereBetween('created_at', [$startDate, $endDate])
-                ->whereIn('Status', ['P', 'L'])
-                ->select(
-                    DB::raw('DATE(created_at) as report_date'),
-                    DB::raw('MIN(Time_In) as in_time'),
-                    DB::raw('MAX(Time_Out) as out_time')
-                )
-                ->groupBy(DB::raw('DATE(created_at)'))
-                ->get()
-                ->keyBy('report_date');
-        }
-
-        // =======================
-        // Leaves (Optimized)
-        // =======================
         $leaves = leave::where('employee_id', $employee_id)
             ->where('status', 'Approved')
-            ->where(function ($q) use ($startDate, $endDate) {
-                $q->whereBetween('from_date', [$startDate, $endDate])
-                    ->orWhereBetween('to_date', [$startDate, $endDate]);
-            })
+            ->where('from_date', '>=', $startDate)
+            ->where('to_date', '<=', $endDate)
+            ->select('from_date', 'to_date', 'purpose')
             ->get();
 
         $leaveDates = [];
+
         foreach ($leaves as $leave) {
-            for ($d = \Carbon\Carbon::parse($leave->from_date); $d <= $leave->to_date; $d->addDay()) {
-                $leaveDates[$d->format('Y-m-d')] = 'Leave';
+            $start = \Carbon\Carbon::parse($leave->from_date)->max($startDate);
+            $end   = \Carbon\Carbon::parse($leave->to_date)->min($endDate);
+            while ($start->lte($end)) {
+                $date = $start->format('Y-m-d');
+                $leaveDates[$date] = $leave->purpose ?? 'Leave';
+                $start->addDay();
             }
         }
 
-        // =======================
-        // Holidays (Optimized)
-        // =======================
-        $holidays = holiday::where(function ($q) use ($startDate, $endDate) {
-            $q->whereBetween('from_date', [$startDate, $endDate])
-                ->orWhereBetween('to_date', [$startDate, $endDate]);
-        })->get();
+        if ($joblocationInfo == 1 || $joblocationInfo == 2) {
+            $attendanceRecords = attendence::where('EID', $employee_id)
+                ->whereBetween('created_at', [$startDate, $endDate])
+                ->whereIn('Status', ['P', 'L'])
+                ->selectRaw('DATE(created_at) as date, MIN(Time_In) as in_time, MAX(Time_Out) as out_time')
+                ->groupByRaw('DATE(created_at)')
+                ->get()
+                ->keyBy('date');
 
-        $holidayDates = [];
-        foreach ($holidays as $holiday) {
-            for ($d = \Carbon\Carbon::parse($holiday->from_date); $d <= $holiday->to_date; $d->addDay()) {
-                $holidayDates[$d->format('Y-m-d')] = $holiday->holiday_name;
+            $calendarData = [];
+            for ($date = $startDate->copy(); $date->lte($endDate); $date->addDay()) {
+
+                $day = $date->format('Y-m-d');
+                $dayName = $date->format('l');
+
+                $isFuture = $date->gt($today);
+
+                if (isset($leaveDates[$day])) {
+                    $calendarData[$day] = [
+                        'type' => 'leave',
+                        'purpose' => $leaveDates[$day],
+                        'date' => $day
+                    ];
+                    continue;
+                }
+
+                if (isset($holidayDates[$day])) {
+                    $calendarData[$day] = [
+                        'type' => 'holiday',
+                        'holiday_name' => $holidayDates[$day],
+                        'date' => $day
+                    ];
+                    continue;
+                }
+
+                if ($dayName === 'Friday') {
+                    $calendarData[$day] = [
+                        'type' => 'weekend',
+                        'date' => $day
+                    ];
+                    continue;
+                }
+
+                if (!$isFuture && isset($attendanceRecords[$day])) {
+                    $calendarData[$day] = [
+                        'type' => 'present',
+                        'in_time' => $attendanceRecords[$day]->in_time,
+                        'out_time' => $attendanceRecords[$day]->out_time,
+                        'date' => $day
+                    ];
+                    continue;
+                }
+                if ($isFuture) {
+                    $calendarData[$day] = [
+                        'type' => 'future',
+                        'date' => $day
+                    ];
+                    continue;
+                } else {
+                    $calendarData[$day] = [
+                        'type' => 'absent',
+                        'date' => $day
+                    ];
+                }
             }
-        }
+        } else if ($joblocationInfo == 3) {
+            $attendanceRecords = app_attendance::where('EID', $employee_id)
+                ->whereBetween('created_at', [$startDate, $endDate])
+                ->whereIn('status', ['in', 'out'])
+                ->selectRaw('DATE(created_at) as date, TIME(MIN(CASE WHEN status="in" THEN created_at END)) as in_time, TIME(MAX(CASE WHEN status="out" THEN created_at END)) as out_time')
+                ->groupByRaw('DATE(created_at)')
+                ->get()
+                ->keyBy('date');
 
-        // =======================
-        // Roster
-        // =======================
-        $rosters = roster_schedule::where('employee_id', $employee_id)
-            ->whereNull('Time_in')
-            ->whereNull('Time_out')
-            ->pluck('day_name')
-            ->toArray();
+            $calendarData = [];
+            for ($date = $startDate->copy(); $date->lte($endDate); $date->addDay()) {
 
-        // =======================
-        // Build Calendar
-        // =======================
-        $period = \Carbon\CarbonPeriod::create($startDate, $endDate);
+                $day = $date->format('Y-m-d');
+                $dayName = $date->format('l');
 
-        $finalData = [];
+                $isFuture = $date->gt($today);
 
-        foreach ($period as $date) {
+                if (isset($leaveDates[$day])) {
+                    $calendarData[$day] = [
+                        'type' => 'leave',
+                        'purpose' => $leaveDates[$day],
+                        'date' => $day
+                    ];
+                    continue;
+                }
 
-            $dateStr = $date->format('Y-m-d');
-            $dayName = $date->format('l');
+                if (isset($holidayDates[$day])) {
+                    $calendarData[$day] = [
+                        'type' => 'holiday',
+                        'holiday_name' => $holidayDates[$day],
+                        'date' => $day
+                    ];
+                    continue;
+                }
 
-            $status = 'Absent';
+                if ($dayName === 'Friday') {
+                    $calendarData[$day] = [
+                        'type' => 'weekend',
+                        'date' => $day
+                    ];
+                    continue;
+                }
 
-            if (isset($attendance[$dateStr])) {
-                $status = 'Present';
+                if (!$isFuture && isset($attendanceRecords[$day])) {
+                    $calendarData[$day] = [
+                        'type' => 'present',
+                        'in_time' => $attendanceRecords[$day]->in_time,
+                        'out_time' => $attendanceRecords[$day]->out_time,
+                        'date' => $day
+                    ];
+                    continue;
+                }
+                if ($isFuture) {
+                    $calendarData[$day] = [
+                        'type' => 'future',
+                        'date' => $day
+                    ];
+                    continue;
+                } else {
+                    $calendarData[$day] = [
+                        'type' => 'absent',
+                        'date' => $day
+                    ];
+                }
             }
-
-            if (isset($leaveDates[$dateStr])) {
-                $status = $leaveDates[$dateStr];
-            }
-
-            if (isset($holidayDates[$dateStr])) {
-                $status = $holidayDates[$dateStr];
-            }
-
-            if (in_array($dayName, $rosters)) {
-                $status = 'Off Day';
-            }
-
-            $finalData[] = [
-                'date'      => $dateStr,
-                'day_name'  => $dayName,
-                'in_time'   => $attendance[$dateStr]->in_time ?? null,
-                'out_time'  => $attendance[$dateStr]->out_time ?? null,
-                'status'    => $status
-            ];
         }
         return response()->json([
             'success' => true,
-            'employee_info' => $employee_info,
-            'data' => $finalData
+            'data' => $calendarData
         ]);
     }
 

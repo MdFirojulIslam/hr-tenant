@@ -1190,10 +1190,11 @@ class EmployeeSalaryController extends Controller
     public function getEmployees($dept_id)
     {
         $user_id = Auth::user()->EID;
-        $select_members = employee::where('id', $user_id)
-            ->join('officials', 'officials.Supervisor_Id', '=', 'employees.id')
-            ->select('officials.EID', 'employees.Full_Name')
-            ->first();
+
+        // $select_members = employee::where('id', $user_id)
+        //     ->join('officials', 'officials.Supervisor_Id', '=', 'employees.id')
+        //     ->select('officials.EID', 'employees.Full_Name')
+        //     ->first();
 
         $employee = employee::select('employees.id', 'employees.Full_Name')
             ->join('officials', 'officials.EID', '=', 'employees.id')
@@ -1202,6 +1203,7 @@ class EmployeeSalaryController extends Controller
             ->where('officials.Status', '=', 'N')
             ->orderby('employees.Full_Name', 'asc')
             ->get();
+
 
         if (!$employee) {
             return response()->json(['message' => 'Employee not found'], 404);

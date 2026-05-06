@@ -251,39 +251,26 @@ onMounted(() => getData());
                     v-model="searchQuery"
                 />
             </div>
-
-            <div class="col-6 col-md-1 generate-button">
-                <button
-                    class="btn btn-warning"
-                    @click="generateSalary"
-                    :disabled="isDisbursed"
-                >
-                    Generate Sheet
-                </button>
-            </div>
-
-            <div class="col-6 col-md-2 align-items-center net-total">
-                <div
-                    class="d-flex justify-content-end align-items-center mt-3 text-nowrap"
-                >
-                    <span class="net-total-lable me-2">NET TOTAL :</span>
-                    <div class="total-class border rounded px-3 py-1 fw-bold">
-                        {{ netTotal }}
-                    </div>
+            <div class="col-6 col-md-1 ms-auto">
+                <label class="total-label">Total</label>
+                <div class="total-amount-class">
+                    {{ netTotal }}
                 </div>
             </div>
 
             <div class="col-6 col-md-1">
-                <label class="label-class">Bank Total</label>
-                <div class="total-amount">{{ bankTotal }}</div>
+                <label class="bank-label">Bank</label>
+                <div class="bank-total-amount">{{ bankTotal }}</div>
             </div>
 
             <div class="col-6 col-md-1">
-                <label class="label-class">Cash Total</label>
-                <div class="total-amount">{{ cashTotal }}</div>
+                <label class="cash-label">Cash</label>
+                <div class="cash-total-amount">{{ cashTotal }}</div>
             </div>
+        </div>
 
-            <div class="col-12 col-md-1 ms-auto">
+        <div class="d-flex gap-3 mt-3">
+            <div class="col-12 col-md-1">
                 <label class="label-class">Download Bank</label>
                 <select
                     class="form-control border-color selected-option"
@@ -309,7 +296,7 @@ onMounted(() => getData());
                 </select>
             </div>
 
-            <div class="col-6 col-md-1 ms-auto disburse-button">
+            <div class="col-6 col-md-1 disburse-button lable-margin">
                 <button
                     class="btn w-100"
                     :class="isDisbursed ? 'btn-secondary' : 'btn-success'"
@@ -320,9 +307,18 @@ onMounted(() => getData());
                 </button>
             </div>
 
-            <div class="col-12 col-md-1">
+            <div class="col-12 col-md-1 lable-margin">
                 <button class="btn btn-info w-100" @click="downloadSalary">
                     <i class="fa-solid fa-download me-2"></i> Download
+                </button>
+            </div>
+            <div class="ms-auto generate-button lable-margin">
+                <button
+                    class="btn btn-warning generate-sheet-button"
+                    @click="generateSalary"
+                    :disabled="isDisbursed"
+                >
+                    Generate Sheet
                 </button>
             </div>
         </div>
@@ -420,9 +416,46 @@ onMounted(() => getData());
     font-weight: bold;
 }
 
+.lable-margin {
+    margin-top: 20px;
+}
+
 .label-class {
     font-weight: 600;
     font-size: 13px;
+}
+
+.cash-label,
+.bank-label,
+.total-label {
+    font-weight: 600;
+    font-size: 13px;
+    display: flex;
+    justify-content: center; /* horizontal center */
+    align-items: center;
+}
+
+.total-amount-class,
+.bank-total-amount,
+.cash-total-amount {
+    font-size: 14px;
+    font-weight: 600;
+    background: #10d431b2;
+    padding: 5px 10px;
+    border-radius: 5px;
+    margin-top: 5px;
+
+    display: flex;
+    justify-content: center; /* horizontal center */
+    align-items: center;
+
+    border: 1px solid #000000d5;
+}
+
+.generate-sheet-button {
+    font-size: 14px;
+    border: 1px solid #000000d5;
+    width: 120px;
 }
 
 .table thead th {
