@@ -54,6 +54,11 @@ const attendanceData = ref({});
 
 const weekDays = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
 
+const getData = async () => {
+    const res = await api.get(`/department-list/${user.id}`);
+    department.value = res.data || [];
+};
+
 // -------------------------
 // ✅ FIX: employee select handler
 const onEmployeeChange = (val) => {
@@ -62,9 +67,20 @@ const onEmployeeChange = (val) => {
 
 // -------------------------
 // ✅ FIX: department change handler
-const onDeptChange = () => {
+const onDeptChange = async () => {
+    await getEmployee(searchDept.value);
     selectedEmployee.value = null;
     selectedEmployeeId.value = null;
+};
+
+const getEmployee = async (deptID) => {
+    if (!deptID) {
+        employee.value = [];
+        return;
+    }
+
+    const res = await api.get(`/adjustment-employees/${deptID}`);
+    employee.value = res.data;
 };
 
 // -------------------------
@@ -137,6 +153,7 @@ watch([selectedMonth, selectedYear, selectedEmployeeId], getMonthlyData);
 // -------------------------
 onMounted(() => {
     getMonthlyData();
+    getData();
 });
 </script>
 
