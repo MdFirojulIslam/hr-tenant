@@ -2,11 +2,16 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\app_attendance;
 use App\Models\department;
 use App\Models\leave;
 use App\Models\official;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Http\Request;
+use App\Models\attendence;
+use Illuminate\Support\Facades\App;
+use DateTime;
 
 class DashboardController extends Controller
 {
@@ -234,5 +239,118 @@ class DashboardController extends Controller
         }
 
         return $data;
+    }
+
+    public function departmentList()
+    {
+        $departments = Department::select('id', 'Name')->get();
+        $departments->prepend([
+            'id' => 0,
+            'Name' => 'All Departments'
+        ]);
+        return $departments;
+    }
+
+    public function getAttendanceData(Request $request)
+    {
+        $department = $request->query('department_id');
+        $date = $request->query('date');
+
+        $presentMachineAtt = attendence::whereIn('Status', ['P', 'L'])
+            ->where('Date', $date)
+            ->distinct('EID')
+            ->count('EID');
+
+        $lateMachineEmp = attendence::where('Status', 'L')
+            ->whereDate('Date', $date)
+            ->distinct('EID')
+            ->count('EID');
+
+
+        $presentAppAtt = app_attendance::where('Status', 'In')
+            ->whereDate('created_at', $date)
+            ->count();
+
+
+        $active_employees = official::where('Status', 'N')->count();
+
+        $totalLeaveCount = leave::where('Status', 'Approved')
+            ->whereDate('From_Date', '=', $date)
+            ->count();
+
+        $totalPendingLeaveCount = leave::whereIN('Status', ['Pending', 'Approved (SV)'])
+            ->whereDate('From_Date', '>=', $date)
+            ->whereDate('To_Date', '<=', $date)
+            ->count();
+
+        $appattendanceTime = app_attendance::whereDate('created_at', $date)
+            ->selectRaw('EID,TIME(MAX(CASE WHEN status = "in" THEN created_at END)) as in_time,TIME(MAX(CASE WHEN status = "out" THEN created_at END)) as out_time')
+            ->groupBy('EID')
+            ->get()
+            ->toArray();
+
+        $matchineAttendanceTime = attendence::where('Date', $date)
+            ->selectRaw('EID, MIN(Time_In) as in_time, MAX(Time_Out) as out_time')
+            ->groupBy('EID')
+            ->get()
+            ->toArray();
+        $totalAppHours = 0;
+        $appLate = 0;
+
+        foreach ($appattendanceTime as $key => $time) {
+            $in = new DateTime($time['in_time']);
+            $out = new DateTime($time['out_time']);
+            $lateDeadline = new DateTime('10:15:00');
+            if ($in > $lateDeadline) {
+                $appLate++;
+            }
+            $singleWorkTime = $out->diff($in);
+            $singleEmployeeHours = $singleWorkTime->h + ($singleWorkTime->i / 60);
+            $totalAppHours += $singleEmployeeHours;
+        }
+
+        $totalMachineHours = 0;
+        foreach ($matchineAttendanceTime as $key => $time) {
+            $in = new DateTime($time['in_time']);
+            $out = new DateTime($time['out_time']);
+            $singleWorkTime = $out->diff($in);
+            $singleEmployeeHours = $singleWorkTime->h + ($singleWorkTime->i / 60);
+            $totalMachineHours += $singleEmployeeHours;
+        }
+        $averageAppHours = $presentAppAtt > 0 ? round($totalAppHours / $presentAppAtt, 2) : 0;
+        $averageMachineHours = $presentMachineAtt > 0 ? round($totalMachineHours / $presentMachineAtt, 2) : 0;
+
+
+
+        $totalPresent = $presentMachineAtt + $presentAppAtt;
+        $avgPresent = ($totalPresent / $active_employees) * 100;
+
+        $totalAbsent = $active_employees - $totalPresent;
+        $avgAbsent = ($totalAbsent / $active_employees) * 100;
+
+        $totalLate = $appLate + $lateMachineEmp;
+        $avgLate = ($totalLate / $totalPresent) * 100;
+
+        $avgLeave = ($totalLeaveCount / $active_employees) * 100;
+        $avgPendingLeave = ($totalPendingLeaveCount / $active_employees) * 100;
+
+        $avgWorkHours = ($totalAppHours + $totalMachineHours) / $totalPresent;
+
+
+        $result = [
+            'total_present' => $totalPresent,
+            'avg_present' => round($avgPresent, 2),
+            'total_absent' => $totalAbsent,
+            'avg_absent' => round($avgAbsent, 2),
+            'total_late' => $totalLate,
+            'avg_late' => round($avgLate, 2),
+            'total_leave' => $totalLeaveCount,
+            'avg_leave' => round($avgLeave, 2),
+            'total_pending_leave' => $totalPendingLeaveCount,
+            'avg_pending_leave' => round($avgPendingLeave, 2),
+            'average_work_hours' => round($avgWorkHours, 2),
+        ];
+
+        return $result;
     }
 }

@@ -12,10 +12,85 @@ const dashCount = ref([]);
 const pieSeries = ref([]);
 const pieChartOptions = ref({});
 
+const departmentList = ref([]);
+
+const dateInput = ref(null);
+const selectedDepartment = ref(null);
+const currentDate = ref("");
+const selectedDate = ref("");
+const dashattendanceData = ref({});
+
+const openCalendar = () => {
+    dateInput.value.showPicker();
+};
+
 const initializeChart = async () => {
     const dashCountres = await api.get("/dashboard-count");
     dashCount.value = dashCountres.data;
 };
+
+const setCurrentDate = () => {
+    const today = new Date();
+
+    selectedDate.value = today.toISOString().split("T")[0];
+
+    currentDate.value = today.toLocaleDateString("en-US", {
+        month: "short",
+        day: "2-digit",
+        year: "numeric",
+    });
+};
+
+watch(selectedDate, (newDate) => {
+    if (newDate) {
+        currentDate.value = new Date(newDate).toLocaleDateString("en-US", {
+            month: "short",
+            day: "2-digit",
+            year: "numeric",
+        });
+        getData();
+    }
+});
+
+watch(selectedDepartment, () => {
+    getData();
+});
+
+const getData = async () => {
+    try {
+        const [responseDept, responseAtendanceData] = await Promise.all([
+            api.get("/dashboard-department-list"),
+            api.get("/dashboard-attendance-data", {
+                params: {
+                    date: selectedDate.value,
+                    department_id: selectedDepartment.value
+                        ? selectedDepartment.value.id
+                        : null,
+                },
+            }),
+        ]);
+        departmentList.value = responseDept.data;
+        dashattendanceData.value = responseAtendanceData.data;
+    } catch (error) {
+        console.error("Error fetching dashboard data:", error);
+    }
+};
+
+watch(dashattendanceData, (newVal) => {
+    if (!newVal) return;
+
+    pieSeries.value = [
+        newVal.total_present || 0,
+        newVal.total_absent || 0,
+        newVal.total_late || 0,
+        newVal.total_leave || 0,
+    ];
+
+    pieChartOptions.value = {
+        labels: ["Present", "Absent", "Late", "Leave"],
+        colors: ["#6de975", "#ff7d4c", "#f7b731", "#45aaf2"],
+    };
+});
 
 watch(
     dashCount,
@@ -36,7 +111,10 @@ watch(
     { immediate: true },
 );
 
-onMounted(() => initializeChart());
+onMounted(() => {
+    initializeChart();
+    setCurrentDate();
+});
 </script>
 
 <template>
@@ -69,18 +147,45 @@ onMounted(() => initializeChart());
                                     >
                                         <div class="view-data-date">
                                             <div>Date Range</div>
-                                            <div>May 01- May 2</div>
+                                            <div>{{ currentDate }}</div>
                                         </div>
-                                        <label for="">
+                                        <label
+                                            class="attendance-calender-select"
+                                            @click="openCalendar()"
+                                            style="cursor: pointer"
+                                        >
                                             <i
                                                 class="fa-solid fa-calendar-days"
-                                            ></i
-                                        ></label>
+                                            ></i>
+                                            <input
+                                                type="date"
+                                                ref="dateInput"
+                                                v-model="selectedDate"
+                                                style="
+                                                    opacity: 0;
+                                                    position: absolute;
+                                                    pointer-events: none;
+                                                "
+                                            />
+                                        </label>
                                     </div>
                                 </div>
                             </div>
                             <div class="col-md-3">
-                                <div class="card p-2 d-flex flex-column"></div>
+                                <div class="card p-2 d-flex flex-column">
+                                    <multiselect
+                                        v-model="selectedDepartment"
+                                        :options="departmentList"
+                                        label="Name"
+                                        track-by="id"
+                                        :searchable="true"
+                                        :close-on-select="true"
+                                        :allow-empty="true"
+                                        placeholder="Select
+                                    Department"
+                                        class="mb-2"
+                                    />
+                                </div>
                             </div>
                             <div class="col-md-3">
                                 <div class="card p-2">
@@ -94,14 +199,14 @@ onMounted(() => initializeChart());
                                         ></label>
                                         <div class="view-data-date">
                                             <div>Last Updated</div>
-                                            <div>May 01- May 2</div>
+                                            <div>{{ currentDate }}</div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
                         <div class="row g-2 mb-3">
-                            <div class="col-md-3">
+                            <div class="col-md-2">
                                 <div class="card p-1">
                                     <label
                                         class="d-block text-center mb-1 attendance-card-title"
@@ -119,9 +224,15 @@ onMounted(() => initializeChart());
                                         ></label>
 
                                         <div>
-                                            <div class="card-count">20</div>
+                                            <div class="card-count">
+                                                {{
+                                                    dashattendanceData.total_present
+                                                }}
+                                            </div>
                                             <div class="card-percentage">
-                                                80%
+                                                {{
+                                                    dashattendanceData.avg_present
+                                                }}%
                                             </div>
                                         </div>
                                     </div>
@@ -145,9 +256,15 @@ onMounted(() => initializeChart());
                                         ></label>
 
                                         <div>
-                                            <div class="card-count">20</div>
+                                            <div class="card-count">
+                                                {{
+                                                    dashattendanceData.total_absent
+                                                }}
+                                            </div>
                                             <div class="card-percentage">
-                                                80%
+                                                {{
+                                                    dashattendanceData.avg_absent
+                                                }}%
                                             </div>
                                         </div>
                                     </div>
@@ -169,9 +286,15 @@ onMounted(() => initializeChart());
                                         ></label>
 
                                         <div>
-                                            <div class="card-count">20</div>
+                                            <div class="card-count">
+                                                {{
+                                                    dashattendanceData.total_late
+                                                }}
+                                            </div>
                                             <div class="card-percentage">
-                                                80%
+                                                {{
+                                                    dashattendanceData.avg_late
+                                                }}%
                                             </div>
                                         </div>
                                     </div>
@@ -194,16 +317,52 @@ onMounted(() => initializeChart());
                                         ></label>
 
                                         <div>
-                                            <div class="card-count">20</div>
+                                            <div class="card-count">
+                                                {{
+                                                    dashattendanceData.total_leave
+                                                }}
+                                            </div>
                                             <div class="card-percentage">
-                                                80%
+                                                {{
+                                                    dashattendanceData.avg_leave
+                                                }}%
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="card p-1">
+                                    <label
+                                        class="d-block text-center mb-1 attendance-card-title"
+                                    >
+                                        PEN LEAVE
+                                    </label>
+
+                                    <div
+                                        class="d-flex justify-content-center align-items-center gap-4"
+                                    >
+                                        <label class="icon-design"
+                                            ><i class="fa-solid fa-umbrella"></i
+                                        ></label>
+
+                                        <div>
+                                            <div class="card-count">
+                                                {{
+                                                    dashattendanceData.total_pending_leave
+                                                }}
+                                            </div>
+                                            <div class="card-percentage">
+                                                {{
+                                                    dashattendanceData.avg_pending_leave
+                                                }}%
                                             </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
-                            <div class="col-md-3">
+                            <div class="col-md-2">
                                 <div class="card p-1">
                                     <label
                                         class="d-block text-center mb-1 attendance-card-title"
@@ -221,7 +380,11 @@ onMounted(() => initializeChart());
                                         ></label>
 
                                         <div>
-                                            <div class="card-count">20</div>
+                                            <div class="card-count">
+                                                {{
+                                                    dashattendanceData.average_work_hours
+                                                }}
+                                            </div>
                                             <div class="card-percentage">
                                                 Hours
                                             </div>
@@ -260,7 +423,13 @@ onMounted(() => initializeChart());
                                                     Present
                                                 </div>
                                                 <div class="summary-name">
-                                                    - 20 (80%)
+                                                    -
+                                                    {{
+                                                        dashattendanceData.total_present
+                                                    }}
+                                                    ({{
+                                                        dashattendanceData.avg_present
+                                                    }}%)
                                                 </div>
                                             </li>
 
@@ -271,7 +440,13 @@ onMounted(() => initializeChart());
                                                     Absent
                                                 </div>
                                                 <div class="summary-name">
-                                                    - 20 (80%)
+                                                    -
+                                                    {{
+                                                        dashattendanceData.total_absent
+                                                    }}
+                                                    ({{
+                                                        dashattendanceData.avg_absent
+                                                    }}%)
                                                 </div>
                                             </li>
 
@@ -282,7 +457,13 @@ onMounted(() => initializeChart());
                                                     Late
                                                 </div>
                                                 <div class="summary-name">
-                                                    - 20 (80%)
+                                                    -
+                                                    {{
+                                                        dashattendanceData.total_late
+                                                    }}
+                                                    ({{
+                                                        dashattendanceData.avg_late
+                                                    }}%)
                                                 </div>
                                             </li>
 
@@ -293,7 +474,13 @@ onMounted(() => initializeChart());
                                                     Leave
                                                 </div>
                                                 <div class="summary-name">
-                                                    - 20 (80%)
+                                                    -
+                                                    {{
+                                                        dashattendanceData.total_leave
+                                                    }}
+                                                    ({{
+                                                        dashattendanceData.avg_leave
+                                                    }}%)
                                                 </div>
                                             </li>
                                         </div>
@@ -464,6 +651,10 @@ onMounted(() => initializeChart());
 .fa-calendar-days {
     font-size: 25px;
     color: #515251;
+}
+
+.fa-calendar-days:hover {
+    color: #c20606;
 }
 
 .view-data-date {
