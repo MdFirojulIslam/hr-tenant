@@ -1,6 +1,8 @@
 <?php
 
+
 namespace App\Http\Controllers;
+
 
 use App\Models\app_attendance;
 use App\Models\department;
@@ -10,8 +12,10 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use App\Models\attendence;
+use App\Models\holiday;
 use Illuminate\Support\Facades\App;
 use DateTime;
+
 
 class DashboardController extends Controller
 {
@@ -23,6 +27,7 @@ class DashboardController extends Controller
         $pendingLeave = leave::where('Status', 'Pending')->whereYear('From_Date', $currentYear)->count();
         $employee_inact = official::where('Status', 'Y')->count();
 
+
         $deptWiseLeave = $this->deptWiseLeave();
         $deptWiseEmp = $this->deptWiseEmp();
         $averageAge = $this->averageAge();
@@ -32,6 +37,7 @@ class DashboardController extends Controller
         $expenseDate = $this->getUsersExpense();
         $genderData = $this->getGenderDiversity();
         $getMonthlyAttendanceChart = $this->getMonthlyAttendanceChart();
+
 
         return [
             'department' => $department,
@@ -50,6 +56,7 @@ class DashboardController extends Controller
         ];
     }
 
+
     public function deptWiseLeave()
     {
         $deptWiseLeave = leave::select('departments.Name as department_name', DB::raw('count(leaves.id) as leave_count'))
@@ -59,8 +66,10 @@ class DashboardController extends Controller
             ->groupBy('departments.id', 'departments.name')
             ->get();
 
+
         return $deptWiseLeave;
     }
+
 
     public function deptWiseEmp()
     {
@@ -70,8 +79,10 @@ class DashboardController extends Controller
             ->where('officials.Status', 'N')
             ->get();
 
+
         return $deptWiseEmp;
     }
+
 
     public function averageAge()
     {
@@ -82,10 +93,13 @@ class DashboardController extends Controller
             ->selectRaw('AVG(TIMESTAMPDIFF(YEAR, employees.DOB, CURDATE())) as average_age')
             ->value('average_age');
 
+
         $averageAge = round($averageAge);
+
 
         return $averageAge;
     }
+
 
     public function divisionWiseEmpCount()
     {
@@ -95,8 +109,10 @@ class DashboardController extends Controller
             ->where('officials.Status', 'N')
             ->get();
 
+
         return $divisionWiseEmpCount;
     }
+
 
     public function averageTenure()
     {
@@ -107,23 +123,29 @@ class DashboardController extends Controller
             ->selectRaw('AVG(TIMESTAMPDIFF(MONTH, officials.DOJ, CURDATE()) / 12) as avg_years')
             ->value('avg_years');
 
+
         // Optional: round the result
         $averageTenure = round($averageTenure, 2);
 
+
         return $averageTenure;
     }
+
 
     public function getTurnoverData()
     {
         $turnoverData = [];
         $currentYear = now()->year;
 
+
         for ($year = 2023; $year <= $currentYear; $year++) {
             $monthlyCounts = [];
+
 
             for ($month = 1; $month <= 12; $month++) {
                 $startOfMonth = Carbon::create($year, $month, 1)->startOfMonth()->toDateString();
                 $endOfMonth = Carbon::create($year, $month, 1)->endOfMonth()->toDateString();
+
 
                 $count = DB::table('employees')
                     ->join('officials', 'officials.EID', '=', 'employees.id')
@@ -134,19 +156,24 @@ class DashboardController extends Controller
                     })
                     ->count();
 
+
                 $monthlyCounts[] = $count;
             }
 
+
             $averageMonthlyHeadcount = count($monthlyCounts) > 0 ? round(array_sum($monthlyCounts) / count($monthlyCounts), 2) : 0;
+
 
             $leftCount = DB::table('employees')
                 ->join('officials', 'officials.EID', '=', 'employees.id')
                 ->whereYear('DOL', $year)
                 ->count();
 
+
             $turnoverRate = $averageMonthlyHeadcount > 0
                 ? round(($leftCount / $averageMonthlyHeadcount) * 100, 2)
                 : 0;
+
 
             $turnoverData[] = [
                 'year' => $year,
@@ -159,12 +186,16 @@ class DashboardController extends Controller
     }
 
 
+
+
     //TADA TOTAL VALUE MONTH WISE
     public function getUsersExpense()
     {
         DB::statement("SET SQL_MODE=''");
 
+
         $year = now()->year;
+
 
         $expenses = DB::table('emplooyee_expenses')
             ->selectRaw('MONTH(date) as month, SUM(Amount) as total_expense')
@@ -173,6 +204,7 @@ class DashboardController extends Controller
             ->groupBy(DB::raw('MONTH(date)'))
             ->orderBy('month')
             ->get();
+
 
         // Format results with month names (optional)
         $formattedExpenses = $expenses->map(function ($item) {
@@ -184,6 +216,7 @@ class DashboardController extends Controller
         return $formattedExpenses;
     }
 
+
     public function getGenderDiversity()
     {
         $genderCounts = DB::table('employees')
@@ -194,7 +227,9 @@ class DashboardController extends Controller
             ->groupBy('employees.Gender')
             ->pluck('count', 'Gender');
 
+
         $total = $genderCounts->sum();
+
 
         $genderRatio = $genderCounts->map(function ($count) use ($total) {
             return round(($count / $total) * 100, 2); // Percentage
@@ -203,10 +238,13 @@ class DashboardController extends Controller
     }
 
 
+
+
     public function getMonthlyAttendanceChart()
     {
         $startDate = Carbon::now()->startOfYear(); // Jan 1
         $endDate = Carbon::now()->endOfYear();     // Dec 31
+
 
         $monthlyData = DB::table('attendences')
             ->selectRaw('MONTH(attendences.Date) as month, attendences.Status, COUNT(*) as count')
@@ -218,6 +256,7 @@ class DashboardController extends Controller
             ->orderBy('month')
             ->get();
 
+
         // Initialize data
         $data = [
             'months' => [],
@@ -225,6 +264,7 @@ class DashboardController extends Controller
             'absent' => [],
             'leave' => [],
         ];
+
 
         foreach ($monthlyData as $row) {
             $month = (int) $row->month;
@@ -238,8 +278,10 @@ class DashboardController extends Controller
             }
         }
 
+
         return $data;
     }
+
 
     public function departmentList()
     {
@@ -251,51 +293,78 @@ class DashboardController extends Controller
         return $departments;
     }
 
-    public function getAttendanceData(Request $request)
+
+    public function departmentFilter(Request $request)
     {
         $department = $request->query('department_id');
         $date = $request->query('date');
 
+
+        $employessDepartmentWise = official::where('Department_Id', $department)
+            ->where('Status', 'N')
+            ->select('EID')
+            ->get()
+            ->toArray();
+
+
         $presentMachineAtt = attendence::whereIn('Status', ['P', 'L'])
-            ->where('Date', $date)
+            ->whereDate('Date', $date)
+            ->whereIn('EID', $employessDepartmentWise)
             ->distinct('EID')
             ->count('EID');
 
+
         $lateMachineEmp = attendence::where('Status', 'L')
             ->whereDate('Date', $date)
+            ->whereIn('EID', $employessDepartmentWise)
             ->distinct('EID')
             ->count('EID');
 
 
         $presentAppAtt = app_attendance::where('Status', 'In')
+            ->whereIn('EID', $employessDepartmentWise)
             ->whereDate('created_at', $date)
             ->count();
 
 
-        $active_employees = official::where('Status', 'N')->count();
-
-        $totalLeaveCount = leave::where('Status', 'Approved')
-            ->whereDate('From_Date', '=', $date)
+        $active_employees = official::where('Status', 'N')
+            ->whereIn('EID', $employessDepartmentWise)
             ->count();
 
-        $totalPendingLeaveCount = leave::whereIN('Status', ['Pending', 'Approved (SV)'])
-            ->whereDate('From_Date', '>=', $date)
-            ->whereDate('To_Date', '<=', $date)
+        $totalLeaveCount = leave::where('status', 'Approved')
+            ->whereDate('from_date', '>=', $date)
+            ->whereDate('to_date', '<=', $date)
+            ->whereIn('employee_id', $employessDepartmentWise)
             ->count();
+
+
+        // $totalPendingLeaveCount = leave::whereIN('status', ['Pending', 'Approved (SV)'])
+        //     ->whereDate('from_date', '>=', $date)
+        //     ->whereDate('to_date', '<=', $date)
+        //     ->whereIn('employee_id', $employessDepartmentWise)
+        //     ->count();
+
+        // $inLeave = $totalLeaveCount + $totalPendingLeaveCount;
+
 
         $appattendanceTime = app_attendance::whereDate('created_at', $date)
+            ->whereIn('EID', $employessDepartmentWise)
             ->selectRaw('EID,TIME(MAX(CASE WHEN status = "in" THEN created_at END)) as in_time,TIME(MAX(CASE WHEN status = "out" THEN created_at END)) as out_time')
             ->groupBy('EID')
             ->get()
             ->toArray();
 
-        $matchineAttendanceTime = attendence::where('Date', $date)
+
+        $matchineAttendanceTime = attendence::whereDate('Date', $date)
+            ->whereIn('EID', $employessDepartmentWise)
             ->selectRaw('EID, MIN(Time_In) as in_time, MAX(Time_Out) as out_time')
             ->groupBy('EID')
             ->get()
             ->toArray();
+
         $totalAppHours = 0;
         $appLate = 0;
+
 
         foreach ($appattendanceTime as $key => $time) {
             $in = new DateTime($time['in_time']);
@@ -308,6 +377,7 @@ class DashboardController extends Controller
             $singleEmployeeHours = $singleWorkTime->h + ($singleWorkTime->i / 60);
             $totalAppHours += $singleEmployeeHours;
         }
+
 
         $totalMachineHours = 0;
         foreach ($matchineAttendanceTime as $key => $time) {
@@ -323,18 +393,137 @@ class DashboardController extends Controller
 
 
         $totalPresent = $presentMachineAtt + $presentAppAtt;
-        $avgPresent = ($totalPresent / $active_employees) * 100;
+        $avgPresent = $active_employees > 0 ? ($totalPresent / $active_employees) * 100 : 0;
 
-        $totalAbsent = $active_employees - $totalPresent;
-        $avgAbsent = ($totalAbsent / $active_employees) * 100;
+
+        $totalAbsent = $active_employees - ($totalPresent + $totalLeaveCount);
+        $avgAbsent = $active_employees > 0 ? ($totalAbsent / $active_employees) * 100 : 0;
+
 
         $totalLate = $appLate + $lateMachineEmp;
-        $avgLate = ($totalLate / $totalPresent) * 100;
+        $avgLate = $totalPresent > 0 ? ($totalLate / $totalPresent) * 100 : 0;
 
-        $avgLeave = ($totalLeaveCount / $active_employees) * 100;
-        $avgPendingLeave = ($totalPendingLeaveCount / $active_employees) * 100;
 
-        $avgWorkHours = ($totalAppHours + $totalMachineHours) / $totalPresent;
+        $avgWorkHours = $totalPresent > 0 ? ($totalAppHours + $totalMachineHours) / $totalPresent : 0;
+
+
+        $result = [
+            'total_present' => $totalPresent,
+            'avg_present' => round($avgPresent, 2),
+            'total_absent' => $totalAbsent,
+            'avg_absent' => round($avgAbsent, 2),
+            'total_late' => $totalLate,
+            'avg_late' => round($avgLate, 2),
+            'average_work_hours' => round($avgWorkHours, 2),
+        ];
+
+        return $result;
+    }
+
+
+    public function getAttendanceData(Request $request)
+    {
+        $department = $request->query('department_id');
+        $date = $request->query('date');
+
+
+        $presentMachineAtt = attendence::whereIn('Status', ['P', 'L'])
+            ->whereDate('Date', $date)
+            ->distinct('EID')
+            ->count('EID');
+
+
+        $lateMachineEmp = attendence::where('Status', 'L')
+            ->whereDate('Date', $date)
+            ->distinct('EID')
+            ->count('EID');
+
+        $presentAppAtt = app_attendance::where('Status', 'In')
+            ->whereDate('created_at', $date)
+            ->count();
+
+
+        $active_employees = official::where('Status', 'N')->count();
+
+
+        $totalLeaveCount = leave::where('status', 'Approved')
+            ->whereDate('from_date', '>=', $date)
+            ->whereDate('to_date', '<=', $date)
+            ->count();
+
+
+        // $totalPendingLeaveCount = leave::whereIN('status', ['Pending', 'Approved (SV)'])
+        //     ->whereDate('from_date', '>=', $date)
+        //     ->whereDate('to_date', '<=', $date)
+        //     ->count();
+
+        // $inLeave = $totalLeaveCount + $totalPendingLeaveCount;
+
+
+        $appattendanceTime = app_attendance::whereDate('created_at', $date)
+            ->selectRaw('EID,TIME(MAX(CASE WHEN status = "in" THEN created_at END)) as in_time,TIME(MAX(CASE WHEN status = "out" THEN created_at END)) as out_time')
+            ->groupBy('EID')
+            ->get()
+            ->toArray();
+
+
+        $matchineAttendanceTime = attendence::whereDate('Date', $date)
+            ->selectRaw('EID, MIN(Time_In) as in_time, MAX(Time_Out) as out_time')
+            ->groupBy('EID')
+            ->get()
+            ->toArray();
+        $totalAppHours = 0;
+        $appLate = 0;
+
+
+        foreach ($appattendanceTime as $key => $time) {
+            $in = new DateTime($time['in_time']);
+            $out = new DateTime($time['out_time']);
+            $lateDeadline = new DateTime('10:15:00');
+            if ($in > $lateDeadline) {
+                $appLate++;
+            }
+            $singleWorkTime = $out->diff($in);
+            $singleEmployeeHours = $singleWorkTime->h + ($singleWorkTime->i / 60);
+            $totalAppHours += $singleEmployeeHours;
+        }
+
+
+        $totalMachineHours = 0;
+        foreach ($matchineAttendanceTime as $key => $time) {
+            $in = new DateTime($time['in_time']);
+            $out = new DateTime($time['out_time']);
+            $singleWorkTime = $out->diff($in);
+            $singleEmployeeHours = $singleWorkTime->h + ($singleWorkTime->i / 60);
+            $totalMachineHours += $singleEmployeeHours;
+        }
+        $averageAppHours = $presentAppAtt > 0 ? round($totalAppHours / $presentAppAtt, 2) : 0;
+        $averageMachineHours = $presentMachineAtt > 0 ? round($totalMachineHours / $presentMachineAtt, 2) : 0;
+
+
+
+
+
+
+        $totalPresent = $presentMachineAtt + $presentAppAtt;
+        $avgPresent = $active_employees > 0 ? ($totalPresent / $active_employees) * 100 : 0;
+
+
+        $totalAbsent = $active_employees - ($totalPresent + $totalLeaveCount);
+        $avgAbsent = $active_employees > 0 ? ($totalAbsent / $active_employees) * 100 : 0;
+
+
+        $totalLate = $appLate + $lateMachineEmp;
+        $avgLate = $totalPresent > 0 ? ($totalLate / $totalPresent) * 100 : 0;
+
+
+        $avgLeave = $active_employees > 0 ? ($totalLeaveCount / $active_employees) * 100 : 0;
+        // $avgPendingLeave = $active_employees > 0 ? ($totalPendingLeaveCount / $active_employees) * 100 : 0;
+
+
+        $avgWorkHours = $totalPresent > 0 ? ($totalAppHours + $totalMachineHours) / $totalPresent : 0;
+
+
 
 
         $result = [
@@ -346,11 +535,53 @@ class DashboardController extends Controller
             'avg_late' => round($avgLate, 2),
             'total_leave' => $totalLeaveCount,
             'avg_leave' => round($avgLeave, 2),
-            'total_pending_leave' => $totalPendingLeaveCount,
-            'avg_pending_leave' => round($avgPendingLeave, 2),
+            // 'total_pending_leave' => $totalPendingLeaveCount,
+            // 'avg_pending_leave' => round($avgPendingLeave, 2),
             'average_work_hours' => round($avgWorkHours, 2),
         ];
 
         return $result;
+    }
+
+    public function getAttendanceTableData(Request $request)
+    {
+        $currentYear = now()->year;
+        $currentDate = now()->toDateString();
+
+        $firstDate = Carbon::now()->startOfYear();
+
+        $fridayCount = Carbon::now()->startOfYear()->diffInWeeks(Carbon::now()->addDay()) + 1;
+
+        $holidays = holiday::where('from_date', '>=', $firstDate)
+            ->where('to_date', '<=', $currentDate)
+            ->sum('duration');
+
+        $totalAppAttendance = app_attendance::whereDate('created_at', '>=', $firstDate)
+            ->where('Status', 'in')
+            ->groupBy('EID')
+            ->count('EID');
+
+
+        $basic_info = official::where('Status', 'N')
+            ->join('departments', 'officials.Department_Id', '=', 'departments.id')
+            ->join('employees', 'officials.EID', '=', 'employees.id')
+            ->select(
+                'employees.id as employee_id',
+                'employees.Employee_Id as employee_code',
+                'employees.Full_Name as emp_name',
+                'departments.Name as department_name',
+                'officials.DOJ as date_of_joining'
+            )
+            ->get();
+
+
+
+
+        $app_attendance = app_attendance::where('Status', 'In')
+            ->whereYear('created_at', $currentYear)
+            ->selectRaw('EID, COUNT(*) as present_count')
+            ->groupBy('EID')
+            ->pluck('present_count', 'EID');
+        return $basic_info;
     }
 }

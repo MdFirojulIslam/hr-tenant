@@ -735,10 +735,10 @@ class RosterScheduleController extends Controller
 
         if ($joblocationInfo == 1 || $joblocationInfo == 2) {
             $attendanceRecords = attendence::where('EID', $employee_id)
-                ->whereBetween('created_at', [$startDate, $endDate])
+                ->whereBetween('Date', [$startDate, $endDate])
                 ->whereIn('Status', ['P', 'L'])
-                ->selectRaw('DATE(created_at) as date, MIN(Time_In) as in_time, MAX(Time_Out) as out_time')
-                ->groupByRaw('DATE(created_at)')
+                ->selectRaw('DATE  as date, MIN(Time_In) as in_time, MAX(Time_Out) as out_time')
+                ->groupByRaw('date')
                 ->get()
                 ->keyBy('date');
 
