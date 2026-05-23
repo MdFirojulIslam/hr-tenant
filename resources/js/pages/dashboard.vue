@@ -184,54 +184,42 @@ onMounted(() => {
                 <h2 class="dashboard-title mb-0">Dashboard</h2>
             </div>
 
-            <!-- <ol class="breadcrumb mb-4">
-                <li class="breadcrumb-item active">Dashboard</li>
-            </ol> -->
-
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="card p-2 mb-4">
-                        <div class="row mb-2">
-                            <div class="col-md-4">
-                                <div class="card p-2">
-                                    <h2 class="text-center attendance-title">
-                                        ATTENDANCE
-                                    </h2>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="card p-2">
-                                    <div
-                                        class="d-flex justify-content-between align-items-center"
-                                    >
-                                        <div class="view-data-date">
-                                            <div>Date Range</div>
-                                            <div>{{ currentDate }}</div>
-                                        </div>
-                                        <label
-                                            class="attendance-calender-select"
-                                            @click="openCalendar()"
-                                            style="cursor: pointer"
-                                        >
-                                            <i
-                                                class="fa-solid fa-calendar-days"
-                                            ></i>
-                                            <input
-                                                type="date"
-                                                ref="dateInput"
-                                                v-model="selectedDate"
-                                                style="
-                                                    opacity: 0;
-                                                    position: absolute;
-                                                    pointer-events: none;
-                                                "
-                                            />
-                                        </label>
+            <div class="row dashboard-background mb-3">
+                <div col-md-12>
+                    <div class="card p-2">
+                        <div class="d-flex gap-3">
+                            <div class="col-md-3 card p-2">
+                                <div
+                                    class="d-flex justify-content-between align-items-center"
+                                >
+                                    <div class="view-data-date">
+                                        <div>Date Range</div>
+                                        <div>{{ currentDate }}</div>
                                     </div>
+                                    <label
+                                        class="attendance-calender-select"
+                                        @click="openCalendar()"
+                                        style="cursor: pointer"
+                                    >
+                                        <i
+                                            class="fa-solid fa-calendar-days"
+                                        ></i>
+                                        <input
+                                            type="date"
+                                            ref="dateInput"
+                                            v-model="selectedDate"
+                                            style="
+                                                opacity: 0;
+                                                position: absolute;
+                                                pointer-events: none;
+                                            "
+                                        />
+                                    </label>
                                 </div>
                             </div>
-                            <div class="col-md-5">
-                                <div class="card d-flex flex-column">
+
+                            <div class="col-md-3">
+                                <div class="card p-1">
                                     <multiselect
                                         v-model="selectedDepartment"
                                         :options="departmentList"
@@ -246,319 +234,221 @@ onMounted(() => {
                                     />
                                 </div>
                             </div>
-                            <!-- <div class="col-md-3">
-                                <div class="card p-2">
-                                    <div class="d-flex justify-content-center align-items-center gap-4">
-                                        <label for=""><i class="fa-solid fa-arrow-rotate-right"></i></label>
-                                        <div class="view-data-date">
-                                            <div>Last Updated</div>
-                                            <div>{{ currentDate }}</div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div> -->
                         </div>
-                        <div class="row g-2 mb-3">
-                            <div class="col-md-3">
-                                <div class="card p-1">
-                                    <label
-                                        class="d-block text-center mb-1 attendance-card-title"
-                                    >
-                                        PRESENT
-                                    </label>
+                    </div>
+                </div>
 
-                                    <div
-                                        class="d-flex justify-content-center align-items-center gap-4"
-                                    >
-                                        <label class="icon-design"
-                                            ><i
-                                                class="fa-solid fa-circle-check"
-                                            ></i
-                                        ></label>
-
-                                        <div>
-                                            <div class="card-count">
-                                                {{
-                                                    activeAttendanceData.total_present
-                                                }}
-                                            </div>
-                                            <div class="card-percentage">
-                                                {{
-                                                    activeAttendanceData.avg_present
-                                                }}%
-                                            </div>
-                                        </div>
+                <div class="col-md-12 mt-2">
+                    <div class="card-grid gap-2">
+                        <div class="card-design">
+                            <div class="p-1">
+                                <div class="height-define">
+                                    <div class="grid-data">
+                                        {{
+                                            activeAttendanceData.active_employee
+                                        }}
+                                    </div>
+                                    <div class="grid-data">
+                                        {{
+                                            activeAttendanceData.gulshan_office_total_employee
+                                        }}
+                                        /<span class="lob-location-status"
+                                            >G</span
+                                        >
+                                        {{
+                                            activeAttendanceData.warehouse_total_employee
+                                        }}
+                                        /<span class="lob-location-status"
+                                            >W</span
+                                        >
+                                        {{
+                                            activeAttendanceData.field_force_total_employee
+                                        }}
+                                        /<span class="lob-location-status"
+                                            >F</span
+                                        >
                                     </div>
                                 </div>
+
+                                <label class="card-title"
+                                    >Total Employees
+                                </label>
                             </div>
-                            <div class="col-md-3">
-                                <div class="card p-1">
-                                    <label
-                                        class="d-block text-center mb-1 attendance-card-title"
-                                    >
-                                        ABSENT
-                                    </label>
-
-                                    <div
-                                        class="d-flex justify-content-center align-items-center gap-4"
-                                    >
-                                        <label class="icon-design"
-                                            ><i
-                                                class="fa-solid fa-user-xmark"
-                                            ></i
-                                        ></label>
-
-                                        <div>
-                                            <div class="card-count">
-                                                {{
-                                                    activeAttendanceData.total_absent
-                                                }}
-                                            </div>
-                                            <div class="card-percentage">
-                                                {{
-                                                    activeAttendanceData.avg_absent
-                                                }}%
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="card p-1">
-                                    <label
-                                        class="d-block text-center mb-1 attendance-card-title"
-                                    >
-                                        LATE
-                                    </label>
-
-                                    <div
-                                        class="d-flex justify-content-center align-items-center gap-4"
-                                    >
-                                        <label class="icon-design"
-                                            ><i class="fa-regular fa-clock"></i
-                                        ></label>
-
-                                        <div>
-                                            <div class="card-count">
-                                                {{
-                                                    activeAttendanceData.total_late
-                                                }}
-                                            </div>
-                                            <div class="card-percentage">
-                                                {{
-                                                    activeAttendanceData.avg_late
-                                                }}%
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="card p-1">
-                                    <label
-                                        class="d-block text-center mb-1 attendance-card-title"
-                                    >
-                                        AVG HOURS
-                                    </label>
-
-                                    <div
-                                        class="d-flex justify-content-center align-items-center gap-4"
-                                    >
-                                        <label class="icon-design"
-                                            ><i
-                                                class="fa-regular fa-alarm-clock"
-                                            ></i
-                                        ></label>
-
-                                        <div>
-                                            <div class="card-count">
-                                                {{
-                                                    activeAttendanceData.average_work_hours
-                                                }}
-                                            </div>
-                                            <div class="card-percentage">
-                                                Hours
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- <div class="col-md-3">
-                                <div class="card p-1">
-                                    <label class="d-block text-center mb-1 attendance-card-title">
-                                        ON LEAVE
-                                    </label>
-
-
-                                    <div class="d-flex justify-content-center align-items-center gap-4">
-                                        <label class="icon-design"><i class="fa-solid fa-umbrella"></i></label>
-
-
-                                        <div>
-                                            <div class="card-count">
-                                                {{
-                                                    activeAttendanceData.total_leave
-                                                }}
-                                            </div>
-                                            <div class="card-percentage">
-                                                {{
-                                                    activeAttendanceData.avg_leave
-                                                }}%
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div> -->
-                            <!-- <div class="col-md-3">
-                                <div class="card p-1">
-                                    <label class="d-block text-center mb-1 attendance-card-title">
-                                        PEN LEAVE
-                                    </label>
-
-
-                                    <div class="d-flex justify-content-center align-items-center gap-4">
-                                        <label class="icon-design"><i class="fa-solid fa-umbrella"></i></label>
-
-
-                                        <div>
-                                            <div class="card-count">
-                                                {{
-                                                    activeAttendanceData.total_pending_leave
-                                                }}
-                                            </div>
-                                            <div class="card-percentage">
-                                                {{
-                                                    activeAttendanceData.avg_pending_leave
-                                                }}%
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div> -->
                         </div>
-                        <div
-                            class="d-flex justify-content-space-between gap-2 mb-2"
-                        >
+                        <div class="card-design">
+                            <div class="p-1">
+                                <div class="height-define">
+                                    <div class="grid-data">
+                                        P -
+                                        {{ activeAttendanceData.total_present }}
+                                        ({{ activeAttendanceData.avg_present
+                                        }}<span>%</span>)
+                                    </div>
+                                    <div class="grid-data">
+                                        A -
+                                        {{ activeAttendanceData.total_absent }}
+                                        ({{ activeAttendanceData.avg_absent
+                                        }}<span>%</span>)
+                                    </div>
+                                </div>
+                                <label class="card-title"> Attendance </label>
+                            </div>
+                        </div>
+                        <div class="card-design">
+                            <div class="p-1">
+                                <div class="height-define">
+                                    <div class="grid-data">
+                                        Late -
+                                        {{ activeAttendanceData.total_late }}
+                                        ({{ activeAttendanceData.avg_late }}%)
+                                    </div>
+                                    <div class="grid-data">
+                                        {{
+                                            activeAttendanceData.average_work_hours
+                                        }}
+                                        Hours
+                                    </div>
+                                </div>
+                                <label class="card-title">
+                                    Average Working hours
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- <div class="card-design">
+                            <div class="p-1">
+                                <div class="card-values"> {{ dashCount.employee_inact }}
+                                </div>
+                                <label for="">Inactive Employees</label>
+                            </div>
+                        </div> -->
+
+                        <div class="card-design">
+                            <div class="p-1">
+                                <div class="height-define">
+                                    <div class="grid-data">
+                                        Approved -
+                                        {{ activeAttendanceData.total_leave }}
+                                    </div>
+                                    <div class="grid-data">
+                                        Pending -
+                                        {{
+                                            activeAttendanceData.total_pending_leave
+                                                ? activeAttendanceData.total_pending_leave
+                                                : 0
+                                        }}
+                                    </div>
+                                </div>
+                                <label class="card-title"> Leave</label>
+                            </div>
+                        </div>
+
+                        <div class="card-design">
+                            <div class="p-1">
+                                <div class="height-define">
+                                    <div class="grid-data">
+                                        {{ activeAttendanceData.averageTenure }}
+                                        Years
+                                    </div>
+                                    <div class="grid-data"></div>
+                                </div>
+                                <label class="card-title">Average Tenure</label>
+                            </div>
+                        </div>
+
+                        <!-- <div class="card-design">
+                            <div class="p-1">
+                                <div class="card-values"> {{ activeAttendanceData.total_absent }} - {{
+                                    activeAttendanceData.avg_absent
+                                }}%</div>
+                                <label> Absent Employee </label>
+                            </div>
+                        </div> -->
+
+                        <div class="card-design">
+                            <div class="p-1">
+                                <div class="single-line-height-define">
+                                    <div class="grid-data">
+                                        {{ activeAttendanceData.total_expense }}
+                                        Taka/-
+                                    </div>
+                                </div>
+                                <label class="card-title"> TA/DA (MTD) </label>
+                            </div>
+                        </div>
+                        <div class="card-design">
+                            <div class="p-1">
+                                <div class="single-line-height-define">
+                                    <div class="grid-data">
+                                        {{
+                                            activeAttendanceData.department_total
+                                        }}
+                                    </div>
+                                </div>
+                                <label class="card-title"
+                                    >Department Count</label
+                                >
+                            </div>
+                        </div>
+                        <div class="card-design">
+                            <div class="p-1">
+                                <div class="single-line-height-define">
+                                    <div class="grid-data">
+                                        {{ activeAttendanceData.averageAge }}
+                                        Years
+                                    </div>
+                                </div>
+                                <label class="card-title">Average Age</label>
+                            </div>
+                        </div>
+                        <!-- <div class="card-design">
+                            <div class="p-1">
+                                <div class="card-values"> {{
+                                    activeAttendanceData.total_pending_leave ?
+                                        activeAttendanceData.total_pending_leave
+                                        : 0
+                                }}</div>
+                                <label> PENDING LEAVE </label>
+                            </div>
+                        </div> -->
+                        <!-- <div class="card-design">
+                            <div class="p-1">
+                                <div class="card-values"> </div>
+                                <label> TOTAL LEAVE </label>
+                            </div>
+                        </div> -->
+                    </div>
+                </div>
+
+                <!-- <div class="col-md-6 mt-3">
+                    <div class="card p-2 mb-4">
+                        <div class="d-flex justify-content-space-between gap-2 mb-2">
                             <div class="col-md-8">
                                 <div class="card p-2">
-                                    <label
-                                        class="d-block text-center mb-2 attendance-card-title"
-                                    >
+                                    <label class="d-block text-center mb-2 attendance-card-title">
                                         ATTENDANCE SUMMARY
                                     </label>
                                     <div class="">
-                                        <ApexCharts
-                                            type="pie"
-                                            height="122"
-                                            :options="AttendancepieChartOptions"
-                                            :series="attendancePieSeries"
-                                        />
-
-                                        <!-- <div class="text-end">
-                                            <li class="d-flex justify-content-between gap-2">
-                                                <div class="summary-name">
-                                                    Present
-                                                </div>
-                                                <div class="summary-name">
-                                                    -
-                                                    {{
-                                                        activeAttendanceData.total_present
-                                                    }}
-                                                    ({{
-                                                        activeAttendanceData.avg_present
-                                                    }}%)
-                                                </div>
-                                            </li>
-
-
-                                            <li class="d-flex justify-content-between gap-2">
-                                                <div class="summary-name">
-                                                    Absent
-                                                </div>
-                                                <div class="summary-name">
-                                                    -
-                                                    {{
-                                                        activeAttendanceData.total_absent
-                                                    }}
-                                                    ({{
-                                                        activeAttendanceData.avg_absent
-                                                    }}%)
-                                                </div>
-                                            </li>
-
-
-                                            <li class="d-flex justify-content-between gap-2">
-                                                <div class="summary-name">
-                                                    Late
-                                                </div>
-                                                <div class="summary-name">
-                                                    -
-                                                    {{
-                                                        activeAttendanceData.total_late
-                                                    }}
-                                                    ({{
-                                                        activeAttendanceData.avg_late
-                                                    }}%)
-                                                </div>
-                                            </li>
-
-
-                                            <li class="d-flex justify-content-between gap-2">
-                                                <div class="summary-name">
-                                                    Leave
-                                                </div>
-                                                <div class="summary-name">
-                                                    -
-                                                    {{
-                                                        activeAttendanceData.total_leave
-                                                    }}
-                                                    ({{
-                                                        activeAttendanceData.avg_leave
-                                                    }}%)
-                                                </div>
-                                            </li>
-                                        </div> -->
+                                        <ApexCharts type="donut" height="180" :options="AttendancepieChartOptions"
+                                            :series="attendancePieSeries" />
                                     </div>
                                 </div>
                             </div>
-                            <!-- <div class="col-md-6">
-                                <label for="">ATTENDANCE TREND (DAILY)</label>
-                            </div> -->
-                            <!-- <div class="col-md-6">
-                                <div class="card p-2">
-                                    <label class="d-block"
-                                        >ATTENDANCE BY DEPARTMENT</label
-                                    >
-                                </div>
-                            </div> -->
                         </div>
 
-                        <div
-                            class="d-flex justify-content-space-between gap-2 mb-2"
-                        >
-                            <!-- <div class="col-md-6 card p-2">
-                                <label for="">STATUS BREAKDOWN</label>
-                            </div> -->
+
+                        <div class="d-flex justify-content-space-between gap-2 mb-2">
                         </div>
                         <div class="col-md-12 card p-2 mb-2">
                             <div class="d-flex justify-content-between mb-2">
-                                <label class="attendance-table-header"
-                                    >EMPLOYEE ATTENDANCE OVERVIEW</label
-                                >
-                                <label
-                                    class="attendance-table-header export-excel"
-                                >
-                                    <i
-                                        class="fa-solid fa-circle-arrow-down"
-                                    ></i>
+                                <label class="attendance-table-header">EMPLOYEE ATTENDANCE OVERVIEW</label>
+                                <label class="attendance-table-header export-excel">
+                                    <i class="fa-solid fa-circle-arrow-down"></i>
                                 </label>
                             </div>
 
-                            <DataTable
-                                :data="attendanceDataTableData"
-                                class="table table-striped"
-                            >
+
+                            <DataTable :data="attendanceDataTableData" class="table table-striped">
                                 <thead>
                                     <tr>
                                         <th>EMP ID</th>
@@ -574,63 +464,8 @@ onMounted(() => {
                             </DataTable>
                         </div>
                     </div>
-                </div>
-                <div class="col-xl-6 col-md-6">
-                    <div class="row">
-                        <div class="col-xl-4 col-md-4">
-                            <div class="card mb-4">
-                                <div class="card-body">
-                                    <h3>{{ dashCount.employee_act }}</h3>
-                                    <h5>Employee Count</h5>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-xl-4 col-md-4">
-                            <div class="card mb-4">
-                                <div class="card-body">
-                                    <h3>{{ dashCount.department }}</h3>
-                                    <h5>Department Count</h5>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-xl-4 col-md-6">
-                            <div class="card mb-4">
-                                <div class="card-body">
-                                    <h3>{{ dashCount.employee_inact }}</h3>
-                                    <h5>Inactive Employees</h5>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="row">
-                        <div class="col-xl-4 col-md-6">
-                            <div class="card mb-4">
-                                <div class="card-body">
-                                    <h3>{{ dashCount.pending_leave }}</h3>
-                                    <h5>Pending Leave</h5>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-xl-4 col-md-6">
-                            <div class="card mb-4">
-                                <div class="card-body">
-                                    <h3>{{ dashCount.average_age }} Years</h3>
-                                    <h5>Average Age</h5>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-xl-4 col-md-6">
-                            <div class="card mb-4">
-                                <div class="card-body">
-                                    <h3>
-                                        {{ dashCount.average_tenure }} Years
-                                    </h3>
-                                    <h5>Average Tenure</h5>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                </div> -->
+                <!-- <div class="col-xl-6 col-md-6 mt-3 ">
                     <div class="col-xl-12 col-md-12">
                         <div class="card mb-4">
                             <div class="card-header">
@@ -638,16 +473,11 @@ onMounted(() => {
                                 Employee Active/Inactive
                             </div>
                             <div class="card-body">
-                                <ApexCharts
-                                    type="pie"
-                                    height="122"
-                                    :options="pieChartOptions"
-                                    :series="pieSeries"
-                                />
+                                <ApexCharts type="pie" height="122" :options="pieChartOptions" :series="pieSeries" />
                             </div>
                         </div>
                     </div>
-                </div>
+                </div> -->
             </div>
             <dashboardChart :dashData="dashCount" />
         </div>
@@ -655,6 +485,68 @@ onMounted(() => {
 </template>
 
 <style scoped>
+.dashboard-background {
+    background-color: #f6f3f39c;
+    padding-top: 7px;
+    padding-bottom: 7px;
+    border-radius: 5px;
+}
+
+.card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 12px;
+}
+
+.first-dev {
+    font-size: 15px;
+}
+
+.lob-location-status {
+    font-size: 10px;
+    margin-right: 6px;
+}
+
+.height-define {
+    height: 55px;
+}
+
+.second-dev {
+    font-size: 13px;
+}
+
+.single-line-height-define {
+    height: 40px;
+}
+
+.first-span {
+    font-size: 17px;
+}
+
+.card-title {
+    font-family: sans-serif;
+}
+
+.card-design {
+    background: #fff;
+    border: 1px solid #dbe3ef;
+    border-radius: 10px;
+    padding: 12px;
+    min-height: 92px;
+    box-shadow: 0 4px 10px #020b190f;
+}
+
+.grid-data {
+    font-family: "Times New Roman", Times, serif;
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.card-values {
+    font-weight: 500;
+    font-size: 18px;
+}
+
 .fa-gauge {
     font-size: 20px;
     color: #000000;
