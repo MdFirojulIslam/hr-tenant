@@ -14,9 +14,8 @@ import { useStore } from "vuex";
 const store = useStore();
 const user = store.getters.getUser;
 
-const { isOpen, editStore, updateinfo, EID, salId } = defineProps([
+const { isOpen, updateinfo, EID, salId } = defineProps([
     "EID",
-    "editStore",
     "isOpen",
     "salId",
     "updateinfo",
@@ -79,13 +78,6 @@ const getEmployee = async (deptID) => {
             Full_Name: emp.Full_Name,
             img_url: emp.img_url || null,
         }));
-
-        // For edit mode: prefill selectedEmployee
-        if (editStore && editStore.employee_id) {
-            selectedEmployee.value = employee.value.find(
-                (e) => e.id === editStore.employee_id,
-            );
-        }
     } catch (err) {
         console.error("Error fetching employees:", err);
     }
@@ -183,46 +175,6 @@ const getEmployeeInfo = async (id) => {
     }
 };
 
-watch(
-    () => editStore,
-    async (item) => {
-        if (item) {
-            form.value.department = item.department_id || "";
-            await getEmployee(item.department_id);
-
-            // Prefill selectedEmployee for Multiselect
-            selectedEmployee.value = employee.value.find(
-                (e) => e.id === item.employee_id,
-            );
-            await getEmployeeInfo(item.employee_id);
-            form.value.eid = item.employee_id || "";
-            await getEmployeeImg(item.employee_id);
-
-            // Fill other fields...
-            form.value.gross_salary = item.gross_salary || "";
-            form.value.house_rent = item.house_rent || "";
-            form.value.conveyance = item.conveyance || "";
-            form.value.medical_allowance = item.medical_allowance || "";
-            form.value.consolidated = item.consolidated || "";
-            form.value.festival_bonus = item.festival_bonus || "";
-            form.value.travel_allowance = item.travel_allowance || "";
-            form.value.daily_allowance = item.daily_allowance || "";
-            form.value.mobile_bill = item.mobile_bill || "";
-            form.value.other_allowance = item.other_allowance || "";
-            form.value.provident_fund = item.provident_fund || "";
-            form.value.income_tax = item.income_tax || "";
-            form.value.revenue_stamp = item.revenue_stamp || "";
-
-            form.value.total_deduction = item.total_deduction || 0;
-            form.value.total_earning = item.total_payment || 0;
-            form.value.net_pay = item.net_pay || "";
-            form.value.salary_type = item.salary_type || "";
-            form.value.bank_account_no = item.bank_account_no || "";
-        }
-    },
-    { immediate: true },
-);
-
 const getEmployeeImg = async (id) => {
     try {
         const response = await api.get(`/empimg/${id}`);
@@ -264,7 +216,7 @@ const closeModal = () => {
     instance.emit("modal-close");
 };
 
-const create = async () => {
+const submit = async () => {
     try {
         const response = await api.post("/salary-setup", form.value);
         if (response.data.success) {
@@ -300,34 +252,6 @@ const create = async () => {
             });
         }
         console.error("Error creating store:", error);
-    }
-};
-
-const update = async () => {
-    try {
-        const response = await api.put(`/salary-update/${salId}`, form.value);
-        if (response.data.success) {
-            instance.emit("modal-close");
-            Swal.fire({
-                position: "middle",
-                icon: "success",
-                title: "Information has been Updated",
-                showConfirmButton: false,
-                timer: 1500,
-            });
-        }
-    } catch (error) {
-        console.error("Error updating store:", error);
-    }
-};
-
-const submit = () => {
-    if (updateinfo === "Save") {
-        create();
-    } else if (updateinfo === "Update") {
-        update();
-    } else {
-        console.error("Invalid updateinfo value:", updateinfo);
     }
 };
 
@@ -756,7 +680,7 @@ onMounted(() => {
                 <!-- Modal Footer -->
                 <div class="modal-footer">
                     <button class="btn btn-success" @click="submit">
-                        <i class="bi bi-check-circle"></i> {{ updateinfo }}
+                        <i class="bi bi-check-circle"></i> Submit
                     </button>
                     <button class="btn btn-warning" @click="resetForm">
                         <i class="bi bi-arrow-clockwise"></i> Reset

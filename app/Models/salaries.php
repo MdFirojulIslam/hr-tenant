@@ -32,8 +32,13 @@ class salaries extends Model
         'updated_by',
     ];
 
-    public function salaries()
+    public function employee()
     {
         return $this->belongsTo(employee::class, 'employee_id');
+    }
+
+    public function official()
+    {
+        return $this->belongsTo(official::class, 'employee_id', 'EID');
     }
 }

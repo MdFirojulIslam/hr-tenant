@@ -66,4 +66,9 @@ class official extends Model
     {
         return $this->belongsTo(branch::class, 'Job_Location_Id');
     }
+
+    public function salary()
+    {
+        return $this->hasOne(salaries::class, 'employee_id', 'EID');
+    }
 }

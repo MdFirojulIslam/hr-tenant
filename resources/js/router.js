@@ -590,6 +590,12 @@ const routes = [
             requireAuth: true,
         },
     },
+    {
+        path: "/salary/edit/:id",
+
+        name: "SalaryEdit",
+        component: () => import("./pages/payroll/component/editSalary.vue"),
+    },
 ];
 
 const router = createRouter({

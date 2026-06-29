@@ -7,12 +7,18 @@ use App\Http\Controllers\payroll\BonusSheetController;
 use Illuminate\Support\Facades\Route;
 
 
-Route::get('/salary', [EmployeeSalaryController::class, 'index']);
+Route::get('/all-employee-salaries', [EmployeeSalaryController::class, 'employeeSalaries']);
 Route::post('/salary-setup', [EmployeeSalaryController::class, 'create']);
+
+Route::get('/single-salaries-info/{id}', [EmployeeSalaryController::class, 'fetchSingleSalaries']);
+Route::put('/single-salaries-info', [EmployeeSalaryController::class, 'updateSingleSalaries']);
+
 Route::put('/salary-update/{id}', [EmployeeSalaryController::class, 'update']);
 Route::get('/employee-salary-search', [EmployeeSalaryController::class, 'salarySearch']);
 
 Route::get('department-list/{id}', [EmployeeSalaryController::class, 'departmentList']);
+Route::get('employee-list-by-department/{dept_id}', [EmployeeSalaryController::class, 'getEmployeesByDept']);
+
 Route::get('adjustment-employees/{dept_id}', [EmployeeSalaryController::class, 'getEmployees']);
 
 Route::get('/generate-salary', [EmployeeSalaryController::class, 'generateSalary']);

@@ -13,13 +13,13 @@ class designation extends Model
         'Name',
     ];
 
-    public function designation()
-    {
-        return $this->hasOne(official::class, 'Designation_Id');
-    }
-
     public function department()
     {
-        return $this->belongsTo(official::class, 'Department_Id');
+        return $this->belongsTo(department::class, 'Designation_Id');
+    }
+
+    public function official()
+    {
+        return $this->hasOne(official::class, 'Department_Id');
     }
 }

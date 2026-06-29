@@ -21,15 +21,16 @@ use PhpOffice\PhpWord\PhpWord;
 use App\Exports\SalaryDisbursementExport;
 use PhpOffice\PhpWord\IOFactory;
 
+use App\Models\SalaryHistory;
+
 use App\Models\salary_disbursement;
 use Barryvdh\DomPDF\Facade\Pdf;
 use App\Http\Controllers\HelperFunctionController;
 
 class EmployeeSalaryController extends Controller
 {
-    public function index(Request $request)
+    public function employeeSalaries(Request $request)
     {
-        // dd($request->all());
         $query = DB::table('salaries')
             ->join('employees', 'employees.id', '=', 'salaries.employee_id')
             ->join('officials', 'officials.EID', '=', 'salaries.employee_id')
@@ -39,6 +40,7 @@ class EmployeeSalaryController extends Controller
                 'salaries.*',
                 'employees.Employee_Id as official_id',
                 'employees.Full_Name as full_name',
+                'officials.Status as employee_status',
                 'departments.Name as department_name',
                 'departments.id as department_id',
                 'designations.Name as designation_name',
@@ -54,30 +56,36 @@ class EmployeeSalaryController extends Controller
                 salaries.provident_fund +
                 salaries.income_tax +
                 salaries.revenue_stamp AS total_deduction
-            ')
+            '),
+                DB::raw('DATE(salaries.effective_date) as effective_date')
             );
 
+
         /* 🔍 Search by Account No or Official ID */
-        if ($request->filled('query')) {
-            $search = $request->query('query');
+        if ($request->filled('search_query')) {
+            $search = $request->query('search_query');
             $query->where(function ($q) use ($search) {
                 $q->where('salaries.bank_account_no', 'like', "%{$search}%")
-                    ->orWhere('employees.Employee_Id', 'like', "%{$search}%");
+                    ->orWhere('employees.Employee_Id', 'like', "%{$search}%")
+                    ->orWhere('salaries.salary_type', 'like', "%{$search}%");
             });
         }
 
-        /* 🏢 Department filter */
         if ($request->filled('department_id')) {
             $query->where('departments.id', $request->department_id);
         }
-
-        /* 👤 Employee filter */
         if ($request->filled('employee_id')) {
             $query->where('employees.id', $request->employee_id);
         }
-
-        $salaries = $query->paginate(16);
-
+        if ($request->filled('status')) {
+            $status = $request->query('status');
+            if ($status === 'N') {
+                $query->where('salaries.hold_status', '=', 0);
+            } else if ($status === 'Y') {
+                $query->where('salaries.hold_status', '=', 1);
+            }
+        }
+        $salaries = $query->paginate(30);
         return response()->json($salaries);
     }
 
@@ -150,6 +158,184 @@ class EmployeeSalaryController extends Controller
             ], 500);
         }
     }
+
+    public function fetchSingleSalaries(Request $request, int $employee_id)
+    {
+        $result = salaries::with([
+            'employee:id,Full_Name',
+            'official:EID,Status,Department_Id,Designation_Id,DOJ,Job_Location_Id',
+            'official.department:id,Name',
+            'official.designation:id,Name',
+            'official.branch:id,Name',
+        ])
+            ->where('employee_id', $employee_id)
+            ->get();
+        return response()->json($result);
+    }
+
+
+    public function updateSingleSalaries(Request $request)
+    {
+        $user_id = Auth::user()->EID;
+        $currentDate = Carbon::now()->toDateString();
+
+        $request->validate([
+            'increment_date' => 'nullable|required_with:increment_amount|date',
+        ], [
+            'increment_date.required_with' => 'Please fill the date here.',
+            'increment_date.date' => 'Please enter a valid date.',
+        ]);
+
+        $employee_id = !empty($request->input('employee_id')) ? $request->input('employee_id') : null;
+        // dd($employee_id);
+
+        $increment_amount = !empty($request->input('increment_amount')) ? $request->input('increment_amount') : 0;
+        // dd($increment_amount);
+
+        $increment_date = !empty($request->input('increment_date')) ? $request->input('increment_date') : null;
+        // dd($increment_date);
+        $remarks = !empty($request->input('remarks')) ? $request->input('remarks') : null;
+        // dd($remarks);
+        $start_of_month = Carbon::parse($increment_date)->startOfMonth()->toDateString();
+        // dd($start_of_month);
+        $gross_salary = !empty($request->input('gross_salary')) ? $request->input('gross_salary') : 0;
+        // dd($gross_salary);
+        $basic_salary = !empty($request->input('basic_salary')) ? $request->input('basic_salary') : 0;
+        // dd($basic_salary);
+        $house_rent = !empty($request->input('house_rent')) ? $request->input('house_rent') : 0;
+        // dd($house_rent);
+        $conveyance = !empty($request->input('conveyance')) ? $request->input('conveyance') : 0;
+        // dd($conveyance);
+        $medical_allowance = !empty($request->input('medical_allowance')) ? $request->input('medical_allowance') : 0;
+        // dd($medical_allowance);
+        $consolidated = !empty($request->input('consolidated')) ? $request->input('consolidated') : 0;
+        // dd($consolidated);
+        $festival_bonus = !empty($request->input('festival_bonus')) ? $request->input('festival_bonus') : 0;
+        // dd($festival_bonus);
+        $travel_allowance = !empty($request->input('travel_allowance')) ? $request->input('travel_allowance') : 0;
+        // dd();
+        $daily_allowance = !empty($request->input('daily_allowance')) ? $request->input('daily_allowance') : 0;
+        // dd();
+        $mobile_bill = !empty($request->input('mobile_bill')) ? $request->input('mobile_bill') : 0;
+        // dd();
+        $other_allowance = !empty($request->input('other_allowance')) ? $request->input('other_allowance') : 0;
+        // dd();
+        $total_payment = !empty($request->input('total_payment')) ? $request->input('total_payment') : 0;
+        // dd();
+        $provident_fund = !empty($request->input('provident_fund')) ? $request->input('provident_fund') : 0;
+        // dd();
+        $income_tax = !empty($request->input('income_tax')) ? $request->input('income_tax') : 0;
+        // dd();
+        $revenue_stamp = !empty($request->input('revenue_stamp')) ? $request->input('revenue_stamp') : 0;
+        // dd();
+        $net_pay = !empty($request->input('net_pay')) ? $request->input('net_pay') : 0;
+        // dd();
+        $salary_type = !empty($request->input('salary_type')) ? $request->input('salary_type') : null;
+        // dd();
+        $bank_account_no = !empty($request->input('bank_account_no')) ? $request->input('bank_account_no') : null;
+        // dd();
+        $hold_status = !empty($request->input('hold_status')) ? $request->input('hold_status') : 0;
+        // dd($hold_status);
+
+        $salaries_data = [
+            'gross_salary' => $gross_salary,
+            'basic' => $basic_salary,
+            'house_rent' => $house_rent,
+            'conveyance' => $conveyance,
+            'medical_allowance' => $medical_allowance,
+            'consolidated' => $consolidated,
+            'festival_bonus' => $festival_bonus,
+            'travel_allowance' => $travel_allowance,
+            'daily_allowance' => $daily_allowance,
+            'mobile_bill' => $mobile_bill,
+            'other_allowance' => $other_allowance,
+            // 'overtime' => $overtime,
+            'total_payment' => $total_payment,
+            'provident_fund' => $provident_fund,
+            'income_tax' => $income_tax,
+            'revenue_stamp' => $revenue_stamp,
+            'net_pay' =>  $net_pay,
+            'salary_type' => $salary_type,
+            'bank_account_no' => $bank_account_no,
+            'hold_status' => $hold_status,
+            'updated_by' => $user_id,
+        ];
+
+        if (isset($increment_amount) && isset($increment_date)) {
+            $prev_salaries_info = salaries::where('employee_id', $employee_id)
+                ->select('id as salaries_id', 'employee_id', 'net_pay',  'salary_type', 'bank_account_no')
+                ->first();
+
+            // dd($prev_salaries_info->toArray());
+
+            // $salaries_id = $prev_salaries_info->salaries_id;
+            $prev_net_pay = $prev_salaries_info->net_pay;
+            // $prev_salary_type = $prev_salaries_info->salary_type;
+            // $prev_account_no = $prev_salaries_info->bank_account_no;
+
+            $increment_data = [
+                'employee_id' => $employee_id,
+                'previous_net_pay' => $prev_net_pay,
+                'increment_amount' => $increment_amount,
+                'current_net_pay' => $net_pay,
+                'increment_dates' => $increment_date,
+                'created_by' => $user_id,
+                'remarks' => $remarks
+            ];
+
+            $prev_salary_sheet_info = salary_sheet::where('employee_id', $employee_id)
+                ->whereDate('salary_date', $start_of_month)
+                ->first();
+
+
+
+            if (empty($prev_salary_sheet_info)) {
+
+                $latest_history = SalaryHistory::where('employee_id', $employee_id)
+                    ->orderBy('id', 'desc')
+                    ->first();
+
+                if ($latest_history && empty($another_increment)) {
+                    $update_history = SalaryHistory::where('employee_id', $employee_id)->update($increment_data);
+                    if ($update_history) {
+                        $update_salaries = salaries::where('employee_id', $employee_id)
+                            ->update($salaries_data);
+                    }
+                } else {
+                    $salary_history = SalaryHistory::create($increment_data);
+                    if ($salary_history) {
+                        $update_salaries = salaries::where('employee_id', $employee_id)
+                            ->update($salaries_data);
+                    }
+                    dd("Success");
+                }
+            } else {
+                dd("checking");
+                $response = [
+                    'success' => false,
+                    'message' => 'Check again increment date!'
+                ];
+                return response()->json($response);
+            }
+        } else {
+            $response = salaries::where('employee_id', $employee_id)
+                ->update($salaries_data);
+        }
+
+        $response = [
+            'success' => true,
+            'message' => 'Successfully Updated'
+        ];
+
+        $response = [
+            'success' => false,
+            'message' => 'Update Failed'
+        ];
+
+        return response()->json($response);
+    }
+
+
 
 
     public function update(Request $request, $id)
@@ -1186,7 +1372,6 @@ class EmployeeSalaryController extends Controller
         return response()->json($response);
     }
 
-
     public function getEmployees($dept_id)
     {
         $user_id = Auth::user()->EID;
@@ -1204,15 +1389,28 @@ class EmployeeSalaryController extends Controller
             ->orderby('employees.Full_Name', 'asc')
             ->get();
 
+        if (!$employee) {
+            return response()->json(['message' => 'Employee not found'], 404);
+        }
+        return response()->json($employee);
+    }
+
+    public function getEmployeesByDept($dept_id)
+    {
+        $employee = employee::select('employees.id as employee_id', 'employees.Full_Name as employee_name')
+            ->join('officials', 'officials.EID', '=', 'employees.id')
+            ->join('departments', 'officials.Department_Id', '=', 'departments.id')
+            ->where('departments.id', '=', $dept_id)
+            ->where('officials.Status', '=', 'N')
+            ->orderby('employees.Full_Name', 'asc')
+            ->get();
 
         if (!$employee) {
             return response()->json(['message' => 'Employee not found'], 404);
         }
 
-
         return response()->json($employee);
     }
-
 
 
     public function completeSalaryDisbursement(Request $request)

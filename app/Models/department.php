@@ -12,11 +12,6 @@ class department extends Model
         'Name',
     ];
 
-    public function department()
-    {
-        return $this->hasOne(official::class, 'Department_Id');
-    }
-
     public function designation()
     {
         return $this->hasOne(designation::class, 'Designation_Id');

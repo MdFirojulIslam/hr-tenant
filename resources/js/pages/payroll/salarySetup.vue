@@ -1,11 +1,15 @@
 <script setup>
 import { ref, onMounted, watch, defineAsyncComponent } from "vue";
+import BaseDept from "@/pages/components/input_field/Basedept.vue";
+import BaseDeptEmp from "@/pages/components/input_field/BaseDeptEmp.vue";
 import { Bootstrap4Pagination } from "laravel-vue-pagination";
 import api from "@/api";
 import Swal from "sweetalert2";
 import { useStore } from "vuex";
-import Multiselect from "vue-multiselect";
-import "vue-multiselect/dist/vue-multiselect.min.css";
+import { useRouter } from "vue-router";
+import EditSalary from "./component/editSalary.vue";
+const router = useRouter();
+
 const store = useStore();
 const role_id = store.getters.getRoleId;
 const user = store.getters.getUser;
@@ -14,54 +18,37 @@ const salaryComponent = defineAsyncComponent(
     () => import("./component/salarySetupForm.vue"),
 );
 
+const userID = user.id;
+const department_id = ref(null);
+const employee_id = ref(null);
 const isLoading = ref(true);
 const error = ref(null);
-
-const employee = ref([]);
-const employeeIDs = ref([]);
-const selectedEmployee = ref(null);
-
-const department = ref([]);
+const search_query = ref("");
 const salaries = ref({});
-
-const searchDept = ref("");
-const searchEmp = ref("");
-const searchQuery = ref("");
-
-const salaryModel = ref(false);
-const selectedStore = ref(null);
-const salaryId = ref(null);
-const heading = ref("");
-
+const status = ref("N");
 const currentPage = ref(1);
 
-const onEmployeeSelect = (value) => {
-    selectedEmployee.value = value;
-    if (value) {
-        searchEmp.value = value.id;
-    } else {
-        searchEmp.value = "";
-    }
-};
+/*
+Modal Variables for edit
+*/
+const selected_employee_object = ref(null);
+const editable_employee_id = ref(null);
+const heading = ref("");
+const salaryModal = ref(false);
 
-/* ---------------- FETCH DATA ---------------- */
 const getData = async (page = 1) => {
     currentPage.value = page;
     try {
-        const [deptRes, salaryRes] = await Promise.all([
-            api.get(`/department-list/${user.id}`),
-            api.get("/salary", {
-                params: {
-                    page,
-                    query: searchQuery.value,
-                    department_id: searchDept.value,
-                    employee_id: searchEmp.value,
-                },
-            }),
-        ]);
-
-        department.value = deptRes.data;
-        salaries.value = salaryRes.data;
+        const res = await api.get("/all-employee-salaries", {
+            params: {
+                page,
+                search_query: search_query.value,
+                department_id: department_id.value,
+                employee_id: employee_id.value,
+                status: status.value,
+            },
+        });
+        salaries.value = res.data;
     } catch (err) {
         error.value = err.message;
     } finally {
@@ -69,78 +56,44 @@ const getData = async (page = 1) => {
     }
 };
 
-/* ---------------- EMPLOYEE BY DEPT ---------------- */
-const getEmployee = async (deptID) => {
-    if (!deptID) {
-        employee.value = [];
-        selectedEmployee.value = null;
-        searchEmp.value = "";
-        return;
-    }
-
-    try {
-        const res = await api.get(`/emp/${deptID}`);
-        employee.value = res.data;
-        selectedEmployee.value = null;
-        searchEmp.value = "";
-    } catch (err) {
-        console.error("Error fetching employees:", err);
-    }
-};
-
-/* ---------------- WATCH FILTERS ---------------- */
-watch([searchDept, searchEmp, searchQuery], () => {
+watch([search_query, department_id, employee_id, status], () => {
     getData();
 });
 
-/* ---------------- MODAL ---------------- */
-const salaryOpen = (title) => {
-    heading.value = title;
-    if (title === "Save") {
-        selectedStore.value = null;
-        salaryId.value = null;
-    }
-    salaryModel.value = true;
+const editSalary = (id) => {
+    router.push({
+        name: "SalaryEdit",
+        params: { id },
+    });
 };
 
-const salaryClose = () => {
-    salaryModel.value = false;
+const newSetup = (title) => {
+    salaryModal.value = true;
+};
+
+const salaryModalClose = () => {
+    salaryModal.value = false;
     getData(currentPage.value);
 };
 
-/* ---------------- ACTIONS ---------------- */
-const editsalary = (id) => {
-    if (!salaries.value.data || salaries.value.data.length === 0) {
-        console.warn("Salary data not loaded yet.");
-        return;
-    }
-
-    const store = salaries.value.data.find((item) => item.employee_id === id);
-
-    if (!store) {
-        console.warn("Selected employee not found in salaries.");
-        return;
-    }
-
-    selectedStore.value = store;
-    salaryId.value = id;
-    salaryOpen("Update");
-};
-
-const deletesalary = async (id) => {
-    const res = await api.get(`/delete-salary/${id}`);
-    if (res.data.success) {
-        Swal.fire({
-            icon: "success",
-            title: "Deleted successfully",
-            timer: 1500,
-            showConfirmButton: false,
-        });
-        getData();
-    }
+const submitHandler = (data) => {
+    console.log("Received from child:", data);
 };
 
 onMounted(() => getData());
+
+// const deletesalary = async (id) => {
+//     const res = await api.get(`/delete-salary/${id}`);
+//     if (res.data.success) {
+//         Swal.fire({
+//             icon: "success",
+//             title: "Deleted successfully",
+//             timer: 1500,
+//             showConfirmButton: false,
+//         });
+//         getData();
+//     }
+// };
 </script>
 
 <template>
@@ -151,10 +104,13 @@ onMounted(() => getData());
         <div
             class="d-flex justify-content-between align-items-center py-2 px-3"
         >
-            <h2 class="m-0 header-design">Salary Setup List</h2>
+            <h2 class="m-0 header-design d-flex align-items-center">
+                <i class="salary-icon fa-solid fa-file-invoice-dollar"></i>
+                Salary List
+            </h2>
             <div v-if="role_id == 1 || role_id == 2">
                 <button
-                    @click="salaryOpen('Save')"
+                    @click="newSetup()"
                     type="button"
                     class="btn btn-success d-flex align-items-center fw-medium shadow-sm"
                 >
@@ -165,13 +121,10 @@ onMounted(() => getData());
 
         <!-- Salary Modal -->
         <component
-            v-if="salaryModel"
+            v-if="salaryModal"
             :is="salaryComponent"
-            :isOpen="salaryModel"
-            :editStore="selectedStore"
-            :updateinfo="heading"
-            :salId="salaryId"
-            @modal-close="salaryClose"
+            :isOpen="salaryModal"
+            @modal-close="salaryModalClose"
             @submit="submitHandler"
             name="first-modal"
         />
@@ -181,57 +134,37 @@ onMounted(() => getData());
             <div class="p-3 mb-3">
                 <!-- Filters -->
                 <div class="row g-3 mb-3">
-                    <div class="col-lg-3 position-relative">
-                        <select
-                            class="form-control field-height field-background-colour"
-                            v-model="searchDept"
-                            @change="getEmployee(searchDept)"
-                        >
-                            <option value="" disabled>All Department</option>
-                            <option
-                                v-for="dept in department"
-                                :key="dept.department_id"
-                                :value="dept.department_id"
-                            >
-                                {{ dept.department_name }}
-                            </option>
-                        </select>
-                        <button
-                            v-if="searchDept"
-                            type="button"
-                            class="btn btn-sm btn-link position-absolute top-0 end-0 mt-2 me-3"
-                            @click="
-                                searchDept = '';
-                                employeeIDs = [];
-                            "
-                        >
-                            <i class="fa fa-times"></i>
-                        </button>
-                    </div>
-
-                    <!-- Employee -->
-                    <div class="col-lg-3 position-relative">
-                        <Multiselect
-                            v-model="selectedEmployee"
-                            :options="employee"
-                            label="Full_Name"
-                            track-by="id"
-                            placeholder="Select or search employee"
-                            :searchable="true"
-                            :close-on-select="true"
-                            :allow-empty="true"
-                            @update:modelValue="onEmployeeSelect"
-                            class="multiselect-design"
+                    <div class="department-component">
+                        <BaseDept
+                            v-model:departmentID="department_id"
+                            :userID="userID"
                         />
                     </div>
-                    <div class="col-lg-3 position-relative">
+
+                    <div class="col-lg-3 position-relative col-sm-12">
+                        <BaseDeptEmp
+                            v-model:employeeID="employee_id"
+                            :deptID="department_id"
+                            :isEdit="false"
+                        />
+                    </div>
+
+                    <div class="col-lg-3 position-relative col-sm-12">
                         <input
                             type="text"
-                            class="form-control field-height field-background-colour"
-                            v-model="searchQuery"
+                            class="form-control search-field"
+                            v-model="search_query"
                             placeholder="Search By Account No or Official ID"
                             @input="searchemp"
                         />
+                    </div>
+
+                    <div class="col-md-2 position-relative">
+                        <select class="active-status" v-model="status">
+                            <option value="N">ACTIVE</option>
+                            <option value="Y">DEACTIVE</option>
+                            <option value="all">ALL</option>
+                        </select>
                     </div>
                 </div>
 
@@ -255,17 +188,16 @@ onMounted(() => getData());
                                     <th class="text-center" width="8%">
                                         EMP ID
                                     </th>
+                                    <th width="12%">EMPLOYEE NAME</th>
                                     <th width="15%">DEPARTMENT</th>
                                     <th width="18%">DESIGNATION NAME</th>
-                                    <th width="12%">EMPLOYEE NAME</th>
+
+                                    <th class="text-center">E_DATE</th>
                                     <th class="text-center" width="7%">
                                         GROSS SALARY
                                     </th>
                                     <th class="text-center" width="7%">
                                         EARNING
-                                    </th>
-                                    <th class="text-center" width="10%">
-                                        DEDUCTION
                                     </th>
                                     <th class="text-center" width="7%">
                                         TOTAL PAY
@@ -289,11 +221,13 @@ onMounted(() => getData());
                                         {{ salaries.from + index }}
                                     </td>
                                     <td class="text-center">
-                                        ABNB-{{ salary.official_id }}
+                                        ABNB{{ salary.official_id }}
                                     </td>
+                                    <td>{{ salary.full_name }}</td>
                                     <td>{{ salary.department_name }}</td>
                                     <td>{{ salary.designation_name }}</td>
-                                    <td>{{ salary.full_name }}</td>
+
+                                    <td>{{ salary.effective_date }}</td>
                                     <td class="text-center">
                                         {{ salary.gross_salary }}
                                     </td>
@@ -302,13 +236,6 @@ onMounted(() => getData());
                                             salary.total_earning == 0
                                                 ? "-"
                                                 : salary.total_earning
-                                        }}
-                                    </td>
-                                    <td class="text-center">
-                                        {{
-                                            salary.total_deduction == 0
-                                                ? "-"
-                                                : salary.total_deduction
                                         }}
                                     </td>
                                     <td class="text-center">
@@ -322,41 +249,22 @@ onMounted(() => getData());
                                         v-if="role_id == 1 || role_id == 2"
                                         class="text-center text-nowrap"
                                     >
-                                        <!-- <button
-                                            class="btn btn-sm btn-light border me-1"
-                                            title="View"
-                                            @click="
-                                                openSalaryDetails(
-                                                    salary.employee_id,
-                                                )
-                                            "
-                                        >
-                                            <i
-                                                class="fa-regular fa-user text-primary"
-                                            ></i>
-                                        </button> -->
                                         <button
                                             class="btn btn-sm btn-light border me-1"
                                             title="Edit"
                                             @click="
-                                                editsalary(salary.employee_id)
+                                                editSalary(salary.employee_id)
                                             "
                                         >
                                             <i
                                                 class="fa-regular fa-pen-to-square text-warning"
                                             ></i>
                                         </button>
-                                        <button
-                                            class="btn btn-sm btn-light border"
-                                            title="Delete"
-                                            @click="
-                                                deletesalary(salary.employee_id)
-                                            "
-                                        >
-                                            <i
-                                                class="fa-solid fa-trash text-danger"
-                                            ></i>
-                                        </button>
+                                        <!-- <button class="btn btn-sm btn-light border" title="Delete" @click="
+                                            deletesalary(salary.employee_id)
+                                            ">
+                                            <i class="fa-solid fa-trash text-danger"></i>
+                                        </button> -->
                                     </td>
                                     <td v-else></td>
                                 </tr>
@@ -378,6 +286,51 @@ onMounted(() => getData());
 </template>
 
 <style>
+.header-design {
+    display: inline-flex;
+    align-items: center;
+    letter-spacing: 1px;
+    padding-top: 5px;
+    color: #000000;
+}
+
+.department-component {
+    width: 400px;
+}
+
+.search-field {
+    height: 40px;
+    font-size: 14px;
+    letter-spacing: 2px;
+    color: #111111;
+    font-weight: 500;
+    opacity: 0.8;
+    transition: all 0.3s ease;
+}
+
+input.search-field::placeholder {
+    color: #4e4e4e !important;
+    letter-spacing: normal !important;
+    opacity: 0.5 !important;
+    font-size: small !important;
+}
+
+.active-status {
+    width: 100px;
+    height: 40px;
+    font-size: 14px;
+    letter-spacing: 2px;
+    opacity: 0.8;
+    font-weight: 500;
+    border: 0.1px solid #d8d7d7;
+    border-radius: 5px;
+    text-align: center;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-color: #bbb8b8;
+}
+
 .table-responsive .table,
 .table-responsive .table tbody,
 .table-responsive .table tr,
@@ -389,9 +342,8 @@ onMounted(() => getData());
     letter-spacing: 0.3px;
 }
 
-.field-hover:hover {
-    border-color: #80bdff;
-    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+.salary-icon {
+    font-size: 14px;
 }
 
 .table tbody tr:hover > td {
@@ -408,57 +360,19 @@ onMounted(() => getData());
     height: 30px;
 }
 
-.field-height {
-    height: 35px;
-}
-.placeholder-text {
-    color: #999; /* faded text for placeholder */
-    font-size: 14px;
-}
-.multiselect-design .multiselect__placeholder {
-    color: #999;
-    font-size: 14px;
-    margin-bottom: 0px;
-    align-items: center;
+.salary-icon {
+    font-size: 18px;
+    line-height: 1;
+    margin-right: 4px;
 }
 
-.multiselect-design .multiselect__tags {
-    min-height: 35px !important; /* override default min-height */
-    height: 35px; /* exact height */
-    padding: 0 8px; /* adjust left/right padding */
-    border-radius: 5px;
-    border: 0.8px solid #b3a9a963;
-    background: #c4c2c250;
-    display: flex; /* align input vertically */
-    align-items: center;
-    font-size: 14px;
-}
+@media (max-width: 480px) {
+    .department-component {
+        width: 100%;
+    }
 
-/* Input inside the multiselect */
-.multiselect-design .multiselect__input,
-.multiselect-design .multiselect__single {
-    height: 100%; /* fill the tags container height */
-    line-height: 35px; /* match container for vertical centering */
-    padding: 0; /* remove extra padding */
-    margin: 0;
-    background: transparent; /* match container bg */
-    border: 0; /* remove default border */
-    flex: 1; /* grow to fill remaining space */
-}
-
-.multiselect-design .multiselect__select {
-    height: 35px;
-}
-
-.field-background-colour {
-    background: #c4c2c250;
-    border: 0.8px solid #b3a9a963;
-}
-.header-design {
-    letter-spacing: 1px;
-    padding-top: 5px;
-    /* background-color: #d6d6d6f5;
-
-    border-radius: 5px; */
+    .active-status {
+        width: 100%;
+    }
 }
 </style>
