@@ -83,7 +83,8 @@ watch(salaries_info, (item) => {
         form.value.department_name = item?.official?.department?.Name || 0;
         form.value.designation_name = item?.official?.designation?.Name || 0;
         form.value.date_of_join = item?.official?.DOJ || 0;
-        form.value.status = item?.official?.Status || 0;
+        form.value.status =
+            item?.official?.Status == "N" ? "Active" : "Inactive";
         form.value.job_location = item?.official?.branch.Name || 0;
         form.value.salary_type = item?.salary_type || 0;
         form.value.bank_account_no = item?.bank_account_no || 0;
@@ -105,7 +106,7 @@ watch(salaries_info, (item) => {
         form.value.provident_fund = Number(item?.provident_fund) || 0;
         form.value.income_tax = Number(item?.income_tax) || 0;
         form.value.revenue_stamp = Number(item?.revenue_stamp) || 0;
-        form.value.hold_status = item?.hold_status || false;
+        form.value.hold_status = item?.hold_status == 1 ? true : false;
         form.value.net_pay = Number(item?.net_pay) || 0;
     }
 });

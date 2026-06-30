@@ -103,13 +103,9 @@ class EmployeeSalaryController extends Controller
             ], 422);
         }
 
-
         DB::beginTransaction();
-
         try {
             $userId = Auth::user()->EID;
-
-
             $data = [
                 'employee_id'             => $request->input('eid'),
                 'gross_salary'            => $request->input('gross_salary'),
@@ -187,55 +183,52 @@ class EmployeeSalaryController extends Controller
         ]);
 
         $employee_id = !empty($request->input('employee_id')) ? $request->input('employee_id') : null;
-        // dd($employee_id);
 
         $increment_amount = !empty($request->input('increment_amount')) ? $request->input('increment_amount') : 0;
-        // dd($increment_amount);
 
         $increment_date = !empty($request->input('increment_date')) ? $request->input('increment_date') : null;
-        // dd($increment_date);
+
         $remarks = !empty($request->input('remarks')) ? $request->input('remarks') : null;
-        // dd($remarks);
+
         $start_of_month = Carbon::parse($increment_date)->startOfMonth()->toDateString();
-        // dd($start_of_month);
+
         $gross_salary = !empty($request->input('gross_salary')) ? $request->input('gross_salary') : 0;
-        // dd($gross_salary);
+
         $basic_salary = !empty($request->input('basic_salary')) ? $request->input('basic_salary') : 0;
-        // dd($basic_salary);
+
         $house_rent = !empty($request->input('house_rent')) ? $request->input('house_rent') : 0;
-        // dd($house_rent);
+
         $conveyance = !empty($request->input('conveyance')) ? $request->input('conveyance') : 0;
-        // dd($conveyance);
+
         $medical_allowance = !empty($request->input('medical_allowance')) ? $request->input('medical_allowance') : 0;
-        // dd($medical_allowance);
+
         $consolidated = !empty($request->input('consolidated')) ? $request->input('consolidated') : 0;
-        // dd($consolidated);
+
         $festival_bonus = !empty($request->input('festival_bonus')) ? $request->input('festival_bonus') : 0;
-        // dd($festival_bonus);
+
         $travel_allowance = !empty($request->input('travel_allowance')) ? $request->input('travel_allowance') : 0;
-        // dd();
+
         $daily_allowance = !empty($request->input('daily_allowance')) ? $request->input('daily_allowance') : 0;
-        // dd();
+
         $mobile_bill = !empty($request->input('mobile_bill')) ? $request->input('mobile_bill') : 0;
-        // dd();
+
         $other_allowance = !empty($request->input('other_allowance')) ? $request->input('other_allowance') : 0;
-        // dd();
+
         $total_payment = !empty($request->input('total_payment')) ? $request->input('total_payment') : 0;
-        // dd();
+
         $provident_fund = !empty($request->input('provident_fund')) ? $request->input('provident_fund') : 0;
-        // dd();
+
         $income_tax = !empty($request->input('income_tax')) ? $request->input('income_tax') : 0;
-        // dd();
+
         $revenue_stamp = !empty($request->input('revenue_stamp')) ? $request->input('revenue_stamp') : 0;
-        // dd();
+
         $net_pay = !empty($request->input('net_pay')) ? $request->input('net_pay') : 0;
-        // dd();
+
         $salary_type = !empty($request->input('salary_type')) ? $request->input('salary_type') : null;
-        // dd();
+
         $bank_account_no = !empty($request->input('bank_account_no')) ? $request->input('bank_account_no') : null;
-        // dd();
-        $hold_status = !empty($request->input('hold_status')) ? $request->input('hold_status') : 0;
-        // dd($hold_status);
+
+        $hold_status = !empty($request->input('hold_status')) ? 1 : 0;
 
         $salaries_data = [
             'gross_salary' => $gross_salary,
@@ -249,7 +242,6 @@ class EmployeeSalaryController extends Controller
             'daily_allowance' => $daily_allowance,
             'mobile_bill' => $mobile_bill,
             'other_allowance' => $other_allowance,
-            // 'overtime' => $overtime,
             'total_payment' => $total_payment,
             'provident_fund' => $provident_fund,
             'income_tax' => $income_tax,
@@ -258,6 +250,7 @@ class EmployeeSalaryController extends Controller
             'salary_type' => $salary_type,
             'bank_account_no' => $bank_account_no,
             'hold_status' => $hold_status,
+            'effective_date' => $currentDate,
             'updated_by' => $user_id,
         ];
 
@@ -266,12 +259,7 @@ class EmployeeSalaryController extends Controller
                 ->select('id as salaries_id', 'employee_id', 'net_pay',  'salary_type', 'bank_account_no')
                 ->first();
 
-            // dd($prev_salaries_info->toArray());
-
-            // $salaries_id = $prev_salaries_info->salaries_id;
             $prev_net_pay = $prev_salaries_info->net_pay;
-            // $prev_salary_type = $prev_salaries_info->salary_type;
-            // $prev_account_no = $prev_salaries_info->bank_account_no;
 
             $increment_data = [
                 'employee_id' => $employee_id,
@@ -287,30 +275,38 @@ class EmployeeSalaryController extends Controller
                 ->whereDate('salary_date', $start_of_month)
                 ->first();
 
-
-
             if (empty($prev_salary_sheet_info)) {
-
                 $latest_history = SalaryHistory::where('employee_id', $employee_id)
                     ->orderBy('id', 'desc')
                     ->first();
 
                 if ($latest_history && empty($another_increment)) {
-                    $update_history = SalaryHistory::where('employee_id', $employee_id)->update($increment_data);
-                    if ($update_history) {
+                    $update_salary_history = SalaryHistory::where('employee_id', $employee_id)->update($increment_data);
+                    if ($update_salary_history) {
                         $update_salaries = salaries::where('employee_id', $employee_id)
                             ->update($salaries_data);
+                        if ($update_salaries) {
+                            $response = [
+                                'success' => true,
+                                'message' => 'Updated increment successfully!'
+                            ];
+                            return response()->json($response);
+                        }
                     }
                 } else {
                     $salary_history = SalaryHistory::create($increment_data);
                     if ($salary_history) {
                         $update_salaries = salaries::where('employee_id', $employee_id)
                             ->update($salaries_data);
+
+                        $response = [
+                            'success' => true,
+                            'message' => 'Create increment successfully!'
+                        ];
+                        return response()->json($response);
                     }
-                    dd("Success");
                 }
             } else {
-                dd("checking");
                 $response = [
                     'success' => false,
                     'message' => 'Check again increment date!'
@@ -320,18 +316,16 @@ class EmployeeSalaryController extends Controller
         } else {
             $response = salaries::where('employee_id', $employee_id)
                 ->update($salaries_data);
+            $response = [
+                'success' => true,
+                'message' => 'Successfully Updated'
+            ];
+            return response()->json($response);
         }
-
-        $response = [
-            'success' => true,
-            'message' => 'Successfully Updated'
-        ];
-
         $response = [
             'success' => false,
-            'message' => 'Update Failed'
+            'message' => 'Update failed'
         ];
-
         return response()->json($response);
     }
 

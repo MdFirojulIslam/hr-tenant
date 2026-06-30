@@ -592,7 +592,6 @@ const routes = [
     },
     {
         path: "/salary/edit/:id",
-
         name: "SalaryEdit",
         component: () => import("./pages/payroll/component/editSalary.vue"),
     },

@@ -134,7 +134,7 @@ onMounted(() => getData());
             <div class="p-3 mb-3">
                 <!-- Filters -->
                 <div class="row g-3 mb-3">
-                    <div class="department-component">
+                    <div class="col-lg-3 department-component">
                         <BaseDept
                             v-model:departmentID="department_id"
                             :userID="userID"
