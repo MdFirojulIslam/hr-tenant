@@ -139,7 +139,7 @@
         <td class="text-center">{{ $loop->iteration }}</td>
         <td>{{ $row->full_name }}</td>
         <td class="text-center">{{ $row->bank_account_no }}</td>
-        <td class="text-center">{{ number_format($row->net_pay, 2) }}</td>
+        <td class="text-center">{{ number_format($row->final_payments, 2) }}</td>
       </tr>
       @endforeach
     </tbody>

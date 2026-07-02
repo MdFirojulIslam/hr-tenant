@@ -18,10 +18,9 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Maatwebsite\Excel\Facades\Excel;
 use PhpOffice\PhpWord\PhpWord;
-use App\Exports\SalaryDisbursementExport;
 use PhpOffice\PhpWord\IOFactory;
 
-use App\Models\SalaryHistory;
+use App\Models\SalaryIncrement;
 
 use App\Models\salary_disbursement;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -163,9 +162,11 @@ class EmployeeSalaryController extends Controller
             'official.department:id,Name',
             'official.designation:id,Name',
             'official.branch:id,Name',
+            'SalaryIncrement'
         ])
             ->where('employee_id', $employee_id)
             ->get();
+
         return response()->json($result);
     }
 
@@ -175,6 +176,7 @@ class EmployeeSalaryController extends Controller
         $user_id = Auth::user()->EID;
         $currentDate = Carbon::now()->toDateString();
 
+
         $request->validate([
             'increment_date' => 'nullable|required_with:increment_amount|date',
         ], [
@@ -183,51 +185,34 @@ class EmployeeSalaryController extends Controller
         ]);
 
         $employee_id = !empty($request->input('employee_id')) ? $request->input('employee_id') : null;
-
         $increment_amount = !empty($request->input('increment_amount')) ? $request->input('increment_amount') : 0;
-
         $increment_date = !empty($request->input('increment_date')) ? $request->input('increment_date') : null;
 
-        $remarks = !empty($request->input('remarks')) ? $request->input('remarks') : null;
+        $previous_increment_amount = !empty($request->input('present_increment_amount')) ? $request->input('present_increment_amount') : 0;
+        $previous_increment_date = !empty($request->input('present_increment_date')) ? $request->input('present_increment_date') : 0;
 
         $start_of_month = Carbon::parse($increment_date)->startOfMonth()->toDateString();
+        $remarks = !empty($request->input('remarks')) ? $request->input('remarks') : null;
 
         $gross_salary = !empty($request->input('gross_salary')) ? $request->input('gross_salary') : 0;
-
         $basic_salary = !empty($request->input('basic_salary')) ? $request->input('basic_salary') : 0;
-
         $house_rent = !empty($request->input('house_rent')) ? $request->input('house_rent') : 0;
-
         $conveyance = !empty($request->input('conveyance')) ? $request->input('conveyance') : 0;
-
         $medical_allowance = !empty($request->input('medical_allowance')) ? $request->input('medical_allowance') : 0;
-
         $consolidated = !empty($request->input('consolidated')) ? $request->input('consolidated') : 0;
-
         $festival_bonus = !empty($request->input('festival_bonus')) ? $request->input('festival_bonus') : 0;
-
         $travel_allowance = !empty($request->input('travel_allowance')) ? $request->input('travel_allowance') : 0;
-
         $daily_allowance = !empty($request->input('daily_allowance')) ? $request->input('daily_allowance') : 0;
-
         $mobile_bill = !empty($request->input('mobile_bill')) ? $request->input('mobile_bill') : 0;
-
         $other_allowance = !empty($request->input('other_allowance')) ? $request->input('other_allowance') : 0;
-
         $total_payment = !empty($request->input('total_payment')) ? $request->input('total_payment') : 0;
-
         $provident_fund = !empty($request->input('provident_fund')) ? $request->input('provident_fund') : 0;
-
         $income_tax = !empty($request->input('income_tax')) ? $request->input('income_tax') : 0;
-
         $revenue_stamp = !empty($request->input('revenue_stamp')) ? $request->input('revenue_stamp') : 0;
-
         $net_pay = !empty($request->input('net_pay')) ? $request->input('net_pay') : 0;
 
         $salary_type = !empty($request->input('salary_type')) ? $request->input('salary_type') : null;
-
         $bank_account_no = !empty($request->input('bank_account_no')) ? $request->input('bank_account_no') : null;
-
         $hold_status = !empty($request->input('hold_status')) ? 1 : 0;
 
         $salaries_data = [
@@ -255,56 +240,51 @@ class EmployeeSalaryController extends Controller
         ];
 
         if (isset($increment_amount) && isset($increment_date)) {
-            $prev_salaries_info = salaries::where('employee_id', $employee_id)
-                ->select('id as salaries_id', 'employee_id', 'net_pay',  'salary_type', 'bank_account_no')
-                ->first();
-
-            $prev_net_pay = $prev_salaries_info->net_pay;
-
-            $increment_data = [
-                'employee_id' => $employee_id,
-                'previous_net_pay' => $prev_net_pay,
-                'increment_amount' => $increment_amount,
-                'current_net_pay' => $net_pay,
-                'increment_dates' => $increment_date,
-                'created_by' => $user_id,
-                'remarks' => $remarks
-            ];
-
             $prev_salary_sheet_info = salary_sheet::where('employee_id', $employee_id)
                 ->whereDate('salary_date', $start_of_month)
                 ->first();
-
             if (empty($prev_salary_sheet_info)) {
-                $latest_history = SalaryHistory::where('employee_id', $employee_id)
-                    ->orderBy('id', 'desc')
+                $prev_salaries_info = salaries::where('employee_id', $employee_id)
+                    ->select('id as salaries_id', 'employee_id', 'gross_salary', 'net_pay',  'salary_type', 'bank_account_no')
                     ->first();
 
-                if ($latest_history && empty($another_increment)) {
-                    $update_salary_history = SalaryHistory::where('employee_id', $employee_id)->update($increment_data);
-                    if ($update_salary_history) {
-                        $update_salaries = salaries::where('employee_id', $employee_id)
-                            ->update($salaries_data);
-                        if ($update_salaries) {
-                            $response = [
-                                'success' => true,
-                                'message' => 'Updated increment successfully!'
-                            ];
-                            return response()->json($response);
-                        }
-                    }
-                } else {
-                    $salary_history = SalaryHistory::create($increment_data);
-                    if ($salary_history) {
-                        $update_salaries = salaries::where('employee_id', $employee_id)
-                            ->update($salaries_data);
+                $prev_gross_salary = $prev_salaries_info->gross_salary;
+                $prev_net_pay = $prev_salaries_info->net_pay;
 
+                $insert_increment_data = [
+                    'employee_id' => $employee_id,
+                    'previous_gross_salary' => $prev_gross_salary,
+                    'increment_amount' => $increment_amount,
+                    'previous_net_pay' => $prev_net_pay,
+                    'current_net_pay' => $net_pay,
+                    'increment_dates' => $increment_date,
+                    'created_by' => $user_id,
+                    'remarks' => $remarks
+                ];
+
+                $create_new_increment = SalaryIncrement::create($insert_increment_data);
+                if ($create_new_increment) {
+                    $update_salary_info = salaries::where('employee_id', $employee_id)
+                        ->update($salaries_data);
+                    if ($update_salary_info) {
                         $response = [
                             'success' => true,
-                            'message' => 'Create increment successfully!'
+                            'message' => 'New increment created successfully!'
+                        ];
+                        return response()->json($response);
+                    } else {
+                        $response = [
+                            'success' => false,
+                            'message' => 'Failed to update salary info when creating increment!'
                         ];
                         return response()->json($response);
                     }
+                } else {
+                    $response = [
+                        'success' => false,
+                        'message' => 'Failed to create new increment!'
+                    ];
+                    return response()->json($response);
                 }
             } else {
                 $response = [
@@ -313,20 +293,72 @@ class EmployeeSalaryController extends Controller
                 ];
                 return response()->json($response);
             }
+        } else if (!empty($previous_increment_amount) && !empty($previous_increment_date) && empty($increment_amount) && empty($increment_date)) {
+            $latest_increment_history = SalaryIncrement::where('employee_id', $employee_id)
+                ->orderBy('id', 'desc')
+                ->first();
+
+            if ($latest_increment_history) {
+                $prev_salaries_info = salaries::where('employee_id', $employee_id)
+                    ->select('id as salaries_id', 'employee_id', 'gross_salary', 'net_pay',  'salary_type', 'bank_account_no')
+                    ->first();
+
+                $prev_gross_salary = $prev_salaries_info->gross_salary;
+                $prev_net_pay = $prev_salaries_info->net_pay;
+
+                $update_increment_data = [
+                    'employee_id' => $employee_id,
+                    'previous_gross_salary' => $prev_gross_salary,
+                    'increment_amount' => $previous_increment_amount,
+                    'previous_net_pay' => $prev_net_pay,
+                    'current_net_pay' => $net_pay,
+                    'increment_dates' => $previous_increment_date,
+                    'created_by' => $user_id,
+                    'remarks' => $remarks
+                ];
+
+                $update_increment_history = $latest_increment_history->update($update_increment_data);
+                if ($update_increment_history) {
+                    $salary_info_update = salaries::where('employee_id', $employee_id)
+                        ->update($salaries_data);
+                    if ($salary_info_update) {
+                        $response = [
+                            'success' => true,
+                            'message' => 'Successfully updated increment history!'
+                        ];
+                        return response()->json($response);
+                    } else {
+                        $response = [
+                            'success' => false,
+                            'message' => 'Failed to update salary info when updating increment history!'
+                        ];
+                        return response()->json($response);
+                    }
+                } else {
+                    $response = [
+                        'success' => false,
+                        'message' => 'Failed to update increment history!'
+                    ];
+                    return response()->json($response);
+                }
+            }
         } else {
-            $response = salaries::where('employee_id', $employee_id)
+            $update_salaries = salaries::where('employee_id', $employee_id)
                 ->update($salaries_data);
-            $response = [
-                'success' => true,
-                'message' => 'Successfully Updated'
-            ];
-            return response()->json($response);
+            if ($update_salaries) {
+                $response = [
+                    'success' => true,
+                    'message' => 'Successfully Updated'
+                ];
+                return response()->json($response);
+            } else {
+                $response = [
+                    'success' => false,
+                    'message' => 'Failed to update salary info!'
+                ];
+                return response()->json($response);
+            }
         }
-        $response = [
-            'success' => false,
-            'message' => 'Update failed'
-        ];
-        return response()->json($response);
     }
 
 
@@ -494,6 +526,8 @@ class EmployeeSalaryController extends Controller
 
                 $net_salary = ($total_payment) - ($deduction);
 
+                $final_payments = $net_salary - $loan;
+
                 $salaryData[] = [
                     'employee_id' => $salary->employee_id,
                     'salary_date' => $monthString,
@@ -521,6 +555,7 @@ class EmployeeSalaryController extends Controller
                     'payment_method' => $salary->salary_type,
                     'bank_account_no' => $salary->bank_account_no,
                     'net_pay' => $net_salary,
+                    'final_payments' => $final_payments,
                     'created_by' => $user_id,
                     'created_at' => now(),
                     'updated_at' => now(),
@@ -575,15 +610,16 @@ class EmployeeSalaryController extends Controller
                 'salary_sheets.monthly_loan_repayments',
                 'salary_sheets.bank_account_no',
                 'salary_sheets.net_pay',
+                'salary_sheets.final_payments',
                 'salary_sheets.disbursement_status',
                 DB::raw("COALESCE(sd.status, 'PENDING') as disbursement_status") // fetch status from salary_disbursement table
             )
             ->orderBy('departments.id')
             ->get();
 
-        $net_total = $salaries->sum(fn($s) => (float) $s->net_pay);
-        $bank_total = $salaries->sum(fn($s) => (float) $s->bank_account_no ? $s->net_pay : 0);
-        $cash_total = $salaries->sum(fn($s) => (float) !$s->bank_account_no ? $s->net_pay : 0);
+        $net_total = $salaries->sum(fn($s) => (float) $s->final_payments);
+        $bank_total = $salaries->sum(fn($s) => (float) $s->bank_account_no ? $s->final_payments : 0);
+        $cash_total = $salaries->sum(fn($s) => (float) !$s->bank_account_no ? $s->final_payments : 0);
         return response()->json([
             'salaries' => $salaries,
             'net_total' => $net_total,
@@ -660,8 +696,6 @@ class EmployeeSalaryController extends Controller
 
     public function deleteSalary($id)
     {
-
-
         DB::beginTransaction();
 
         try {
@@ -714,7 +748,7 @@ class EmployeeSalaryController extends Controller
                 'employees.Employee_Id as employee_id',
                 'employees.Full_Name as full_name',
                 'salary_sheets.bank_account_no',
-                'salary_sheets.net_pay',
+                'salary_sheets.final_payments',
                 'salary_disbursements.id as disbursement_id',
                 'salary_disbursements.status as disbursement_status'
             )
@@ -723,11 +757,11 @@ class EmployeeSalaryController extends Controller
         // Calculate totals
         $bankTotal = $salaries
             ->whereNotNull('bank_account_no')   // only bank accounts
-            ->sum(fn($s) => (float) $s->net_pay);
+            ->sum(fn($s) => (float) $s->final_payments);
 
         $cashTotal = $salaries
             ->whereNull('bank_account_no')      // only cash payments
-            ->sum(fn($s) => (float) $s->net_pay);
+            ->sum(fn($s) => (float) $s->final_payments);
 
         return response()->json([
             'salaries' => $salaries,
@@ -759,7 +793,7 @@ class EmployeeSalaryController extends Controller
     //             'employees.Employee_Id as employee_id',
     //             'employees.Full_Name as full_name',
     //             'salary_sheets.bank_account_no',
-    //             'salary_sheets.net_pay'
+    //             'salary_sheets.final_payments'
     //         )->orderBy('departments.id')->get();
     //     $grandTotal = $salaries->sum('net_pay');
 
@@ -796,12 +830,12 @@ class EmployeeSalaryController extends Controller
                 'employees.Employee_Id as employee_id',
                 'employees.Full_Name as full_name',
                 'salary_sheets.bank_account_no',
-                'salary_sheets.net_pay'
+                'salary_sheets.final_payments'
             )
             ->orderBy('departments.id')
             ->get();
 
-        $grandTotal = $salaries->sum('net_pay');
+        $grandTotal = $salaries->sum('final_payments');
         $grandTotalInWords = HelperFunctionController::numberToWords($grandTotal);
 
         $pdf = Pdf::loadView('pdf.salary-disbursement-bank-pdf', [
@@ -840,12 +874,12 @@ class EmployeeSalaryController extends Controller
                 'employees.Full_Name as full_name',
                 'designations.Name as designation',
                 'salary_sheets.payment_method',
-                'salary_sheets.net_pay'
+                'salary_sheets.final_payments'
             )->orderBy('departments.id')
             ->get();
 
         // Calculate grand total
-        $grandTotal = $salaries->sum('net_pay');
+        $grandTotal = $salaries->sum('final_payments');
         $grandTotalInWords = HelperFunctionController::numberToWords($grandTotal);
 
         $pdf = Pdf::loadView('pdf.salary-disbursement-cash-pdf', [
@@ -881,12 +915,12 @@ class EmployeeSalaryController extends Controller
             ->select(
                 'employees.Full_Name as full_name',
                 'salary_sheets.bank_account_no',
-                'salary_sheets.net_pay'
+                'salary_sheets.final_payments'
             )
             ->orderBy('departments.id')
             ->get();
 
-        $subtotal = $data->sum('net_pay');
+        $subtotal = $data->sum('final_payments');
         $inWords = HelperFunctionController::numberToWords($subtotal);
 
         return Excel::download(
@@ -895,36 +929,6 @@ class EmployeeSalaryController extends Controller
         );
     }
 
-
-    // public function SalaryDisbursementBankXLSX(Request $request)
-    // {
-    //     $year = $request->year;
-    //     $month = $request->month;
-    //     $monthName = date('F', mktime(0, 0, 0, $month, 10));
-
-    //     $data = DB::table('salary_sheets')
-    //         ->join('employees', 'employees.id', '=', 'salary_sheets.employee_id')
-    //         ->join('officials', 'officials.EID', '=', 'salary_sheets.employee_id')
-    //         ->join('departments', 'departments.id', '=', 'officials.Department_Id')
-    //         ->where('salary_sheets.payment_method', 'bank')
-    //         ->whereYear('salary_sheets.salary_date', $year)
-    //         ->whereMonth('salary_sheets.salary_date', $month)
-    //         ->whereNotNull('salary_sheets.disbursement_status')
-    //         ->select(
-    //             'employees.Employee_Id as employee_id',
-    //             'employees.Full_Name as full_name',
-    //             'salary_sheets.bank_account_no',
-    //             'salary_sheets.net_pay'
-    //         )->orderBy('departments.id')
-    //         ->get();
-
-    //     $subtotal = $data->sum('net_pay');
-
-    //     return Excel::download(
-    //         new SalaryDisbursementExport($data, "Salary Disbursement (Bank)", "{$monthName} {$year}", $subtotal),
-    //         "Salary_Disbursement_Bank_{$monthName}_{$year}.xlsx"
-    //     );
-    // }
 
     public function SalaryDisbursementCashXLSX(Request $request)
     {
@@ -946,11 +950,11 @@ class EmployeeSalaryController extends Controller
                 'employees.Full_Name as full_name',
                 'designations.Name as designation',
                 DB::raw('"Cash" as bank_account_no'),
-                'salary_sheets.net_pay'
+                'salary_sheets.final_payments'
             )->orderBy('departments.id')
             ->get();
 
-        $subtotal = $data->sum('net_pay');
+        $subtotal = $data->sum('final_payments');
         $inWords = HelperFunctionController::numberToWords($subtotal);
         return Excel::download(
             new SalaryDisbursementCashExport($data, $monthName, $year, $subtotal, $inWords),
@@ -978,12 +982,12 @@ class EmployeeSalaryController extends Controller
             ->select(
                 'employees.Full_Name as full_name',
                 'salary_sheets.bank_account_no',
-                'salary_sheets.net_pay'
+                'salary_sheets.final_payments'
             )
             ->orderBy('departments.id')
             ->get();
 
-        $grandTotal = $data->sum('net_pay');
+        $grandTotal = $data->sum('final_payments');
 
         // ================= NUMBER TO WORDS =================
         $amount = number_format($grandTotal, 2, '.', '');
@@ -1054,7 +1058,7 @@ class EmployeeSalaryController extends Controller
             $table->addCell(1000)->addText($i + 1);
             $table->addCell(4000)->addText($row->full_name);
             $table->addCell(3000)->addText($row->bank_account_no ?? '-');
-            $table->addCell(2000)->addText(number_format($row->net_pay, 2));
+            $table->addCell(2000)->addText(number_format($row->final_payments, 2));
         }
 
         // ================= TOTAL =================
@@ -1142,13 +1146,13 @@ class EmployeeSalaryController extends Controller
                 DB::raw("CONCAT('ABNB', employees.Employee_Id) as employee_id"),
                 'employees.Full_Name as full_name',
                 'designations.Name as designation',
-                'salary_sheets.net_pay'
+                'salary_sheets.final_payments'
             )
             ->orderBy('departments.id')
             ->get();
 
         // Grand total
-        $grandTotal = $salaries->sum('net_pay');
+        $grandTotal = $salaries->sum('final_payments');
 
         $amount = number_format($grandTotal, 2, '.', '');
         [$taka, $paisa] = explode('.', $amount);
@@ -1207,7 +1211,7 @@ class EmployeeSalaryController extends Controller
             $table->addCell(4000)->addText($salary->full_name);
             $table->addCell(2500)->addText($salary->designation);
             $table->addCell(2500)->addText('Cash');
-            $table->addCell(1500)->addText(number_format($salary->net_pay, 2));
+            $table->addCell(1500)->addText(number_format($salary->final_payments, 2));
             $table->addCell(1500)->addText('');
         }
 

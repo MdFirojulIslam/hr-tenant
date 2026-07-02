@@ -345,9 +345,10 @@ onMounted(() => getData());
                         <th class="text-center">GROSS</th>
                         <th class="text-center">TOTAL EARNING</th>
                         <th class="text-center">TOTAL DEDUCTION</th>
-                        <th class="text-center">LOAN</th>
-                        <th class="text-center">BANK ACCOUNT</th>
-                        <th class="text-center">NET SALARY</th>
+                        <th class="text-center">NET PAY</th>
+                        <th class="text-center">LOAN REPAYMENTS</th>
+                        <th class="text-center">FINAL PAYMENTS</th>
+                        <th class="text-center">PAYMENT METHOD</th>
                     </tr>
                 </thead>
 
@@ -373,16 +374,20 @@ onMounted(() => getData());
                             {{ salary.total_deduction ?? "-" }}
                         </td>
 
+                        <td class="text-center fw-bold">
+                            {{ salary.net_pay }}
+                        </td>
+
                         <td class="text-center">
                             {{ salary.monthly_loan_repayments ?? "-" }}
                         </td>
 
                         <td class="text-center">
-                            {{ salary.bank_account_no ?? "Cash" }}
+                            {{ salary.final_payments ?? "-" }}
                         </td>
 
-                        <td class="text-center fw-bold">
-                            {{ salary.net_pay }}
+                        <td class="text-center">
+                            {{ salary.bank_account_no ?? "Cash" }}
                         </td>
                     </tr>
 

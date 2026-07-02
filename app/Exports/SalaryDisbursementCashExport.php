@@ -43,7 +43,7 @@ class SalaryDisbursementCashExport implements FromArray, WithEvents
         $row->full_name,
         $row->designation,
         'Cash', // fixed payment method
-        number_format($row->net_pay, 2),
+        number_format($row->final_payments, 2),
         ''
       ];
     }

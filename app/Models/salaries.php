@@ -41,4 +41,10 @@ class salaries extends Model
     {
         return $this->belongsTo(official::class, 'employee_id', 'EID');
     }
+
+    public function SalaryIncrement()
+    {
+        return $this->hasOne(SalaryIncrement::class, 'employee_id', 'employee_id')
+            ->latestOfMany();
+    }
 }

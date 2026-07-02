@@ -23,6 +23,10 @@ const store = createStore({
                 return null;
             }
         })(),
+        notification: {
+            successMessage: "",
+            errorMessage: "",
+        },
     },
 
     mutations: {
@@ -44,6 +48,20 @@ const store = createStore({
         },
         SET_PERMISSIONS(state, payload) {
             state.permissions = payload;
+        },
+        setSuccess(state, message) {
+            state.notification.successMessage = message;
+            state.notification.errorMessage = "";
+        },
+
+        setError(state, message) {
+            state.notification.errorMessage = message;
+            state.notification.successMessage = "";
+        },
+
+        clearNotification(state) {
+            state.notification.successMessage = "";
+            state.notification.errorMessage = "";
         },
     },
 
@@ -128,7 +146,7 @@ const store = createStore({
 if (localStorage.getItem("tokenExpiration")) {
     const expirationTime = parseInt(
         localStorage.getItem("tokenExpiration"),
-        10
+        10,
     );
     if (Date.now() > expirationTime) {
         store.dispatch("removeToken");

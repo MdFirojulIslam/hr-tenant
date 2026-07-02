@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, watch, defineAsyncComponent } from "vue";
+import { ref, onMounted, watch, computed, defineAsyncComponent } from "vue";
 import BaseDept from "@/pages/components/input_field/Basedept.vue";
 import BaseDeptEmp from "@/pages/components/input_field/BaseDeptEmp.vue";
 import { Bootstrap4Pagination } from "laravel-vue-pagination";
@@ -8,6 +8,7 @@ import Swal from "sweetalert2";
 import { useStore } from "vuex";
 import { useRouter } from "vue-router";
 import EditSalary from "./component/editSalary.vue";
+
 const router = useRouter();
 
 const store = useStore();
@@ -36,6 +37,8 @@ const editable_employee_id = ref(null);
 const heading = ref("");
 const salaryModal = ref(false);
 
+const notification = computed(() => store.state.notification);
+
 const getData = async (page = 1) => {
     currentPage.value = page;
     try {
@@ -60,11 +63,19 @@ watch([search_query, department_id, employee_id, status], () => {
     getData();
 });
 
+// const editSalary = (id) => {
+//     router.push({
+//         name: "SalaryEdit",
+//         params: { id },
+//     });
+// };
+
 const editSalary = (id) => {
-    router.push({
+    const routeData = router.resolve({
         name: "SalaryEdit",
         params: { id },
     });
+    window.open(routeData.href, "_blank");
 };
 
 const newSetup = (title) => {
@@ -80,7 +91,21 @@ const submitHandler = (data) => {
     console.log("Received from child:", data);
 };
 
-onMounted(() => getData());
+onMounted(() => {
+    if (notification.value.successMessage) {
+        Swal.fire({
+            position: "middle",
+            icon: "success",
+            title: notification.value.successMessage,
+            showConfirmButton: false,
+            timer: 1500,
+        });
+
+        store.commit("clearNotification");
+    }
+
+    getData();
+});
 
 // const deletesalary = async (id) => {
 //     const res = await api.get(`/delete-salary/${id}`);

@@ -390,6 +390,7 @@ const routes = [
             pageId: 40,
         },
     },
+
     {
         path: "/payroll/salary-setup",
         name: "SalarySetup",
@@ -399,6 +400,7 @@ const routes = [
             pageId: 42,
         },
     },
+
     {
         path: "/payroll/salary-adjustment",
         name: "SalaryAdjustment",

@@ -76,7 +76,7 @@ class SalaryDisbursementBankExport extends DefaultValueBinder implements FromArr
         $index + 1,
         $row->full_name,
         (string)$row->bank_account_no, // Explicit string casting
-        number_format($row->net_pay, 2),
+        number_format($row->final_payments, 2),
       ];
     }
 

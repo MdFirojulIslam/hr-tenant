@@ -293,7 +293,7 @@
         <td>{{ $row->full_name }}</td>
         <td>{{ $row->designation }}</td>
         <td class="text-center">{{ $row->payment_method }}</td>
-        <td class="text-center">{{ rtrim(rtrim(number_format($row->net_pay, 2), '0'), '.') }}</td>
+        <td class="text-center">{{ rtrim(rtrim(number_format($row->final_payments, 2), '0'), '.') }}</td>
         <td></td>
       </tr>
       @endforeach

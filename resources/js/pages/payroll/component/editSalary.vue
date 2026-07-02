@@ -7,10 +7,15 @@ import SelectField from "@/pages/components/input_field/SelectField.vue";
 import Image from "@/pages/components/image/Image.vue";
 import api from "@/api";
 import { useStore } from "vuex";
+import { useRouter } from "vue-router";
+
+const router = useRouter();
 
 const store = useStore();
 const role_id = store.getters.getRoleId;
 const user = store.getters.getUser;
+
+// Get the route parameters
 const route = useRoute();
 const employee_id_params = route.params.id;
 
@@ -23,7 +28,13 @@ const increment_status = ref(false);
 const activeTab = ref("salary_details");
 
 const increment_date = ref("");
-const tmp_gross_Salary = ref(0);
+
+const tmp_gross_salary = ref(0);
+
+const tmp_previous_gross_salary = ref(0);
+
+const originalPresentIncrementDate = ref("");
+const originalPresentIncrementAmount = ref("");
 
 const tabs = [
     { key: "salary_details", label: "Salary Details" },
@@ -69,13 +80,14 @@ const form = ref({
     provident_fund: "",
     increment_amount: "",
     increment_date: "",
+    present_increment_amount: "",
+    present_increment_date: "",
     income_tax: "",
     revenue_stamp: "",
     total_deduction: "",
     hold_status: false,
     net_pay: "",
 });
-
 watch(salaries_info, (item) => {
     if (item) {
         form.value.employee_id = item?.employee?.id || 0;
@@ -88,20 +100,34 @@ watch(salaries_info, (item) => {
         form.value.job_location = item?.official?.branch.Name || 0;
         form.value.salary_type = item?.salary_type || 0;
         form.value.bank_account_no = item?.bank_account_no || 0;
-        tmp_gross_Salary.value = Number(item?.gross_salary) || 0;
+        tmp_gross_salary.value = Number(item?.gross_salary) || 0;
+
+        tmp_previous_gross_salary.value =
+            Number(item?.salary_increment?.previous_gross_salary) || 0;
+
         form.value.gross_salary = Number(item?.gross_salary) || 0;
 
         form.value.basic_salary = Number(item?.basic) || 0;
         form.value.house_rent = Number(item?.house_rent) || 0;
         form.value.conveyance = Number(item?.conveyance) || 0;
         form.value.medical_allowance = Number(item?.medical_allowance) || 0;
-        form.value.consolidated = Number(item?.consoliodated) || 0;
+        form.value.consolidated = Number(item?.consolidated) || 0;
         form.value.festival_bonus = Number(item?.festival_bonus) || 0;
         form.value.travel_allowance = Number(item?.travel_allowance) || 0;
         form.value.daily_allowance = Number(item?.daily_allowance) || 0;
         form.value.mobile_bill = Number(item?.mobile_bill) || 0;
         form.value.other_allowance = Number(item?.other_allowance) || 0;
-        form.value.increment_date = Number(item?.increment_date) || null;
+
+        originalPresentIncrementDate.value =
+            item?.salary_increment?.increment_dates || "";
+
+        originalPresentIncrementAmount.value =
+            Number(item?.salary_increment?.increment_amount) || 0;
+
+        form.value.present_increment_amount =
+            Number(item?.salary_increment?.increment_amount) || 0;
+        form.value.present_increment_date =
+            item?.salary_increment?.increment_dates || "";
 
         form.value.provident_fund = Number(item?.provident_fund) || 0;
         form.value.income_tax = Number(item?.income_tax) || 0;
@@ -111,13 +137,48 @@ watch(salaries_info, (item) => {
     }
 });
 
-const tmp_gross = computed(
+const tmp_previous_gross = computed(
     () =>
-        (Number(tmp_gross_Salary.value) || 0) +
-        Number(form.value.increment_amount),
+        (Number(tmp_previous_gross_salary.value) || 0) +
+        Number(form.value.present_increment_amount || 0),
 );
 
-watch(tmp_gross, (newValue) => {
+const present_gross = computed(() => {
+    if (Number(tmp_previous_gross.value > 0)) {
+        return (
+            Number(tmp_previous_gross.value) +
+            Number(form.value.increment_amount)
+        );
+    } else {
+        return (
+            Number(tmp_gross_salary.value) + Number(form.value.increment_amount)
+        );
+    }
+});
+
+const isPresentIncrementReadonly = computed(() => {
+    return (
+        form.value.increment_amount !== "" &&
+        form.value.increment_amount !== null &&
+        Number(form.value.increment_amount) > 0
+    );
+});
+
+watch(
+    () => form.value.increment_amount,
+    (newValue) => {
+        if (newValue !== "" && newValue !== null && Number(newValue) > 0) {
+            // Reset to API value
+            form.value.present_increment_amount =
+                originalPresentIncrementAmount.value;
+
+            form.value.present_increment_date =
+                originalPresentIncrementDate.value;
+        }
+    },
+);
+
+watch(present_gross, (newValue) => {
     form.value.gross_salary = newValue;
 });
 
@@ -156,6 +217,10 @@ const total_payment = computed(
         Number(form.value.other_allowance || 0),
 );
 
+watch(total_payment, (value) => {
+    form.value.total_payment = value;
+});
+
 const total_deduction = computed(
     () =>
         Number(form.value.provident_fund || 0) +
@@ -179,13 +244,10 @@ const submit = async () => {
     try {
         const response = await api.put("/single-salaries-info", form.value);
         if (response.data.success) {
-            instance.emit("modal-close");
-            Swal.fire({
-                position: "middle",
-                icon: "success",
-                title: "Information has been Saved",
-                showConfirmButton: false,
-                timer: 1500,
+            store.commit("setSuccess", response.data.message);
+
+            router.push({
+                name: "SalarySetup",
             });
         }
     } catch (error) {
@@ -447,20 +509,6 @@ onMounted(() => {
                                         class="col-md-12 d-flex align-items-center"
                                     >
                                         <Label
-                                            label="New Gross Salary"
-                                            class="increment-label"
-                                        />
-                                        <span class="colon">:</span>
-                                        <NumberField
-                                            v-model="form.gross_salary"
-                                            type="number"
-                                            readonly
-                                        />
-                                    </div>
-                                    <div
-                                        class="col-md-12 d-flex align-items-center"
-                                    >
-                                        <Label
                                             label="Effective From*"
                                             class="increment-label"
                                         />
@@ -477,6 +525,69 @@ onMounted(() => {
                                     >
                                         {{ errors.increment_date[0] }}
                                     </p>
+                                    <div
+                                        v-if="
+                                            form.present_increment_amount ===
+                                                '' ||
+                                            form.present_increment_amount ===
+                                                null ||
+                                            Number(
+                                                form.present_increment_amount,
+                                            ) !== 0
+                                        "
+                                        class="col-md-12 d-flex align-items-center"
+                                    >
+                                        <Label
+                                            label="Current Increment Amount*"
+                                            class="increment-label"
+                                        />
+                                        <span class="colon">:</span>
+                                        <NumberField
+                                            v-model="
+                                                form.present_increment_amount
+                                            "
+                                            type="number"
+                                            :readonly="
+                                                isPresentIncrementReadonly
+                                            "
+                                        />
+                                    </div>
+                                    <div
+                                        v-if="
+                                            form.present_increment_date != '' &&
+                                            form.present_increment_date != 0
+                                        "
+                                        class="col-md-12 d-flex align-items-center"
+                                    >
+                                        <Label
+                                            label="Current Increment Date*"
+                                            class="increment-label"
+                                        />
+                                        <span class="colon">:</span>
+                                        <NumberField
+                                            v-model="
+                                                form.present_increment_date
+                                            "
+                                            type="date"
+                                            :readonly="
+                                                isPresentIncrementReadonly
+                                            "
+                                        />
+                                    </div>
+                                    <div
+                                        class="col-md-12 d-flex align-items-center"
+                                    >
+                                        <Label
+                                            label="Present Gross Salary"
+                                            class="increment-label"
+                                        />
+                                        <span class="colon">:</span>
+                                        <NumberField
+                                            v-model="form.gross_salary"
+                                            type="number"
+                                            readonly
+                                        />
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -608,7 +719,7 @@ onMounted(() => {
 }
 
 .increment-label {
-    width: 115px;
+    width: 165px;
 }
 
 .deductions-label {
