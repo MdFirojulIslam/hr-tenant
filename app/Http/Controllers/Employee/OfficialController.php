@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 
 use App\Models\employee;
 use App\Models\official;
+use App\Models\salaries;
 use App\Models\town_belong;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -202,12 +203,25 @@ class OfficialController extends Controller
 
             $user = User::where('EID', $official->EID)->first();
 
-            if($user && $request->status == 'Y'){
+            $salaries = salaries::where('employee_id', $official->EID)
+                ->first();
+
+            if ($salaries && $request->status == 'Y') {
+                $salaries->hold_status = 1;
+                $salaries->save();
+            }
+
+            if ($salaries && $request->status == 'N') {
+                $salaries->hold_status = 0;
+                $salaries->save();
+            }
+
+            if ($user && $request->status == 'Y') {
                 $user->active = 0;
                 $user->save();
             }
 
-            if($user && $request->status == 'N'){
+            if ($user && $request->status == 'N') {
                 $user->active = 1;
                 $user->save();
             }

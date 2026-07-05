@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, computed } from "vue";
+import { ref, onMounted, computed, watch } from "vue";
 import api from "@/api";
 import Swal from "sweetalert2";
 
@@ -12,6 +12,7 @@ const isDisbursed = ref(false);
 const netTotal = ref(0);
 const bankTotal = ref(0);
 const cashTotal = ref(0);
+
 const bankFormat = ref("");
 const cashFormat = ref("");
 
@@ -149,6 +150,24 @@ const downloadSalary = async () => {
     }
 };
 
+const downloadFile = (response, filename) => {
+    const blob = new Blob([response.data], {
+        type: response.headers["content-type"],
+    });
+
+    const url = window.URL.createObjectURL(blob);
+
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+
+    document.body.appendChild(link);
+    link.click();
+
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(link);
+};
+
 const downloadBank = async (type) => {
     try {
         const response = await api.get(`/salary-disbursement-bank-${type}`, {
@@ -199,6 +218,18 @@ const filteredSalaries = computed(() => {
 
         return name.includes(q) || eid.includes(q) || bank.includes(q);
     });
+});
+
+watch(bankFormat, (format) => {
+    if (!format) return;
+    downloadBank(format);
+    bankFormat.value = "";
+});
+
+watch(cashFormat, (format) => {
+    if (!format) return;
+    downloadCash(format);
+    cashFormat.value = "";
 });
 
 onMounted(() => getData());

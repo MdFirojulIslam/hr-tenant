@@ -65,6 +65,7 @@ class SalarySheetExport extends DefaultValueBinder implements
                 'departments.Name as department_name',
                 'designations.Name as designation_name',
                 'officials.DOJ',
+                'salary_sheets.present_days',
                 'salary_sheets.absent_days',
                 'salary_sheets.gross_salary',
                 'salary_sheets.basic_salary',
@@ -109,6 +110,7 @@ class SalarySheetExport extends DefaultValueBinder implements
             $row->department_name,
             $row->designation_name,
             $row->DOJ,
+            $row->present_days,
             $row->absent_days,
             $row->gross_salary,
             $row->basic_salary,
@@ -148,6 +150,7 @@ class SalarySheetExport extends DefaultValueBinder implements
                 'Department',
                 'Designation',
                 'Date Of Join',
+                'Present',
                 'Absent',
                 'Gross Salary',
                 'Basic Salary',
@@ -196,7 +199,7 @@ class SalarySheetExport extends DefaultValueBinder implements
                 $sheet->mergeCells("A1:{$lastColumn}1");
                 $sheet->mergeCells("A2:{$lastColumn}2");
 
-                /* ===== Title Styles ===== */
+
                 $sheet->getStyle('A1')->applyFromArray([
                     'font' => ['bold' => true, 'size' => 14],
                     'alignment' => ['horizontal' => Alignment::HORIZONTAL_LEFT],
@@ -207,54 +210,39 @@ class SalarySheetExport extends DefaultValueBinder implements
                     'alignment' => ['horizontal' => Alignment::HORIZONTAL_LEFT],
                 ]);
 
-                /* ===== Header Row ===== */
                 $sheet->freezePane('A4');
 
                 $sheet->getStyle("A3:{$lastColumn}3")->applyFromArray([
                     'font' => ['bold' => true],
                     'alignment' => [
                         'horizontal' => Alignment::HORIZONTAL_CENTER,
-                        // 'vertical'   => Alignment::VERTICAL_CENTER,
-                        // 'textRotation' => 90,
                     ],
                 ]);
 
-                /* ===== Total Net Pay ===== */
-                $netPayColumn = 'Z';
-                $sumLoan = 'AA';
-                $finalPayColumn = 'AB';
+
                 $totalRow = $lastRow + 1;
 
-                $sheet->setCellValue("Y{$totalRow}", 'Total');
+                $sheet->setCellValue("G{$totalRow}", "Total");
+
+                $startColumn = 'H';
+                $endColumn   = 'AC';
+
+                for ($column = $startColumn; $column !== $endColumn; $column++) {
+                    $sheet->setCellValue(
+                        "{$column}{$totalRow}",
+                        "=SUM({$column}4:{$column}{$lastRow})"
+                    );
+                }
 
                 $sheet->setCellValue(
-                    "{$netPayColumn}{$totalRow}",
-                    "=SUM({$netPayColumn}4:{$netPayColumn}{$lastRow})"
+                    "AC{$totalRow}",
+                    "=SUM(AC4:AC{$lastRow})"
                 );
 
-                $sheet->setCellValue(
-                    "{$sumLoan}{$totalRow}",
-                    "=SUM({$sumLoan}4:{$sumLoan}{$lastRow})"
-                );
-
-                $sheet->setCellValue(
-                    "{$finalPayColumn}{$totalRow}",
-                    "=SUM({$finalPayColumn}4:{$finalPayColumn}{$lastRow})"
-                );
-
-                $sheet->getStyle("Z{$totalRow}:{$netPayColumn}{$totalRow}")
+                $sheet->getStyle("G{$totalRow}:AC{$totalRow}")
                     ->getFont()
                     ->setBold(true);
 
-                $sheet->getStyle("AA{$totalRow}:{$sumLoan}{$totalRow}")
-                    ->getFont()
-                    ->setBold(true);
-
-                $sheet->getStyle("AB{$totalRow}:{$finalPayColumn}{$totalRow}")
-                    ->getFont()
-                    ->setBold(true);
-
-                /* ===== Full Border (Header + Data + Total) ===== */
                 $sheet->getStyle("A3:{$lastColumn}{$totalRow}")
                     ->applyFromArray([
                         'borders' => [

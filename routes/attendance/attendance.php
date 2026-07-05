@@ -13,7 +13,12 @@ Route::get('/location', [AttendenceController::class, 'getTsoLocation']);
 Route::get('/emp-attendence', [AttendenceController::class, 'attendenceEmployee']);
 Route::get('/fetch-attendence', [AttendenceController::class, 'fetchAttendence']);
 Route::get('/fetch-zkt-attendence', [AttendenceController::class, 'fetchZktAttendence']);
+
+Route::get('/prepare-summary', [AttendenceController::class, 'prepareSummary']);
+Route::get('/daily-attendance-sync', [AttendenceController::class, 'dailyAttendanceSync']);
+
 Route::get('/fetch-zkt-user', [AttendenceController::class, 'fetchZktUser']);
+Route::post('/manual-attendance', [AttendenceController::class, 'manualAttendance']);
 
 
 //App Attendance

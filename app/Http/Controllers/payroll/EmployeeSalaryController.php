@@ -501,6 +501,22 @@ class EmployeeSalaryController extends Controller
                 ->get()
                 ->keyBy('employee_id');
 
+            $present = DB::table('attendance_summaries')
+                ->select('employee_id', DB::raw('COUNT(*) as total_present'))
+                ->whereBetween('date', [$month_start, $month_end])
+                ->whereNotNull('status')
+                ->groupBy('employee_id')
+                ->get()
+                ->keyBy('employee_id');
+
+            $absent = DB::table('attendance_summaries')
+                ->select('employee_id', DB::raw('COUNT(*) as total_absent'))
+                ->whereBetween('date', [$month_start, $month_end])
+                ->whereNull('status')
+                ->groupBy('employee_id')
+                ->get()
+                ->keyBy('employee_id');
+
             $salaries = DB::table('salaries')
                 ->join('employees', 'employees.id', '=', 'salaries.employee_id')
                 ->join('officials', 'officials.EID', '=', 'salaries.employee_id')
@@ -510,6 +526,7 @@ class EmployeeSalaryController extends Controller
                     'salaries.*'
                 )
                 ->where('officials.Status', '=', 'N')
+                ->where('salaries.hold_status', '=', 0)
                 ->whereDate('officials.DOJ', '<=', $month_end)
                 ->get();
 
@@ -521,6 +538,9 @@ class EmployeeSalaryController extends Controller
                 $earning = $earnings[$salary->employee_id]->total_earning ?? 0;
                 $deduction = $deductions[$salary->employee_id]->total_deduction ?? 0;
                 $loan = $loans[$salary->employee_id]->total_loan ?? 0;
+
+                $present_days = $present[$salary->employee_id]->total_present ?? 0;
+                $absent_days = $absent[$salary->employee_id]->total_absent ?? 0;
 
                 $total_payment = $earning + ($salary->net_pay);
 
@@ -554,6 +574,8 @@ class EmployeeSalaryController extends Controller
                     'salary_status' => 'approved',
                     'payment_method' => $salary->salary_type,
                     'bank_account_no' => $salary->bank_account_no,
+                    'present_days' => $present_days,
+                    'absent_days' => $absent_days,
                     'net_pay' => $net_salary,
                     'final_payments' => $final_payments,
                     'created_by' => $user_id,

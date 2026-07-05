@@ -593,6 +593,14 @@ const routes = [
         },
     },
     {
+        path: "/manual-attendance",
+        name: "ManualAttendance",
+        component: () => import("./pages/attendance/manualAttendance.vue"),
+        meta: {
+            requireAuth: true,
+        },
+    },
+    {
         path: "/salary/edit/:id",
         name: "SalaryEdit",
         component: () => import("./pages/payroll/component/editSalary.vue"),

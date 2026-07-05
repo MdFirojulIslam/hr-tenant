@@ -277,7 +277,7 @@ onMounted(() => {
                             <div class="d-flex gap-4 mt-4">
                                 <div class="image">
                                     <Image
-                                        src="/default-avatar.png"
+                                        :employeeID="form.employee_id"
                                         width="100px"
                                         height="100px"
                                         circle

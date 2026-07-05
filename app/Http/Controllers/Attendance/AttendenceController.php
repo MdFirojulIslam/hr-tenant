@@ -8,6 +8,7 @@ use App\Models\leave;
 use App\Models\holiday;
 use App\Models\employee;
 use App\Models\attendence;
+use App\Models\AttendanceSummary;
 use Illuminate\Http\Request;
 use App\Models\zkt_attendence;
 use Illuminate\Support\Carbon;
@@ -54,6 +55,7 @@ class AttendenceController extends Controller
         return response()->json($attendance);
     }
 
+
     public function fetchZktAttendence()
     {
         Artisan::call('attendance:fetch');
@@ -63,6 +65,149 @@ class AttendenceController extends Controller
             'success' => true,
         ]);
     }
+
+    public function prepareSummary()
+    {
+        Artisan::call('app:monthly-attendance-generate');
+        return response()->json([
+            'message' => 'Attendance fetched successfully.',
+            'success' => true,
+        ]);
+    }
+
+    public function dailyAttendanceSync(Request $request)
+    {
+        $startDate = $request->query('startDate');
+        $endDate = $request->query('endDate');
+
+        $currentDate = $startDate;
+        $monthDates = [];
+        while ($currentDate <= $endDate) {
+            $monthDates[] = $currentDate;
+            $currentDate = Carbon::parse($currentDate)->addDay()->toDateString();
+        }
+
+        $attendanceData = [];
+        foreach ($monthDates as $dateInfo) {
+            $appAttendanceInfo = app_attendance::whereDate('created_at', $dateInfo)
+                ->whereIn('status', ['in', 'out'])
+                ->selectRaw('EID as employee_id, DATE(created_at) as date, TIME(MIN(CASE WHEN status="in" THEN created_at END)) as in_time, TIME(MAX(CASE WHEN status="out" THEN created_at END)) as out_time')
+                ->groupByRaw('EID, DATE(created_at)')
+                ->get();
+            $machineAttendanceInfo = attendence::whereDate('Date', $dateInfo)
+                ->whereIn('Status', ['P', 'L'])
+                ->selectRaw('EID as employee_id, DATE as date, MIN(Time_In) as in_time, MAX(Time_Out) as out_time')
+                ->groupByRaw('EID, DATE')
+                ->get();
+            $mergedAttendance = $appAttendanceInfo->concat($machineAttendanceInfo);
+            foreach ($mergedAttendance as $record) {
+                $attendanceData[$dateInfo][] = [
+                    'employee_id' => $record->employee_id,
+                    'in_time' => $record->in_time,
+                    'out_time' => $record->out_time,
+                ];
+            }
+        }
+
+        $leaves = leave::whereDate('from_date', '<=', $endDate)
+            ->whereDate('to_date', '>=', $startDate)
+            ->where('status', 'Approved')
+            ->select('from_date', 'to_date', 'employee_id')
+            ->get();
+
+
+        $leaveData = [];
+        foreach ($leaves as $leave) {
+            $start = \Carbon\Carbon::parse($leave->from_date)->max($startDate);
+            $end   = \Carbon\Carbon::parse($leave->to_date)->min($endDate);
+            while ($start->lte($end)) {
+                $date = $start->format('Y-m-d');
+                $leaveData[$date][] = [
+                    'date' => $date,
+                    'employee_id' => $leave->employee_id,
+                ];
+                $start->addDay();
+            }
+        }
+
+        $fetchAttendanceSummary = AttendanceSummary::whereBetween('date', [$startDate, $endDate])
+            ->get()
+            ->keyBy(function ($item) {
+                return $item->employee_id . '_' . $item->date;
+            });
+
+        foreach ($leaveData as $data) {
+            foreach ($data as $record) {
+                $key = $record['employee_id'] . '_' . $record['date'];
+                $existing = $fetchAttendanceSummary[$key] ?? null;
+                if ($existing && is_null($existing->in_time)) {
+                    $existing->update([
+                        'status'   => 'On Leave'
+                    ]);
+                }
+            }
+        }
+
+        foreach ($attendanceData as $date => $records) {
+            foreach ($records as $record) {
+                $key = $record['employee_id'] . '_' . $date;
+                $existing = $fetchAttendanceSummary[$key] ?? null;
+                if ($existing && is_null($existing->in_time)) {
+                    $status = 'Present';
+                    $inTime = Carbon::parse($record['in_time']);
+                    $outTime = Carbon::parse($record['out_time']);
+
+                    $rosterIn = $existing->rostered_in_time
+                        ? Carbon::parse($existing->rostered_in_time)
+                        : null;
+                    $rosterOut = $existing->rostered_out_time
+                        ? Carbon::parse($existing->rostered_out_time)
+                        : null;
+
+                    if ($rosterIn && $inTime->diffInMinutes($rosterIn, false) < -15) {
+                        $status = 'Late';
+                    }
+                    if ($rosterOut && $outTime->diffInMinutes($rosterOut, false) > 15) {
+                        $status = 'Early Leave';
+                    }
+
+                    $existing->update([
+                        'in_time'  => $record['in_time'],
+                        'out_time' => $record['out_time'],
+                        'status'   => $status
+                    ]);
+                }
+            }
+        }
+    }
+
+    public function manualAttendance(Request $request)
+    {
+        $employee_id = $request->employee_id;
+        $in_time = $request->in_time;
+        $out_time = $request->out_time;
+
+        $date = Carbon::parse($request->attendance_date)->toDateString();
+
+        $remarks = !empty($request->remarks) ? $request->remarks : null;
+        $status = "Home";
+
+        $data = [
+            'employee_id' => $employee_id,
+            'in_time' => $in_time,
+            'out_time' => $out_time,
+            'date' => $date,
+            'remarks' => $remarks,
+            'status' => $status,
+        ];
+
+        $response = AttendanceSummary::where('employee_id', $employee_id)
+            ->whereDate('date', $date)
+            ->update($data);
+
+        return response()->json($response);
+    }
+
 
     public function fetchZktUser()
     {

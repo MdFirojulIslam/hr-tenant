@@ -20,6 +20,7 @@ const salaryComponent = defineAsyncComponent(
 );
 
 const userID = user.id;
+
 const department_id = ref(null);
 const employee_id = ref(null);
 const isLoading = ref(true);

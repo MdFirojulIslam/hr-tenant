@@ -2,10 +2,11 @@
 
 namespace App\Console;
 
+use App\Console\Commands\DailyAttendanceGenerate;
 use Illuminate\Console\Scheduling\Schedule;
 use App\Console\Commands\FetchAttendance;
+use App\Console\Commands\MonthlyAttendanceGenerate;
 use App\Jobs\CommonJob;
-use App\Jobs\FetchZKTecoAttendanceJob;
 use Illuminate\Foundation\Console\Kernel as ConsoleKernel;
 
 class Kernel extends ConsoleKernel
@@ -15,7 +16,10 @@ class Kernel extends ConsoleKernel
      */
     protected $commands = [
         FetchAttendance::class,
+        DailyAttendanceGenerate::class,
+        MonthlyAttendanceGenerate::class
     ];
+
 
     protected function schedule(Schedule $schedule): void
     {

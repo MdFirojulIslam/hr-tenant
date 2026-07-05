@@ -71,7 +71,8 @@ class NavigationSeeder extends Seeder
             ['id' => '59', 'name' => 'Bonus Disbursement', 'url' => '/payroll/bonus-disbursement', 'icon' => 'NULL', 'page' => 'BonusDisbursement', 'path' => './pages/payroll/bonusDisbursement.vue', 'parent_id' => '41', 'active' => '1'],
             ['id' => '60', 'name' => 'Roster/Schedule Setup', 'url' => '/roster-setup', 'icon' => 'NULL', 'page' => 'RosterSetup', 'path' => './pages/attendance/rosterSetup.vue', 'parent_id' => '9', 'active' => '1'],
             ['id' => '61', 'name' => 'Daily Attendance', 'url' => '/roster-report-list', 'icon' => 'NULL', 'page' => 'RosterReportList', 'path' => './pages/attendance/rosterReportList.vue', 'parent_id' => '9', 'active' => '1'],
-            ['id' => '62', 'name' => 'Artisan Calendar', 'url' => '/artisan-calendar', 'icon' => 'NULL', 'page' => 'ArtisanCalendar', 'path' => './pages/attendance/artisanCalendar.vue', 'parent_id' => '9', 'active' => '1']
+            ['id' => '62', 'name' => 'Artisan Calendar', 'url' => '/artisan-calendar', 'icon' => 'NULL', 'page' => 'ArtisanCalendar', 'path' => './pages/attendance/artisanCalendar.vue', 'parent_id' => '9', 'active' => '1'],
+            ['id' => '63', 'name' => 'Manual Attendance', 'url' => '/manual-attendance', 'icon' => 'NULL', 'page' => 'ManualAttendance', 'path' => './pages/attendance/manualAttendance.vue', 'parent_id' => '9', 'active' => '1']
         ];
 
         foreach ($navigations as $item) {
