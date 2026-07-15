@@ -9,9 +9,6 @@ import BaseDeptEmp from "@/pages/components/input_field/BaseDeptEmp.vue";
 import Image from "@/pages/components/image/Image.vue";
 import Label from "@/pages/components/label/Label.vue";
 
-import { VueDatePicker } from "@vuepic/vue-datepicker";
-import "@vuepic/vue-datepicker/dist/main.css";
-
 const store = useStore();
 const user = store.getters.getUser;
 const userID = user.id;
@@ -121,8 +118,10 @@ const submit = async () => {
                         </div>
                         <div class="col-lg-6 pt-3">
                             <Label label="Select Date*" />
-                            <VueDatePicker
+                            <input
+                                type="date"
                                 v-model="form.attendance_date"
+                                class="form-control"
                                 required
                             />
                         </div>

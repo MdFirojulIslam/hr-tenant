@@ -114,8 +114,8 @@
         <div>
             <p>
                 ______________________<br>
-                <strong>Md. Shafiqul Islam</strong><br>
-                Assistant Manager- Accounts & Finance
+                <strong>Md. Hasan Miah</strong><br>
+                Assistant Manager, Credit Control & Revenue
             </p>
         </div>
 

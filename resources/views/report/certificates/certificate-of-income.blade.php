@@ -17,7 +17,8 @@
             margin-bottom: 20px;
         }
 
-        td, th {
+        td,
+        th {
             border: 1px solid #000;
             padding: 6px 10px;
             text-align: left;
@@ -80,15 +81,42 @@
             </tr>
         </thead>
         <tbody>
-            <tr><td>Basic</td><td>{{ number_format($salary->Basic, 0) }}</td></tr>
-            <tr><td>House Rent</td><td>{{ number_format($salary->House_Rent, 0) }}</td></tr>
-            <tr><td>Conveyance</td><td>{{ number_format($salary->Conveyance, 0) }}</td></tr>
-            <tr><td>Medical Allowance</td><td>{{ number_format($salary->Medical_Allowance, 0) }}</td></tr>
-            <tr><td>Festival Bonus</td><td>{{ number_format($salary->Festival_Bonus, 0) }}</td></tr>
-            <tr><td>Overtime</td><td>{{ number_format($salary->Overtime, 0) }}</td></tr>
-            <tr><td>Food Allowance</td><td>{{ number_format($salary->Food_Allowance ?? 0, 0) }}</td></tr>
-            <tr><td>Travel Allowance</td><td>{{ number_format($salary->Travel_Allowance, 0) }}</td></tr>
-            <tr><td>Other Allowance</td><td>{{ number_format($salary->Other_Allowance, 0) }}</td></tr>
+            <tr>
+                <td>Basic</td>
+                <td>{{ number_format($salary->Basic, 0) }}</td>
+            </tr>
+            <tr>
+                <td>House Rent</td>
+                <td>{{ number_format($salary->House_Rent, 0) }}</td>
+            </tr>
+            <tr>
+                <td>Conveyance</td>
+                <td>{{ number_format($salary->Conveyance, 0) }}</td>
+            </tr>
+            <tr>
+                <td>Medical Allowance</td>
+                <td>{{ number_format($salary->Medical_Allowance, 0) }}</td>
+            </tr>
+            <tr>
+                <td>Festival Bonus</td>
+                <td>{{ number_format($salary->Festival_Bonus, 0) }}</td>
+            </tr>
+            <tr>
+                <td>Overtime</td>
+                <td>{{ number_format($salary->Overtime, 0) }}</td>
+            </tr>
+            <tr>
+                <td>Food Allowance</td>
+                <td>{{ number_format($salary->Food_Allowance ?? 0, 0) }}</td>
+            </tr>
+            <tr>
+                <td>Travel Allowance</td>
+                <td>{{ number_format($salary->Travel_Allowance, 0) }}</td>
+            </tr>
+            <tr>
+                <td>Other Allowance</td>
+                <td>{{ number_format($salary->Other_Allowance, 0) }}</td>
+            </tr>
             <tr>
                 <th>Total Income</th>
                 <th>{{ number_format($total_income, 0) }}</th>
@@ -128,8 +156,8 @@
         <p>
             For ARTISAN BUSINESS NETWORK BANGLADESH<br><br>
             ____________________________<br>
-            Md. Shafiqul Islam<br>
-            Assistant Manager – Accounts & Finance
+            Md. Hasan Miah<br>
+            Assistant Manager, Credit Control & Revenue
         </p>
     </div>
 

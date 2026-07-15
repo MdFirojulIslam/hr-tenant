@@ -14,11 +14,11 @@ class MonthlyAttendanceGenerateService
 {
   public function monthlyAttendanceCommonInformation()
   {
-    // $startOfMonth = now()->startOfMonth()->toDateString();
-    // $endOfMonth = now()->endOfMonth()->toDateString();
+    $startOfMonth = now()->startOfMonth()->toDateString();
+    $endOfMonth = now()->endOfMonth()->toDateString();
 
-    $startOfMonth = now()->subMonth()->startOfMonth()->toDateString();
-    $endOfMonth = now()->subMonth()->endOfMonth()->toDateString();
+    // $startOfMonth = now()->subMonth()->startOfMonth()->toDateString();
+    // $endOfMonth = now()->subMonth()->endOfMonth()->toDateString();
 
     $employeesInfo = employee::where('officials.Status', 'N')
       ->join('officials', 'officials.EID', '=', 'employees.id')

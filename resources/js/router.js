@@ -605,6 +605,21 @@ const routes = [
         name: "SalaryEdit",
         component: () => import("./pages/payroll/component/editSalary.vue"),
     },
+    {
+        path: "/incentive/incentive-setup",
+        name: "IncentiveSetup",
+        component: () => import("./pages/incentive/incentiveSetup.vue"),
+        meta: {
+            requireAuth: true,
+            pageId: 65,
+        },
+    },
+    {
+        path: "/incentive-setup/incentive-setup-form",
+        name: "incentiveSetupForm",
+        component: () =>
+            import("./pages/incentive/component/incentiveSetupForm.vue"),
+    },
 ];
 
 const router = createRouter({
