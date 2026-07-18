@@ -620,6 +620,12 @@ const routes = [
         component: () =>
             import("./pages/incentive/component/incentiveSetupForm.vue"),
     },
+    {
+        path: "/incentive-setup/incentive-setup-form-edit",
+        name: "incentiveSetupFormEdit",
+        component: () =>
+            import("./pages/incentive/component/incentiveSetupFormEdit.vue"),
+    },
 ];
 
 const router = createRouter({
