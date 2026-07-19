@@ -2,6 +2,11 @@
 import { ref, computed, watch, onMounted } from "vue";
 import Multiselect from "vue-multiselect";
 import "vue-multiselect/dist/vue-multiselect.min.css";
+import Label from "@/pages/components/label/Label.vue";
+import SelectField from "@/pages/components/input_field/SelectField.vue";
+import MultiselectDept from "@/pages/components/input_field/Basedept.vue";
+import NumberField from "@/pages/components/input_field/NumberField.vue";
+
 import api from "@/api";
 import Swal from "sweetalert2";
 import { useStore } from "vuex";
@@ -9,20 +14,22 @@ import { useStore } from "vuex";
 const store = useStore();
 const user = store.getters.getUser;
 
-const monthPeriods = [
-    "January 2026",
-    "February 2026",
-    "March 2026",
-    "April 2026",
-    "May 2026",
-    "June 2026",
-    "July 2026",
-    "August 2026",
-    "September 2026",
-    "October 2026",
-    "November 2026",
-    "December 2026",
-];
+const userID = user.id;
+
+// const monthPeriods = [
+//     "January 2026",
+//     "February 2026",
+//     "March 2026",
+//     "April 2026",
+//     "May 2026",
+//     "June 2026",
+//     "July 2026",
+//     "August 2026",
+//     "September 2026",
+//     "October 2026",
+//     "November 2026",
+//     "December 2026",
+// ];
 
 const selectedPeriod = ref("");
 const selectedDepartments = ref([]);
@@ -82,7 +89,11 @@ const groupedEmployees = computed(() => {
         }
         groups[emp.department_id].employees.push(emp);
     });
-    return Object.values(groups);
+    let sl = 0;
+    return Object.values(groups).map((group) => ({
+        ...group,
+        employees: group.employees.map((emp) => ({ emp, sl: ++sl })),
+    }));
 });
 
 const totalAmount = computed(() =>
@@ -180,22 +191,20 @@ onMounted(() => {
 
 <template>
     <div class="border rounded h-100 d-flex flex-column p-0 m-0">
-        <div class="p-4">
-            <!-- Header -->
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h4 class="m-0 fw-bold" style="letter-spacing: 0.5px">
-                    Incentive Setup Form
-                </h4>
-            </div>
+        <!-- Header -->
+        <div
+            class="d-flex justify-content-between align-items-center py-2 px-3"
+        >
+            <h2 class="m-0 header-design">Incentive Setup Form</h2>
+        </div>
 
-            <!-- Controls Row -->
-            <div class="row g-3 align-items-end mb-4">
+        <!-- Controls Row -->
+        <div class="p-3">
+            <div class="d-flex gap-4">
                 <!-- Month Period -->
-                <div class="col-lg-3 col-md-6">
-                    <label class="form-label fw-semibold mb-1">
-                        Month Period <span class="text-danger">*</span>
-                    </label>
-                    <select
+                <div class="">
+                    <Label label="Month Period*" class="month-period-labels" />
+                    <!-- <select
                         class="form-select form-select-sm"
                         v-model="selectedPeriod"
                         :class="{ 'is-invalid': validationErrors.period }"
@@ -208,7 +217,29 @@ onMounted(() => {
                         >
                             {{ period }}
                         </option>
-                    </select>
+                    </select> -->
+                    <!-- "January 2026", "February 2026", "March 2026", "April 2026",
+                    "May 2026", "June 2026", "July 2026", "August 2026",
+                    "September 2026", "October 2026", "November 2026", "December
+                    2026", -->
+                    <SelectField
+                        v-model="selectedPeriod"
+                        className="incnetive-select-field"
+                        :items="[
+                            { name: 'January 2026', value: 'January 2026' },
+                            { name: 'February 2026', value: 'February 2026' },
+                            { name: 'March 2026', value: 'March 2026' },
+                            { name: 'April 2026', value: 'April 2026' },
+                            { name: 'May 2026', value: 'May 2026' },
+                            { name: 'June 2026', value: 'June 2026' },
+                            { name: 'July 2026', value: 'July 2026' },
+                            { name: 'August 2026', value: 'August 2026' },
+                            { name: 'September 2026', value: 'September 2026' },
+                            { name: 'October 2026', value: 'October 2026' },
+                            { name: 'November 2026', value: 'November 2026' },
+                            { name: 'December 2026', value: 'December 2026' },
+                        ]"
+                    />
                     <div
                         v-if="validationErrors.period"
                         class="invalid-feedback"
@@ -218,10 +249,16 @@ onMounted(() => {
                 </div>
 
                 <!-- Department Multi-Select -->
-                <div class="col-lg-4 col-md-6">
-                    <label class="form-label fw-semibold mb-1">
-                        Department <span class="text-danger">*</span>
-                    </label>
+                <div class="col-lg-3">
+                    <Label
+                        label="Department Select*"
+                        class="department-select-labels"
+                    />
+                    <!-- <MultiselectDept
+                        v-model:departmentID="department_id"
+                        :userID="userID"
+                    /> -->
+
                     <Multiselect
                         v-model="selectedDepartments"
                         :options="departments"
@@ -251,8 +288,8 @@ onMounted(() => {
                 </div>
 
                 <!-- Total Amount Summary -->
-                <div class="col-lg-5 col-md-12">
-                    <label class="form-label fw-semibold mb-1">&nbsp;</label>
+                <div class="col-lg-3 col-md-12">
+                    <label class="form-label fw-semibold mb-2">&nbsp;</label>
                     <div
                         class="summary-box d-flex align-items-center justify-content-between h-38 px-3"
                     >
@@ -292,91 +329,99 @@ onMounted(() => {
             </div>
 
             <!-- Employee Table -->
-            <div class="table-responsive bg-light">
-                <!-- Loading -->
-                <div v-if="isLoadingEmployees" class="text-center py-5">
-                    <div class="spinner-border text-success" role="status">
-                        <span class="visually-hidden">Loading...</span>
+            <div class="mt-5">
+                <div class="table-responsive bg-light">
+                    <!-- Loading -->
+                    <div v-if="isLoadingEmployees" class="text-center py-5">
+                        <div class="spinner-border text-success" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2 text-muted">Loading employees...</p>
                     </div>
-                    <p class="mt-2 text-muted">Loading employees...</p>
-                </div>
 
-                <!-- Empty -->
-                <div
-                    v-else-if="!employees.length"
-                    class="text-center py-5 text-muted"
-                >
-                    <p class="mb-0">
-                        Select one or more departments to load employees.
-                    </p>
-                </div>
+                    <!-- Empty -->
+                    <div
+                        v-else-if="!employees.length"
+                        class="text-center py-5 text-muted"
+                    >
+                        <p class="mb-0">
+                            Select one or more departments to load employees.
+                        </p>
+                    </div>
 
-                <!-- Table -->
-                <table v-else class="table table-bordered table-sm mb-0">
-                    <thead>
-                        <tr>
-                            <th class="text-center" style="width: 4%">SL</th>
-                            <th class="text-center" style="width: 10%">
-                                EMP ID
-                            </th>
-                            <th style="width: 22%">EMPLOYEE NAME</th>
-                            <th style="width: 18%">DEPARTMENT</th>
-                            <th style="width: 18%">DESIGNATION</th>
-                            <th class="text-center" style="width: 14%">
-                                INCENTIVE AMOUNT
-                            </th>
-                            <th style="width: 14%">REMARKS</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <template
-                            v-for="group in groupedEmployees"
-                            :key="group.name"
-                        >
-                            <tr class="dept-header-row">
-                                <td></td>
-                                <td colspan="6" class="fw-bold">
-                                    {{ group.name }} ({{
-                                        group.employees.length
-                                    }})
-                                </td>
+                    <!-- Table -->
+                    <table v-else class="table table-bordered table-sm mb-0">
+                        <thead>
+                            <tr>
+                                <th class="text-center" style="width: 4%">
+                                    SL
+                                </th>
+                                <th class="text-center" style="width: 10%">
+                                    EMP ID
+                                </th>
+                                <th style="width: 22%">EMPLOYEE NAME</th>
+                                <th style="width: 18%">DEPARTMENT</th>
+                                <th style="width: 18%">DESIGNATION</th>
+                                <th class="text-center" style="width: 14%">
+                                    INCENTIVE AMOUNT
+                                </th>
+                                <th style="width: 14%">REMARKS</th>
                             </tr>
-                            <tr
-                                v-for="emp in group.employees"
-                                :key="emp.id"
-                                class="text-nowrap"
+                        </thead>
+                        <tbody>
+                            <template
+                                v-for="group in groupedEmployees"
+                                :key="group.name"
                             >
-                                <td class="text-center">
-                                    {{ employees.indexOf(emp) + 1 }}
-                                </td>
-                                <td class="text-center">
-                                    ABNB{{ emp.Employee_Id }}
-                                </td>
-                                <td>{{ emp.Full_Name }}</td>
-                                <td>{{ emp.department_name }}</td>
-                                <td>{{ emp.designation_name }}</td>
-                                <td>
-                                    <input
-                                        type="number"
-                                        class="form-control form-control-sm text-end"
-                                        v-model="emp.incentive_amount"
-                                        min="0"
-                                        step="1"
-                                        placeholder="0"
-                                    />
-                                </td>
-                                <td>
-                                    <input
-                                        type="text"
-                                        class="form-control form-control-sm"
-                                        v-model="emp.remarks"
-                                        placeholder="Optional"
-                                    />
-                                </td>
-                            </tr>
-                        </template>
-                    </tbody>
-                </table>
+                                <tr class="dept-header-row">
+                                    <td></td>
+                                    <td colspan="6" class="fw-bold">
+                                        {{ group.name }} ({{
+                                            group.employees.length
+                                        }})
+                                    </td>
+                                </tr>
+                                <tr
+                                    v-for="item in group.employees"
+                                    :key="item.emp.id"
+                                    class="text-nowrap"
+                                >
+                                    <td class="text-center">
+                                        {{ item.sl }}
+                                    </td>
+                                    <td class="text-center">
+                                        ABNB{{ item.emp.Employee_Id }}
+                                    </td>
+                                    <td>{{ item.emp.Full_Name }}</td>
+                                    <td>{{ item.emp.department_name }}</td>
+                                    <td>{{ item.emp.designation_name }}</td>
+                                    <td>
+                                        <!-- <input
+                                            type="number"
+                                            class="form-control form-control-sm text-end"
+                                            v-model="emp.incentive_amount"
+                                            min="0"
+                                            step="1"
+                                            placeholder="0"
+                                        /> -->
+                                        <NumberField
+                                            v-model="item.emp.incentive_amount"
+                                            type="number"
+                                        />
+                                    </td>
+                                    <td>
+                                        <input
+                                            type="text"
+                                            class="form-control form-control-sm"
+                                            v-model="item.emp.remarks"
+                                            placeholder="Optional"
+                                        />
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
             </div>
 
             <!-- Action Buttons -->
@@ -411,6 +456,14 @@ onMounted(() => {
 </template>
 
 <style scoped>
+.header-design {
+    display: inline-flex;
+    align-items: center;
+    letter-spacing: 1px;
+    padding-top: 5px;
+    color: #000000;
+}
+
 .form-select,
 .form-control {
     border-radius: 5px;
@@ -429,7 +482,7 @@ onMounted(() => {
 
 .summary-box {
     background: #f1f3f5;
-    border: 1px solid #dee2e6;
+    border: 0.8px solid rgb(196, 194, 194);
     border-radius: 5px;
 }
 
@@ -456,7 +509,7 @@ onMounted(() => {
     background: #343a40;
     color: #fff;
     font-weight: 600;
-    font-size: 0.78rem;
+    /* font-size: 0.78rem; */
     letter-spacing: 0.5px;
     text-transform: uppercase;
     padding: 8px 10px;
@@ -497,14 +550,16 @@ input[type="number"]::-webkit-outer-spin-button {
 <style>
 .multiselect-design .multiselect__tags {
     min-height: 38px !important;
-    height: 38px;
+    height: auto;
+
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+
     padding: 5px 35px 5px 10px;
     border-radius: 5px;
     border: 1px solid #ced4da;
     background: #fff;
-    display: flex;
-    align-items: center;
-    font-size: 0.875rem;
 }
 
 .multiselect-design .multiselect__input,

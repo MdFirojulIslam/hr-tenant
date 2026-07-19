@@ -81,13 +81,17 @@ onMounted(() => {
 </script>
 
 <template>
-    <div class="border rounded container-fluid h-100 d-flex flex-column p-0 m-0">
+    <div
+        class="border rounded container-fluid h-100 d-flex flex-column p-0 m-0"
+    >
         <div class="p-3">
             <div class="d-flex justify-content-between align-items-center">
-                <h4 class="m-0 header-design">
-                    <i class="fa-solid fa-hand-holding-dollar me-2"></i>
+                <h2 class="m-0 header-design d-flex align-items-center">
+                    <i
+                        class="doller-icon fa-solid fa-hand-holding-dollar me-2"
+                    ></i>
                     Incentive List
-                </h4>
+                </h2>
                 <button
                     @click="newSetup()"
                     type="button"
@@ -120,7 +124,7 @@ onMounted(() => {
                                 <th style="width: 4%">SL</th>
                                 <th>INCENTIVE PERIOD</th>
                                 <th>TOTAL AMOUNT</th>
-                                <th>DETAILS COUNT</th>
+                                <th>EMPLOYEES COUNT</th>
                                 <th>STATUS</th>
                                 <th style="width: 14%">EXPORT</th>
                                 <th style="width: 10%">ACTION</th>
@@ -138,45 +142,59 @@ onMounted(() => {
                                 </td>
                                 <td>
                                     {{
-                                        Number(incentive.incentive_amount).toLocaleString()
+                                        Number(
+                                            incentive.incentive_amount,
+                                        ).toLocaleString()
                                     }}
                                 </td>
                                 <td>{{ incentive.details_count }}</td>
                                 <td>
                                     <span
                                         class="badge px-3 py-2"
-                                        :class="statusBadgeClass(incentive.status)"
+                                        :class="
+                                            statusBadgeClass(incentive.status)
+                                        "
                                     >
                                         {{ incentive.status }}
                                     </span>
                                 </td>
                                 <td>
-                                    <div class="d-flex justify-content-center gap-1">
+                                    <div
+                                        class="d-flex justify-content-center gap-1"
+                                    >
                                         <button
                                             class="btn btn-sm btn-outline-danger"
                                             title="Download PDF"
-                                            @click="exportFile(incentive.id, 'pdf')"
+                                            @click="
+                                                exportFile(incentive.id, 'pdf')
+                                            "
                                         >
                                             PDF
                                         </button>
                                         <button
                                             class="btn btn-sm btn-outline-primary"
                                             title="Download Word"
-                                            @click="exportFile(incentive.id, 'word')"
+                                            @click="
+                                                exportFile(incentive.id, 'word')
+                                            "
                                         >
                                             Word
                                         </button>
                                         <button
                                             class="btn btn-sm btn-outline-success"
                                             title="Download Excel"
-                                            @click="exportFile(incentive.id, 'xlsx')"
+                                            @click="
+                                                exportFile(incentive.id, 'xlsx')
+                                            "
                                         >
                                             Excel
                                         </button>
                                     </div>
                                 </td>
                                 <td>
-                                    <div class="d-flex justify-content-center gap-1">
+                                    <div
+                                        class="d-flex justify-content-center gap-1"
+                                    >
                                         <button
                                             class="btn btn-sm btn-outline-secondary"
                                             title="View Details"
@@ -188,7 +206,9 @@ onMounted(() => {
                                             title="Edit"
                                             @click="editIncentive(incentive.id)"
                                         >
-                                            <i class="fa-solid fa-pen-to-square"></i>
+                                            <i
+                                                class="fa-solid fa-pen-to-square"
+                                            ></i>
                                         </button>
                                     </div>
                                 </td>
@@ -202,8 +222,16 @@ onMounted(() => {
 </template>
 
 <style scoped>
+.doller-icon {
+    font-size: 18px;
+    line-height: 1;
+    margin-right: 4px;
+}
 .header-design {
+    display: inline-flex;
+    align-items: center;
     letter-spacing: 1px;
+    padding-top: 5px;
     color: #000000;
 }
 

@@ -1,1 +1,0 @@
-import{b as s}from"./app-0c71a106.js";const n=e=>s.get(`department-list/${e}`),a=e=>s.get(`employee-list-by-department/${e}`),p=async e=>{const{data:t}=await s.get(`/empimg/${e}`);return(t==null?void 0:t.img_url)||t};export{a,p as b,n as g};

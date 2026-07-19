@@ -41,9 +41,16 @@ class IncentiveController extends Controller
             ->leftJoin('designations', 'designations.id', '=', 'officials.Designation_Id')
             ->where('incentive_details.incentive_id', $id)
             ->select(
-                'incentive_details.*',
+                'incentive_details.id as detail_id',
+                'incentive_details.incentive_id',
+                'incentive_details.employee_id',
+                'incentive_details.department_id',
+                'incentive_details.amounts',
+                'incentive_details.remarks',
+                'incentive_details.created_by',
+                'incentive_details.updated_by',
                 'employees.Full_Name as employee_name',
-                'employees.Employee_Id as employee_id',
+                'employees.Employee_Id as emp_code',
                 'departments.Name as department_name',
                 'designations.Name as designation_name'
             )
@@ -164,17 +171,34 @@ class IncentiveController extends Controller
                 'updated_by' => $userId,
             ]);
 
-            IncentiveDetails::where('incentive_id', $id)->delete();
+            $submittedEmployeeIds = collect($request->details)->pluck('employee_id')->toArray();
+
+            IncentiveDetails::where('incentive_id', $id)
+                ->whereNotIn('employee_id', $submittedEmployeeIds)
+                ->delete();
 
             foreach ($request->details as $detail) {
-                IncentiveDetails::create([
-                    'incentive_id' => $incentive->id,
-                    'employee_id' => $detail['employee_id'],
-                    'department_id' => $detail['department_id'],
-                    'amounts' => $detail['amounts'],
-                    'remarks' => $detail['remarks'] ?? null,
-                    'created_by' => $userId,
-                ]);
+                $existing = IncentiveDetails::where('incentive_id', $id)
+                    ->where('employee_id', $detail['employee_id'])
+                    ->first();
+
+                if ($existing) {
+                    $existing->update([
+                        'department_id' => $detail['department_id'],
+                        'amounts' => $detail['amounts'],
+                        'remarks' => $detail['remarks'] ?? null,
+                        'updated_by' => $userId,
+                    ]);
+                } else {
+                    IncentiveDetails::create([
+                        'incentive_id' => $incentive->id,
+                        'employee_id' => $detail['employee_id'],
+                        'department_id' => $detail['department_id'],
+                        'amounts' => $detail['amounts'],
+                        'remarks' => $detail['remarks'] ?? null,
+                        'created_by' => $userId,
+                    ]);
+                }
             }
 
             DB::commit();

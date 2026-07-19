@@ -203,7 +203,7 @@
             @foreach($details as $index => $detail)
             <tr>
                 <td class="text-center">{{ $index + 1 }}</td>
-                <td class="text-center">ABNB{{ $detail->employee_id }}</td>
+                <td class="text-center">{{ $detail->employee_id }}</td>
                 <td>{{ $detail->employee_name }}</td>
                 <td>{{ $detail->department_name }}</td>
                 <td>{{ $detail->designation_name }}</td>
@@ -222,17 +222,17 @@
     </table>
 
     <div class="footer">
-        <div class="footer-section">
+        <!-- <div class="footer-section">
             <span class="footer-label">Prepared By:</span>
             {{ $createdByUser ? $createdByUser->name : '-' }}
-        </div>
+        </div> -->
 
         <div class="signature-area">
-            <div class="signature-block">
+            <!-- <div class="signature-block">
                 <div class="signature-line">Prepared by</div>
-            </div>
+            </div> -->
             <div class="signature-block">
-                <div class="signature-line">Approved by</div>
+                <div class="signature-line">Signature</div>
             </div>
         </div>
     </div>

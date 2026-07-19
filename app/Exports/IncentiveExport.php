@@ -34,7 +34,17 @@ class IncentiveExport implements
 
     public function collection()
     {
-        return $this->data['details'];
+        return $this->data['details']->values()->map(function ($item, $index) {
+            return [
+                'sl' => $index + 1,
+                'employee_id' => $item->employee_id,
+                'employee_name' => $item->employee_name,
+                'department_name' => $item->department_name,
+                'designation_name' => $item->designation_name,
+                'amounts' => $item->amounts,
+                'remarks' => $item->remarks,
+            ];
+        });
     }
 
     public function headings(): array

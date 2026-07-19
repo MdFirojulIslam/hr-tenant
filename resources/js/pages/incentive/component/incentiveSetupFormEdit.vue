@@ -3,6 +3,10 @@ import { ref, computed, watch, onMounted } from "vue";
 import { useRoute } from "vue-router";
 import Multiselect from "vue-multiselect";
 import "vue-multiselect/dist/vue-multiselect.min.css";
+import Label from "@/pages/components/label/Label.vue";
+import SelectField from "@/pages/components/input_field/SelectField.vue";
+import MultiselectDept from "@/pages/components/input_field/Basedept.vue";
+import NumberField from "@/pages/components/input_field/NumberField.vue";
 import api from "@/api";
 import Swal from "sweetalert2";
 import { useStore } from "vuex";
@@ -12,9 +16,18 @@ const user = store.getters.getUser;
 const route = useRoute();
 
 const monthPeriods = [
-    "January 2026", "February 2026", "March 2026", "April 2026",
-    "May 2026", "June 2026", "July 2026", "August 2026",
-    "September 2026", "October 2026", "November 2026", "December 2026",
+    "January 2026",
+    "February 2026",
+    "March 2026",
+    "April 2026",
+    "May 2026",
+    "June 2026",
+    "July 2026",
+    "August 2026",
+    "September 2026",
+    "October 2026",
+    "November 2026",
+    "December 2026",
 ];
 
 const selectedPeriod = ref("");
@@ -41,7 +54,7 @@ const fetchRecord = async () => {
 
         employees.value = incentive.details.map((d) => ({
             id: d.employee_id,
-            Employee_Id: d.employee_id,
+            Employee_Id: d.emp_code,
             Full_Name: d.employee_name,
             department_id: d.department_id,
             department_name: d.department_name,
@@ -80,7 +93,9 @@ const fetchEmployees = async () => {
     }
     isLoadingEmployees.value = true;
     try {
-        const deptIds = selectedDepartments.value.map((d) => d.department_id).join(",");
+        const deptIds = selectedDepartments.value
+            .map((d) => d.department_id)
+            .join(",");
         const res = await api.get(`/incentive-employees/${deptIds}`);
 
         const existingMap = {};
@@ -104,8 +119,12 @@ const fetchEmployees = async () => {
 };
 
 watch(selectedDepartments, (newVal, oldVal) => {
-    if (!isLoadingRecord.value && newVal.length !== oldVal.length) {
-        fetchEmployees();
+    if (!isLoadingRecord.value) {
+        const newIds = newVal.map((d) => d.department_id).join(",");
+        const oldIds = oldVal.map((d) => d.department_id).join(",");
+        if (newIds !== oldIds) {
+            fetchEmployees();
+        }
     }
 });
 
@@ -113,7 +132,10 @@ const groupedEmployees = computed(() => {
     const groups = {};
     employees.value.forEach((emp) => {
         if (!groups[emp.department_id]) {
-            groups[emp.department_id] = { name: emp.department_name, employees: [] };
+            groups[emp.department_id] = {
+                name: emp.department_name,
+                employees: [],
+            };
         }
         groups[emp.department_id].employees.push(emp);
     });
@@ -121,22 +143,41 @@ const groupedEmployees = computed(() => {
 });
 
 const totalAmount = computed(() =>
-    employees.value.reduce((sum, emp) => sum + (parseFloat(emp.incentive_amount) || 0), 0)
+    employees.value.reduce(
+        (sum, emp) => sum + (parseFloat(emp.incentive_amount) || 0),
+        0,
+    ),
 );
 
-const filledCount = computed(() =>
-    employees.value.filter((emp) => emp.incentive_amount !== "" && parseFloat(emp.incentive_amount) > 0).length
+const filledCount = computed(
+    () =>
+        employees.value.filter(
+            (emp) =>
+                emp.incentive_amount !== "" &&
+                parseFloat(emp.incentive_amount) > 0,
+        ).length,
 );
 
 const validationErrors = ref({});
 
 const validate = () => {
     validationErrors.value = {};
-    if (!selectedPeriod.value) validationErrors.value.period = "Please select a month period.";
-    if (!selectedDepartments.value.length) validationErrors.value.department = "Please select at least one department.";
-    if (!employees.value.length) validationErrors.value.employees = "No employees found for selected departments.";
-    if (!employees.value.filter((e) => e.incentive_amount !== "" && parseFloat(e.incentive_amount) > 0).length) {
-        validationErrors.value.amount = "Please enter incentive amount for at least one employee.";
+    if (!selectedPeriod.value)
+        validationErrors.value.period = "Please select a month period.";
+    if (!selectedDepartments.value.length)
+        validationErrors.value.department =
+            "Please select at least one department.";
+    if (!employees.value.length)
+        validationErrors.value.employees =
+            "No employees found for selected departments.";
+    if (
+        !employees.value.filter(
+            (e) =>
+                e.incentive_amount !== "" && parseFloat(e.incentive_amount) > 0,
+        ).length
+    ) {
+        validationErrors.value.amount =
+            "Please enter incentive amount for at least one employee.";
     }
     return Object.keys(validationErrors.value).length === 0;
 };
@@ -146,7 +187,11 @@ const update = async () => {
     isSubmitting.value = true;
 
     const details = employees.value
-        .filter((emp) => emp.incentive_amount !== "" && parseFloat(emp.incentive_amount) > 0)
+        .filter(
+            (emp) =>
+                emp.incentive_amount !== "" &&
+                parseFloat(emp.incentive_amount) > 0,
+        )
         .map((emp) => ({
             employee_id: emp.id,
             department_id: emp.department_id,
@@ -169,10 +214,18 @@ const update = async () => {
                 showConfirmButton: false,
             }).then(() => window.close());
         } else {
-            Swal.fire({ icon: "error", title: "Error", text: res.data.message || "Something went wrong." });
+            Swal.fire({
+                icon: "error",
+                title: "Error",
+                text: res.data.message || "Something went wrong.",
+            });
         }
     } catch (err) {
-        Swal.fire({ icon: "error", title: "Error", text: err.response?.data?.message || "Something went wrong." });
+        Swal.fire({
+            icon: "error",
+            title: "Error",
+            text: err.response?.data?.message || "Something went wrong.",
+        });
     } finally {
         isSubmitting.value = false;
     }
@@ -188,15 +241,15 @@ onMounted(async () => {
 
 <template>
     <div class="border rounded h-100 d-flex flex-column p-0 m-0">
-        <div class="p-4">
-            <!-- Header -->
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h4 class="m-0 fw-bold" style="letter-spacing: 0.5px;">
-                    Edit Incentive
-                </h4>
-            </div>
+        <!-- Header -->
+        <div
+            class="d-flex justify-content-between align-items-center py-2 px-3"
+        >
+            <h2 class="m-0 header-design">Incentive Setup Edit</h2>
+        </div>
 
-            <!-- Loading Record -->
+        <!-- Loading Record -->
+        <div class="p-3">
             <div v-if="isLoadingRecord" class="text-center py-5">
                 <div class="spinner-border text-success" role="status">
                     <span class="visually-hidden">Loading...</span>
@@ -206,32 +259,77 @@ onMounted(async () => {
 
             <template v-else>
                 <!-- Controls Row -->
-                <div class="row g-3 align-items-end mb-4">
+                <div class="d-flex gap-4">
                     <!-- Month Period -->
-                    <div class="col-lg-3 col-md-6">
-                        <label class="form-label fw-semibold mb-1">
+                    <div class="">
+                        <!-- <label class="form-label fw-semibold mb-1">
                             Month Period <span class="text-danger">*</span>
-                        </label>
-                        <select
+                        </label> -->
+                        <Label
+                            label="Month Period*"
+                            class="month-period-labels"
+                        />
+
+                        <!-- <select
                             class="form-select form-select-sm"
                             v-model="selectedPeriod"
                             :class="{ 'is-invalid': validationErrors.period }"
                         >
-                            <option value="" disabled>Select Month Period</option>
-                            <option v-for="period in monthPeriods" :key="period" :value="period">
+                            <option value="" disabled>
+                                Select Month Period
+                            </option>
+                            <option
+                                v-for="period in monthPeriods"
+                                :key="period"
+                                :value="period"
+                            >
                                 {{ period }}
                             </option>
-                        </select>
-                        <div v-if="validationErrors.period" class="invalid-feedback">
+                        </select> -->
+                        <SelectField
+                            v-model="selectedPeriod"
+                            className="incnetive-select-field"
+                            :items="[
+                                { name: 'January 2026', value: 'January 2026' },
+                                {
+                                    name: 'February 2026',
+                                    value: 'February 2026',
+                                },
+                                { name: 'March 2026', value: 'March 2026' },
+                                { name: 'April 2026', value: 'April 2026' },
+                                { name: 'May 2026', value: 'May 2026' },
+                                { name: 'June 2026', value: 'June 2026' },
+                                { name: 'July 2026', value: 'July 2026' },
+                                { name: 'August 2026', value: 'August 2026' },
+                                {
+                                    name: 'September 2026',
+                                    value: 'September 2026',
+                                },
+                                { name: 'October 2026', value: 'October 2026' },
+                                {
+                                    name: 'November 2026',
+                                    value: 'November 2026',
+                                },
+                                {
+                                    name: 'December 2026',
+                                    value: 'December 2026',
+                                },
+                            ]"
+                        />
+                        <div
+                            v-if="validationErrors.period"
+                            class="invalid-feedback"
+                        >
                             {{ validationErrors.period }}
                         </div>
                     </div>
 
                     <!-- Department Multi-Select -->
-                    <div class="col-lg-4 col-md-6">
-                        <label class="form-label fw-semibold mb-1">
-                            Department <span class="text-danger">*</span>
-                        </label>
+                    <div class="col-lg-3 col-md-6">
+                        <Label
+                            label="Department Select*"
+                            class="department-select-labels"
+                        />
                         <Multiselect
                             v-model="selectedDepartments"
                             :options="departments"
@@ -242,34 +340,54 @@ onMounted(async () => {
                             :close-on-select="false"
                             :clear-on-select="false"
                             :preserve-search="true"
-                            :placeholder="isLoadingDepartments ? 'Loading departments...' : 'Select departments'"
+                            :placeholder="
+                                isLoadingDepartments
+                                    ? 'Loading departments...'
+                                    : 'Select departments'
+                            "
                             :disabled="isLoadingDepartments"
                             class="multiselect-design"
                         >
                         </Multiselect>
-                        <div v-if="validationErrors.department" class="text-danger mt-1" style="font-size: 0.8rem;">
+                        <div
+                            v-if="validationErrors.department"
+                            class="text-danger mt-1"
+                            style="font-size: 0.8rem"
+                        >
                             {{ validationErrors.department }}
                         </div>
                     </div>
 
                     <!-- Total Amount Summary -->
-                    <div class="col-lg-5 col-md-12">
-                        <label class="form-label fw-semibold mb-1">&nbsp;</label>
-                        <div class="summary-box d-flex align-items-center justify-content-between h-38 px-3">
+                    <div class="col-lg-3 col-md-12">
+                        <label class="form-label fw-semibold mb-2"
+                            >&nbsp;</label
+                        >
+                        <div
+                            class="summary-box d-flex align-items-center justify-content-between h-38 px-3"
+                        >
                             <div class="d-flex align-items-center gap-4">
                                 <div>
-                                    <span class="summary-label">Total Amount</span>
-                                    <span class="summary-value ms-2">{{ Number(totalAmount).toLocaleString() }}</span>
+                                    <span class="summary-label"
+                                        >Total Amount</span
+                                    >
+                                    <span class="summary-value ms-2">{{
+                                        Number(totalAmount).toLocaleString()
+                                    }}</span>
                                 </div>
                                 <div class="vr"></div>
                                 <div>
                                     <span class="summary-label">Filled</span>
-                                    <span class="summary-value ms-2">{{ filledCount }}</span>
+                                    <span class="summary-value ms-2">{{
+                                        filledCount
+                                    }}</span>
                                 </div>
                                 <div class="vr"></div>
                                 <div>
                                     <span class="summary-label">Employees</span>
-                                    <span class="summary-value ms-2">{{ employees.length }}</span>
+                                    <span class="summary-value ms-2">{{
+                                        employees.length
+                                    }}</span>
                                 </div>
                             </div>
                         </div>
@@ -286,70 +404,102 @@ onMounted(async () => {
                 </div>
 
                 <!-- Employee Table -->
-                <div class="table-responsive bg-light">
-                    <div v-if="isLoadingEmployees" class="text-center py-5">
-                        <div class="spinner-border text-success" role="status">
-                            <span class="visually-hidden">Loading...</span>
+                <div class="mt-5">
+                    <div class="table-responsive bg-light">
+                        <div v-if="isLoadingEmployees" class="text-center py-5">
+                            <div
+                                class="spinner-border text-success"
+                                role="status"
+                            >
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="mt-2 text-muted">Loading employees...</p>
                         </div>
-                        <p class="mt-2 text-muted">Loading employees...</p>
-                    </div>
 
-                    <div v-else-if="!employees.length" class="text-center py-5 text-muted">
-                        <p class="mb-0">Select one or more departments to load employees.</p>
-                    </div>
+                        <div
+                            v-else-if="!employees.length"
+                            class="text-center py-5 text-muted"
+                        >
+                            <p class="mb-0">
+                                Select one or more departments to load
+                                employees.
+                            </p>
+                        </div>
 
-                    <table v-else class="table table-bordered table-sm mb-0">
-                        <thead>
-                            <tr>
-                                <th class="text-center" style="width: 4%">SL</th>
-                                <th class="text-center" style="width: 10%">EMP ID</th>
-                                <th style="width: 22%">EMPLOYEE NAME</th>
-                                <th style="width: 18%">DEPARTMENT</th>
-                                <th style="width: 18%">DESIGNATION</th>
-                                <th class="text-center" style="width: 14%">INCENTIVE AMOUNT</th>
-                                <th style="width: 14%">REMARKS</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <template v-for="group in groupedEmployees" :key="group.name">
-                                <tr class="dept-header-row">
-                                    <td></td>
-                                    <td colspan="6" class="fw-bold">
-                                        {{ group.name }} ({{ group.employees.length }})
-                                    </td>
+                        <table
+                            v-else
+                            class="table table-bordered table-sm mb-0"
+                        >
+                            <thead>
+                                <tr>
+                                    <th class="text-center" style="width: 4%">
+                                        SL
+                                    </th>
+                                    <th class="text-center" style="width: 10%">
+                                        EMP ID
+                                    </th>
+                                    <th style="width: 22%">EMPLOYEE NAME</th>
+                                    <th style="width: 18%">DEPARTMENT</th>
+                                    <th style="width: 18%">DESIGNATION</th>
+                                    <th class="text-center" style="width: 14%">
+                                        INCENTIVE AMOUNT
+                                    </th>
+                                    <th style="width: 14%">REMARKS</th>
                                 </tr>
-                                <tr v-for="emp in group.employees" :key="emp.id" class="text-nowrap">
-                                    <td class="text-center">{{ employees.indexOf(emp) + 1 }}</td>
-                                    <td class="text-center">ABNB{{ emp.Employee_Id }}</td>
-                                    <td>{{ emp.Full_Name }}</td>
-                                    <td>{{ emp.department_name }}</td>
-                                    <td>{{ emp.designation_name }}</td>
-                                    <td>
-                                        <input
-                                            type="number"
-                                            class="form-control form-control-sm text-end"
-                                            v-model="emp.incentive_amount"
-                                            min="0"
-                                            step="1"
-                                            placeholder="0"
-                                        />
-                                    </td>
-                                    <td>
-                                        <input
-                                            type="text"
-                                            class="form-control form-control-sm"
-                                            v-model="emp.remarks"
-                                            placeholder="Optional"
-                                        />
-                                    </td>
-                                </tr>
-                            </template>
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody>
+                                <template
+                                    v-for="group in groupedEmployees"
+                                    :key="group.name"
+                                >
+                                    <tr class="dept-header-row">
+                                        <td></td>
+                                        <td colspan="6" class="fw-bold">
+                                            {{ group.name }} ({{
+                                                group.employees.length
+                                            }})
+                                        </td>
+                                    </tr>
+                                    <tr
+                                        v-for="emp in group.employees"
+                                        :key="emp.id"
+                                        class="text-nowrap"
+                                    >
+                                        <td class="text-center">
+                                            {{ employees.indexOf(emp) + 1 }}
+                                        </td>
+                                        <td class="text-center">
+                                            ABNB{{ emp.Employee_Id }}
+                                        </td>
+                                        <td>{{ emp.Full_Name }}</td>
+                                        <td>{{ emp.department_name }}</td>
+                                        <td>{{ emp.designation_name }}</td>
+                                        <td>
+                                            <NumberField
+                                                v-model="emp.incentive_amount"
+                                                type="number"
+                                            />
+                                        </td>
+                                        <td>
+                                            <input
+                                                type="text"
+                                                class="form-control form-control-sm"
+                                                v-model="emp.remarks"
+                                                placeholder="Optional"
+                                            />
+                                        </td>
+                                    </tr>
+                                </template>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
 
                 <!-- Action Buttons -->
-                <div v-if="employees.length" class="d-flex justify-content-end gap-2 mt-4">
+                <div
+                    v-if="employees.length"
+                    class="d-flex justify-content-end gap-2 mt-4"
+                >
                     <button
                         type="button"
                         class="btn btn-light btn-sm border px-3"
@@ -378,6 +528,14 @@ onMounted(async () => {
 </template>
 
 <style scoped>
+.header-design {
+    display: inline-flex;
+    align-items: center;
+    letter-spacing: 1px;
+    padding-top: 5px;
+    color: #000000;
+}
+
 .form-select,
 .form-control {
     border-radius: 5px;
@@ -396,7 +554,7 @@ onMounted(async () => {
 
 .summary-box {
     background: #f1f3f5;
-    border: 1px solid #dee2e6;
+    border: 0.8px solid rgb(196, 194, 194);
     border-radius: 5px;
 }
 
@@ -423,7 +581,7 @@ onMounted(async () => {
     background: #343a40;
     color: #fff;
     font-weight: 600;
-    font-size: 0.78rem;
+    /* font-size: 0.78rem; */
     letter-spacing: 0.5px;
     text-transform: uppercase;
     padding: 8px 10px;
@@ -464,14 +622,16 @@ input[type="number"]::-webkit-outer-spin-button {
 <style>
 .multiselect-design .multiselect__tags {
     min-height: 38px !important;
-    height: 38px;
+    height: auto;
+
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+
     padding: 5px 35px 5px 10px;
     border-radius: 5px;
     border: 1px solid #ced4da;
     background: #fff;
-    display: flex;
-    align-items: center;
-    font-size: 0.875rem;
 }
 
 .multiselect-design .multiselect__input,
