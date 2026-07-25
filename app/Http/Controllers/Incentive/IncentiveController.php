@@ -6,9 +6,12 @@ use App\Http\Controllers\Controller;
 use App\Models\Incentive;
 use App\Models\IncentiveDetails;
 use App\Models\employee;
+use App\Models\department;
 use App\Models\User;
 use App\Exports\IncentiveExport;
+use App\Exports\IncentiveTemplateExport;
 use Illuminate\Http\Request;
+use PhpOffice\PhpSpreadsheet\IOFactory as SpreadsheetIOFactory;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -28,6 +31,12 @@ class IncentiveController extends Controller
             ->get();
 
         return response()->json($incentives);
+    }
+
+    public function departmentListIncentive(Request $request)
+    {
+        $response = department::select('id as department_id', 'Name as department_name')->get();
+        return response()->json($response);
     }
 
     public function show($id)
@@ -380,5 +389,212 @@ class IncentiveController extends Controller
         $writer->save($filePath);
 
         return response()->download($filePath)->deleteFileAfterSend(true);
+    }
+
+    public function downloadTemplate(Request $request)
+    {
+        $period = $request->query('period', '');
+        $deptIds = $request->query('deptIds', '');
+
+        $query = employee::select(
+            'employees.id',
+            'employees.Full_Name',
+            'employees.Employee_Id',
+            'departments.id as department_id',
+            'departments.Name as department_name',
+            'designations.Name as designation_name'
+        )
+            ->join('officials', 'officials.EID', '=', 'employees.id')
+            ->join('departments', 'officials.Department_Id', '=', 'departments.id')
+            ->leftJoin('designations', 'officials.Designation_Id', '=', 'designations.id')
+            ->where('officials.Status', '=', 'N');
+
+        if ($deptIds) {
+            $departmentIds = array_map('intval', explode(',', $deptIds));
+            $query->whereIn('departments.id', $departmentIds);
+        }
+
+        $employees = $query
+            ->orderBy('departments.Name', 'asc')
+            ->orderBy('employees.Full_Name', 'asc')
+            ->get();
+
+        if ($employees->isEmpty()) {
+            return response()->json(['message' => 'No employees found.'], 404);
+        }
+
+        $fileName = 'Incentive_Template' . ($period ? '_' . str_replace(' ', '_', $period) : '');
+
+        return Excel::download(
+            new IncentiveTemplateExport($employees, $period),
+            $fileName . '.xlsx'
+        );
+    }
+
+    public function importExcel(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|file|mimes:xls,xlsx|max:10240',
+        ]);
+
+        try {
+            $path = $request->file('file')->getRealPath();
+            $spreadsheet = SpreadsheetIOFactory::load($path);
+            $sheet = $spreadsheet->getActiveSheet();
+            $rows = $sheet->toArray(null, true, true, true);
+
+            if (count($rows) < 2) {
+                return response()->json([
+                    'message' => 'Excel file is empty.'
+                ], 422);
+            }
+
+            $headerRowIndex = null;
+            $normalizedRows = array_values($rows);
+
+            foreach ($normalizedRows as $rowIndex => $row) {
+                $lowered = array_map(function ($cell) {
+                    return strtolower(trim((string) $cell));
+                }, $row);
+
+                if (in_array('employee id', $lowered)) {
+                    $headerRowIndex = $rowIndex;
+                    break;
+                }
+            }
+
+            if ($headerRowIndex === null) {
+                return response()->json([
+                    'message' => 'Missing required column: Employee ID.'
+                ], 422);
+            }
+
+            $headers = array_map('strtolower', array_map('trim', $normalizedRows[$headerRowIndex]));
+
+            $employeeIdIndex = array_search('employee id', $headers);
+            $amountIndex = array_search('incentive amount', $headers);
+            $remarksIndex = array_search('remarks', $headers);
+
+            if ($amountIndex === false) {
+                return response()->json([
+                    'message' => 'Missing required column: Incentive Amount.'
+                ], 422);
+            }
+
+            $dataRows = array_slice($normalizedRows, $headerRowIndex + 1);
+
+            $results = [];
+            $seenIds = [];
+            $invalidIds = [];
+            $duplicateIds = [];
+            $empIdsToFetch = [];
+
+            foreach ($dataRows as $index => $row) {
+                if (empty(array_filter($row))) {
+                    continue;
+                }
+
+                $rawEmpId = trim((string) ($row[$employeeIdIndex] ?? ''));
+                $empId = str_replace('ABNB', '', $rawEmpId);
+
+                if (empty($empId)) {
+                    $invalidIds[] = $rawEmpId ?: "Row " . ($index + $headerRowIndex + 2);
+                    continue;
+                }
+
+                if (in_array($empId, $seenIds)) {
+                    $duplicateIds[] = $empId;
+                    continue;
+                }
+                $seenIds[] = $empId;
+
+                $amount = $row[$amountIndex] ?? '';
+                $remark = $row[$remarksIndex] ?? '';
+
+                if (!empty($amount) && !is_numeric($amount)) {
+                    $invalidIds[] = $rawEmpId . ' (invalid amount)';
+                    continue;
+                }
+
+                $results[] = [
+                    'raw_emp_id' => $empId,
+                    'incentive_amount' => $amount !== '' ? (float) $amount : '',
+                    'remarks' => is_string($remark) ? $remark : '',
+                ];
+
+                $empIdsToFetch[] = $empId;
+            }
+
+            $errors = [];
+            if (!empty($invalidIds)) {
+                $errors[] = 'Invalid Employee IDs: ' . implode(', ', array_slice($invalidIds, 0, 10)) . (count($invalidIds) > 10 ? '...' : '');
+            }
+            if (!empty($duplicateIds)) {
+                $errors[] = 'Duplicate Employee IDs: ' . implode(', ', array_slice($duplicateIds, 0, 10)) . (count($duplicateIds) > 10 ? '...' : '');
+            }
+
+            if (!empty($errors)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => implode(' | ', $errors),
+                    'data' => [],
+                ], 422);
+            }
+
+            $employeeMap = employee::select(
+                'employees.id',
+                'employees.Full_Name',
+                'employees.Employee_Id',
+                'departments.id as department_id',
+                'departments.Name as department_name',
+                'designations.Name as designation_name'
+            )
+                ->join('officials', 'officials.EID', '=', 'employees.id')
+                ->join('departments', 'officials.Department_Id', '=', 'departments.id')
+                ->leftJoin('designations', 'officials.Designation_Id', '=', 'designations.id')
+                ->whereIn('employees.Employee_Id', $empIdsToFetch)
+                ->where('officials.Status', '=', 'N')
+                ->get()
+                ->keyBy('Employee_Id');
+
+            $finalResults = [];
+            foreach ($results as $item) {
+                $emp = $employeeMap->get($item['raw_emp_id']);
+                if (!$emp) {
+                    $invalidIds[] = $item['raw_emp_id'];
+                    continue;
+                }
+
+                $finalResults[] = [
+                    'id' => $emp->id,
+                    'Employee_Id' => $emp->Employee_Id,
+                    'Full_Name' => $emp->Full_Name,
+                    'department_id' => $emp->department_id,
+                    'department_name' => $emp->department_name,
+                    'designation_name' => $emp->designation_name,
+                    'incentive_amount' => $item['incentive_amount'],
+                    'remarks' => $item['remarks'],
+                ];
+            }
+
+            if (!empty($invalidIds)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Employee not found or inactive: ' . implode(', ', array_slice($invalidIds, 0, 10)) . (count($invalidIds) > 10 ? '...' : ''),
+                    'data' => $finalResults,
+                ], 422);
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => $finalResults,
+                'total' => count($finalResults),
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Failed to process Excel file.',
+                'error' => $e->getMessage()
+            ], 500);
+        }
     }
 }

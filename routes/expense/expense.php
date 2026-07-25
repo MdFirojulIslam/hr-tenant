@@ -24,3 +24,4 @@ Route::post('/update-expense-permission', [EmplooyeeExpenseController::class, 'u
 //report
 // Route::get('/expense-report', [EmplooyeeExpenseController::class, "getExpenseReport"]);
 Route::get('/users-expense', [EmplooyeeExpenseController::class, "getUsersExpense"]);
+Route::get('/export-expense-summary', [EmplooyeeExpenseController::class, "exportExpenseSummary"]);

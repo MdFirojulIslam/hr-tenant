@@ -144,22 +144,22 @@
             <tr>
                 <td>
                     @if($status >= 1)
-                        {{ $employee->Full_Name }}
+                    {{ $employee->Full_Name }}
                     @endif
                 </td>
                 <td>
                     @if($status >= 2)
-                        {{ $employee->official->supervisor->Full_Name }}
+                    {{ $employee->official->supervisor->Full_Name }}
                     @endif
                 </td>
                 <td>
                     @if($status >= 3)
-                        SM Mahmud Hossain
+                    SM Mahmud Hossain
                     @endif
                 </td>
                 <td>
                     @if($status >= 4)
-                        Mohammad Kamrul Hasan
+                    Mohammad Kamrul Hasan
                     @endif
                 </td>
             </tr>

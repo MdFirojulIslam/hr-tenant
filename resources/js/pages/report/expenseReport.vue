@@ -1,22 +1,78 @@
 <template>
     <div class="card">
         <div class="card-body">
-            <div class="row d-flex justify-content-start">
+            <div class="d-flex gap-3">
                 <div class="col-lg-2 mb-3">
                     <label for="">Select a Year</label>
-                    <select class="form-control" name="status" v-model="selectedYear" @change="getData">
-                        <option v-for="(year, index) in years" :key="year" :value="year">
+                    <select
+                        class="form-control"
+                        name="status"
+                        v-model="selectedYear"
+                        @change="getData"
+                    >
+                        <option
+                            v-for="(year, index) in years"
+                            :key="year"
+                            :value="year"
+                        >
                             {{ year }}
                         </option>
                     </select>
                 </div>
                 <div class="col-lg-2 mb-3">
                     <label for="">Select a Month</label>
-                    <select class="form-control" name="status" v-model="selectedMonth" @change="getData">
-                        <option v-for="(month, index) in months" :key="month" :value="index">
+                    <select
+                        class="form-control"
+                        name="status"
+                        v-model="selectedMonth"
+                        @change="getData"
+                    >
+                        <option
+                            v-for="(month, index) in months"
+                            :key="month"
+                            :value="index"
+                        >
                             {{ month }}
                         </option>
                     </select>
+                </div>
+                <div class="ms-auto d-flex align-items-end mb-3">
+                    <div class="dropdown">
+                        <button
+                            class="custom-btn btn-13 export-dropdown-btn dropdown-toggle"
+                            type="button"
+                            data-bs-toggle="dropdown"
+                            aria-expanded="false"
+                        >
+                            <i class="fa-solid fa-download"></i> Export
+                        </button>
+                        <ul class="dropdown-menu export-dropdown-menu">
+                            <li>
+                                <a
+                                    class="dropdown-item"
+                                    href="#"
+                                    @click.prevent="exportReport('excel')"
+                                >
+                                    <i
+                                        class="fa-solid fa-file-excel text-success"
+                                    ></i>
+                                    Export as Excel
+                                </a>
+                            </li>
+                            <li>
+                                <a
+                                    class="dropdown-item"
+                                    href="#"
+                                    @click.prevent="exportReport('pdf')"
+                                >
+                                    <i
+                                        class="fa-solid fa-file-pdf text-danger"
+                                    ></i>
+                                    Export as PDF
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
                 </div>
             </div>
             <div class="table-responsive">
@@ -36,7 +92,11 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <tr v-for="(item, index) in userExpense.expenses" :key="item.id" @click="navigateToDetails(item)">
+                        <tr
+                            v-for="(item, index) in userExpense.expenses"
+                            :key="item.id"
+                            @click="navigateToDetails(item)"
+                        >
                             <td>{{ index + 1 }}</td>
                             <td>{{ item.Full_Name }}</td>
                             <td>{{ item.Dept_Name }}</td>
@@ -49,33 +109,58 @@
                             <td v-if="item.Status >= 4">Approved</td>
                             <td v-else>...</td>
                             <td v-if="item.Status == 4">
-                                    <span class="text-success">Complete</span>
+                                <span class="text-success">Complete</span>
                             </td>
-                            <td v-else-if="item.Status == 0">
-                                ...
-                            </td>
-                            <td v-else-if="item.Status == 1 && item.sup_id == user.id">
-                                <button class="custom-btn btn-15 mx-1" @click.stop="approveExpenses(item.id)">
+                            <td v-else-if="item.Status == 0">...</td>
+                            <td
+                                v-else-if="
+                                    item.Status == 1 && item.sup_id == user.id
+                                "
+                            >
+                                <button
+                                    class="custom-btn btn-15 mx-1"
+                                    @click.stop="approveExpenses(item.id)"
+                                >
                                     <i class="fa-solid fa-check"></i>
                                 </button>
                             </td>
-                            <td v-else-if="item.Status == 2 && item.hod_id == user.id">
-                                <button class="custom-btn btn-15 mx-1" @click.stop="approveExpenses(item.id)">
+                            <td
+                                v-else-if="
+                                    item.Status == 2 && item.hod_id == user.id
+                                "
+                            >
+                                <button
+                                    class="custom-btn btn-15 mx-1"
+                                    @click.stop="approveExpenses(item.id)"
+                                >
                                     <i class="fa-solid fa-check"></i>
                                 </button>
                             </td>
-                            <td v-else-if="item.Status == 3 && item.ceo_id == user.id">
-                                <button class="custom-btn btn-15 mx-1" @click.stop="approveExpenses(item.id)">
+                            <td
+                                v-else-if="
+                                    item.Status == 3 && item.ceo_id == user.id
+                                "
+                            >
+                                <button
+                                    class="custom-btn btn-15 mx-1"
+                                    @click.stop="approveExpenses(item.id)"
+                                >
                                     <i class="fa-solid fa-check"></i>
                                 </button>
                             </td>
                             <td v-else>Pending</td>
                             <td>
                                 <div class="d-flex align-items-center">
-                                    <button class="custom-btn btn-13 mx-1" @click.stop="viewReport(item.id)">
+                                    <button
+                                        class="custom-btn btn-13 mx-1"
+                                        @click.stop="viewReport(item.id)"
+                                    >
                                         <i class="fa-regular fa-file"></i>
                                     </button>
-                                    <button class="custom-btn btn-15 mx-1" @click.stop="downloadReport(item.id)">
+                                    <button
+                                        class="custom-btn btn-15 mx-1"
+                                        @click.stop="downloadReport(item.id)"
+                                    >
                                         <i class="fa-solid fa-download"></i>
                                     </button>
                                 </div>
@@ -153,7 +238,6 @@ const getData = async () => {
     }
 };
 
-
 // Check if the user can edit the expense
 const canEdit = (item) => {
     return (
@@ -224,14 +308,62 @@ const downloadReport = (id) => {
     const month = selectedMonth.value;
     const year = selectedYear.value;
 
-    window.open(`/expense-report?month=${month}&year=${year}&eid=${id}&down=down`);
+    window.open(
+        `/expense-report?month=${month}&year=${year}&eid=${id}&down=down`,
+    );
+};
+
+const exportReport = (format) => {
+    const month = selectedMonth.value;
+    const year = selectedYear.value;
+
+    window.open(
+        `/api/export-expense-summary?month=${month}&year=${year}&format=${format}`,
+    );
 };
 
 onMounted(() => getData());
 </script>
 
-
 <style scoped>
+.export-dropdown-btn {
+    height: 32px;
+    line-height: 16px;
+    padding: 0 16px;
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.export-dropdown-btn::after {
+    border: none;
+    margin-left: 4px;
+    vertical-align: middle;
+    border-top: 4px solid currentColor;
+    border-right: 4px solid transparent;
+    border-left: 4px solid transparent;
+    content: "";
+}
+
+.export-dropdown-menu {
+    min-width: 180px;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    padding: 4px 0;
+}
+
+.export-dropdown-menu .dropdown-item {
+    padding: 6px 16px;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.export-dropdown-menu .dropdown-item:hover {
+    background-color: #f0f0f0;
+}
+
 tr:hover td {
     cursor: pointer;
     background-color: #d3d9d9 !important;
@@ -239,6 +371,5 @@ tr:hover td {
 
 .bg-green {
     background-color: #d4edda;
-    /* Light green */
 }
 </style>

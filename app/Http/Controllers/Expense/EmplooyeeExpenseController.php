@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Expense;
 
+use App\Exports\ExpenseSummaryExport;
 use App\Http\Controllers\Controller;
 use App\Models\app_attendance;
 use App\Models\emplooyee_expense;
@@ -9,10 +10,12 @@ use App\Models\employee;
 use App\Models\employee_expense_permission;
 use App\Models\leave;
 use App\Models\town_belong;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Maatwebsite\Excel\Facades\Excel;
 
 class EmplooyeeExpenseController extends Controller
 {
@@ -229,14 +232,15 @@ class EmplooyeeExpenseController extends Controller
             $userId = Auth::user()->EID;
             $data = $request->all();
             $allowanceDate = $data['allowance'][0]['date'] ?? null;
+
             $attendanceLock = employee_expense_permission::where('EID', $userId)->value('Attendance_Lock');
 
             if ($allowanceDate) {
                 if ($attendanceLock == 1) {
-                    $leaveExists = leave::where('Status', 'Approved')
-                        ->where('EID', $userId)
-                        ->where('From_Date', '<=', $allowanceDate)
-                        ->where('To_Date', '>=', $allowanceDate)
+                    $leaveExists = leave::where('status', 'Approved')
+                        ->where('employee_id', $userId)
+                        ->where('from_date', '<=', $allowanceDate)
+                        ->where('to_date', '>=', $allowanceDate)
                         ->exists();
 
                     $attendanceExists = app_attendance::where('EID', $userId)
@@ -584,6 +588,92 @@ class EmplooyeeExpenseController extends Controller
         ]);
     }
 
+
+
+    public function exportExpenseSummary(Request $request)
+    {
+        DB::statement("SET SQL_MODE=''");
+
+        $month = $request->query('month');
+        $year = $request->query('year');
+        $format = $request->query('format', 'pdf');
+        $user = Auth::user();
+
+        $monthNames = [
+            0 => 'January',
+            1 => 'February',
+            2 => 'March',
+            3 => 'April',
+            4 => 'May',
+            5 => 'June',
+            6 => 'July',
+            7 => 'August',
+            8 => 'September',
+            9 => 'October',
+            10 => 'November',
+            11 => 'December',
+        ];
+        $monthName = $monthNames[$month] ?? '';
+
+        $allSubordinateIds = $this->getAllSubordinateIds($user->EID);
+
+        $query = DB::table('emplooyee_expenses')
+            ->join('employees', 'emplooyee_expenses.EID', '=', 'employees.id')
+            ->join('officials', 'officials.EID', '=', 'employees.id')
+            ->join('departments', 'departments.id', '=', 'officials.Department_Id')
+            ->join('designations', 'designations.id', '=', 'officials.Designation_Id')
+            ->select(
+                'employees.id',
+                'employees.Employee_Id',
+                'employees.Full_Name',
+                'departments.Name as Dept_Name',
+                'designations.Name as Des_Name',
+                DB::raw('SUM(CASE WHEN emplooyee_expenses.Tr_Type = \'ta\' THEN emplooyee_expenses.Amount ELSE 0 END) as total_ta'),
+                DB::raw('SUM(CASE WHEN emplooyee_expenses.Tr_Type IN (\'da\', \'oe\') THEN emplooyee_expenses.Amount ELSE 0 END) as total_da_oe'),
+                DB::raw('SUM(emplooyee_expenses.Amount) as total_expense')
+            )
+            ->whereNull('emplooyee_expenses.deleted_at')
+            ->whereMonth('emplooyee_expenses.date', $month + 1)
+            ->whereYear('emplooyee_expenses.date', $year)
+            ->groupBy(
+                'employees.id',
+                'employees.Employee_Id',
+                'employees.Full_Name',
+                'departments.Name',
+                'designations.Name'
+            );
+
+        if ($user->role_id == 1 || $user->role_id == 2 || $user->role_id == 4) {
+            $expenses = $query->get();
+        } else {
+            $expenses = $query->whereIn('emplooyee_expenses.EID', $allSubordinateIds)->get();
+        }
+
+        $totalTa = $expenses->sum('total_ta');
+        $totalDaOe = $expenses->sum('total_da_oe');
+        $totalAmount = $expenses->sum('total_expense');
+
+        $fileName = "Expense_Summary_{$monthName}_{$year}";
+
+        if ($format === 'excel') {
+            return Excel::download(
+                new ExpenseSummaryExport($expenses, $totalTa, $totalDaOe, $totalAmount, $monthName, $year),
+                $fileName . '.xlsx'
+            );
+        }
+
+        $pdf = Pdf::loadView('report.expense.expenseSummaryExport', [
+            'expenses' => $expenses,
+            'totalTa' => $totalTa,
+            'totalDaOe' => $totalDaOe,
+            'totalAmount' => $totalAmount,
+            'monthName' => $monthName,
+            'year' => $year,
+            'departmentFilter' => null,
+        ]);
+
+        return $pdf->download($fileName . '.pdf');
+    }
 
 
     private function getAllSubordinateIds($userId)

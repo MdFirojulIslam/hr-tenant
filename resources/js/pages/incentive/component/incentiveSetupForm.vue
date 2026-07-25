@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, watch, onMounted } from "vue";
+import { ref, computed, watch, onMounted, nextTick } from "vue";
 import Multiselect from "vue-multiselect";
 import "vue-multiselect/dist/vue-multiselect.min.css";
 import Label from "@/pages/components/label/Label.vue";
@@ -38,11 +38,12 @@ const employees = ref([]);
 const isLoadingDepartments = ref(true);
 const isLoadingEmployees = ref(false);
 const isSubmitting = ref(false);
+const isImporting = ref(false);
 
 const fetchDepartments = async () => {
     isLoadingDepartments.value = true;
     try {
-        const res = await api.get(`/department-list/${user.id}`);
+        const res = await api.get(`/departments-incentive-list/${user.id}`);
         departments.value = res.data;
     } catch (err) {
         console.error("Error fetching departments:", err);
@@ -75,7 +76,9 @@ const fetchEmployees = async () => {
 };
 
 watch(selectedDepartments, () => {
-    fetchEmployees();
+    if (!isImporting.value) {
+        fetchEmployees();
+    }
 });
 
 const groupedEmployees = computed(() => {
@@ -179,6 +182,172 @@ const generate = async () => {
         });
     } finally {
         isSubmitting.value = false;
+    }
+};
+
+const isUploading = ref(false);
+const isDownloading = ref(false);
+
+const downloadTemplate = async () => {
+    isDownloading.value = true;
+    try {
+        const params = new URLSearchParams();
+        if (selectedPeriod.value) params.append("period", selectedPeriod.value);
+        if (selectedDepartments.value.length) {
+            const deptIds = selectedDepartments.value
+                .map((d) => d.department_id)
+                .join(",");
+            params.append("deptIds", deptIds);
+        }
+
+        const token = localStorage.getItem("token");
+        const url = `/api/incentive-download-template${params.toString() ? "?" + params.toString() : ""}`;
+        const res = await fetch(url, {
+            headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (!res.ok) {
+            const err = await res.json();
+            throw new Error(err.message || "Download failed");
+        }
+
+        const blob = await res.blob();
+        const ext = "xlsx";
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = `Incentive_Template${selectedPeriod.value ? "_" + selectedPeriod.value.replace(/\s/g, "_") : ""}.${ext}`;
+        a.click();
+        URL.revokeObjectURL(a.href);
+    } catch (err) {
+        Swal.fire({
+            icon: "error",
+            title: "Download Failed",
+            text:
+                err.message || "Could not download template. Please try again.",
+        });
+    } finally {
+        isDownloading.value = false;
+    }
+};
+
+const uploadExcel = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const validTypes = [
+        "application/vnd.ms-excel",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    ];
+    if (!validTypes.includes(file.type) && !file.name.match(/\.xlsx?$/i)) {
+        Swal.fire({
+            icon: "error",
+            title: "Invalid File",
+            text: "Please upload a valid Excel file (.xls or .xlsx).",
+        });
+        event.target.value = "";
+        return;
+    }
+
+    isUploading.value = true;
+    isImporting.value = true;
+    try {
+        const formData = new FormData();
+        formData.append("file", file);
+
+        const res = await api.post("/incentive-import-excel", formData, {
+            headers: { "Content-Type": "multipart/form-data" },
+        });
+
+        if (res.data.success && res.data.data) {
+            const importData = res.data.data;
+
+            const importMap = {};
+            importData.forEach((row) => {
+                importMap[row.id] = {
+                    incentive_amount: row.incentive_amount,
+                    remarks: row.remarks || "",
+                };
+            });
+
+            if (employees.value.length > 0) {
+                let matchedCount = 0;
+                employees.value.forEach((emp) => {
+                    const data = importMap[emp.id];
+                    if (data) {
+                        matchedCount++;
+                        emp.incentive_amount = data.incentive_amount;
+                        emp.remarks = data.remarks;
+                    }
+                });
+
+                await nextTick();
+
+                Swal.fire({
+                    icon: "success",
+                    title: "Import Successful",
+                    text: `${matchedCount} employee(s) updated from Excel.`,
+                    timer: 2000,
+                    showConfirmButton: false,
+                });
+            } else {
+                const loadedEmployees = importData.map((row) => ({
+                    id: row.id,
+                    Employee_Id: row.Employee_Id,
+                    Full_Name: row.Full_Name,
+                    department_id: row.department_id,
+                    department_name: row.department_name,
+                    designation_name: row.designation_name,
+                    incentive_amount: row.incentive_amount,
+                    remarks: row.remarks || "",
+                }));
+                employees.value = loadedEmployees;
+
+                const deptMap = {};
+                importData.forEach((row) => {
+                    if (
+                        row.department_id &&
+                        row.department_name &&
+                        !deptMap[row.department_id]
+                    ) {
+                        deptMap[row.department_id] = {
+                            department_id: row.department_id,
+                            department_name: row.department_name,
+                        };
+                    }
+                });
+                const matchedDepts = departments.value.filter(
+                    (d) => deptMap[d.department_id],
+                );
+                if (matchedDepts.length) {
+                    selectedDepartments.value = matchedDepts;
+                }
+
+                await nextTick();
+
+                Swal.fire({
+                    icon: "success",
+                    title: "Import Successful",
+                    text: `${employees.value.length} employee(s) loaded from Excel.`,
+                    timer: 2000,
+                    showConfirmButton: false,
+                });
+            }
+        } else {
+            throw new Error(res.data.message || "Import failed");
+        }
+    } catch (err) {
+        Swal.fire({
+            icon: "error",
+            title: "Import Failed",
+            text:
+                err.response?.data?.message ||
+                err.message ||
+                "Could not process Excel file.",
+        });
+    } finally {
+        isImporting.value = false;
+        isUploading.value = false;
+        event.target.value = "";
     }
 };
 
@@ -316,6 +485,55 @@ onMounted(() => {
                             </div>
                         </div>
                     </div>
+                </div>
+            </div>
+
+            <!-- Template Download & Excel Upload Row -->
+            <div class="d-flex gap-4 mt-3">
+                <div>
+                    <label class="form-label fw-semibold mb-1"
+                        >Download Template</label
+                    >
+                    <button
+                        type="button"
+                        class="btn btn-outline-success btn-sm d-flex align-items-center gap-1 px-3"
+                        @click="downloadTemplate"
+                        :disabled="isDownloading"
+                    >
+                        <span
+                            v-if="isDownloading"
+                            class="spinner-border spinner-border-sm"
+                            role="status"
+                        ></span>
+                        <i v-else class="fa-solid fa-download"></i>
+                        {{
+                            isDownloading
+                                ? "Downloading..."
+                                : "Download Template"
+                        }}
+                    </button>
+                </div>
+                <div>
+                    <label class="form-label fw-semibold mb-1"
+                        >Upload Excel (If Have)</label
+                    >
+                    <input
+                        type="file"
+                        class="form-control form-control-sm"
+                        accept=".xls,.xlsx"
+                        @change="uploadExcel($event)"
+                        :disabled="isUploading"
+                        style="width: 260px"
+                    />
+                </div>
+                <div v-if="isUploading" class="d-flex align-items-end">
+                    <span class="text-muted" style="font-size: 0.82rem">
+                        <span
+                            class="spinner-border spinner-border-sm me-1"
+                            role="status"
+                        ></span>
+                        Processing Excel...
+                    </span>
                 </div>
             </div>
 
