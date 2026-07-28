@@ -1,101 +1,3 @@
-<template>
-    <nav class="sb-topnav navbar navbar-expand navbar-dark bg-dark">
-        <Router-Link class="navbar-brand ps-3" to="#">
-            <img
-                src="/public/storage/uploads/1718087744_artisan.png"
-                height="35px"
-                width="35px"
-                class="mx-3"
-            />
-            Artisan HRM</Router-Link
-        >
-
-        <button class="btn btn-link btn-sm mx-4" id="sidebarToggle" href="#!">
-            <i class="fas fa-bars"></i>
-        </button>
-
-        <form
-            class="d-none d-md-inline-block form-inline ms-auto me-0 me-md-3 my-2 my-md-0"
-        ></form>
-
-        <ul class="navbar-nav ms-auto ms-md-0 me-3 me-lg-4">
-            <li class="nav-item dropdown position-relative p-2">
-                <a
-                    class="nav-link position-relative"
-                    id="navbarDropdown"
-                    href="#"
-                    role="button"
-                    data-bs-toggle="dropdown"
-                    aria-expanded="false"
-                >
-                    <i class="fa-solid fa-bell" style="font-size: large"></i>
-
-                    <span
-                        v-if="totalNotifications > 0"
-                        class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
-                    >
-                        {{ totalNotifications }}
-                        <span class="visually-hidden">unread messages</span>
-                    </span>
-                </a>
-                <ul
-                    class="dropdown-menu dropdown-menu-end"
-                    aria-labelledby="navbarDropdown"
-                    style="background-color: #c7d1cb"
-                >
-                    <div v-for="item in notification" :key="item.id">
-                        <li
-                            class="dropdown-item"
-                            v-if="item.status === 'Pending'"
-                            @click="goToSupervisorApproval(item)"
-                        >
-                            {{ item.Full_Name }} Requested a Leave
-                        </li>
-                        <li
-                            class="dropdown-item"
-                            v-if="item.status === 'Approved (SV)'"
-                            @click="goToHrApproval(item)"
-                        >
-                            {{ item.Full_Name }} leave has been accepted by his
-                            Supervisor.
-                        </li>
-                    </div>
-                </ul>
-            </li>
-            <li class="nav-item dropdown">
-                <a
-                    class="nav-link dropdown-toggle"
-                    id="userDropdown"
-                    href="#"
-                    role="button"
-                    data-bs-toggle="dropdown"
-                    aria-expanded="false"
-                >
-                    {{ user.Full_Name }}
-                    <img
-                        :src="user.img_url"
-                        alt="User Image"
-                        height="40px"
-                        width="40px"
-                        style="border-radius: 50%"
-                    />
-                </a>
-                <ul
-                    class="dropdown-menu dropdown-menu-end"
-                    aria-labelledby="userDropdown"
-                >
-                    <li class="dropdown-item">Settings</li>
-                    <li class="dropdown-item">Activity Log</li>
-                    <li>
-                        <hr class="dropdown-divider" />
-                    </li>
-                    <li class="dropdown-item" @click="logout">Logout</li>
-                </ul>
-            </li>
-        </ul>
-    </nav>
-</template>
-
 <script setup>
 import { ref, onMounted, computed } from "vue";
 import api from "@/api";
@@ -110,6 +12,10 @@ const user = store.getters.getUser;
 const router = useRouter();
 const error = ref("");
 const notification = ref([]);
+
+const toggleSidebar = () => {
+    store.commit("TOGGLE_SIDEBAR");
+};
 
 const goToSupervisorApproval = (item) => {
     router.push({
@@ -182,35 +88,147 @@ const logout = async () => {
 
 onMounted(() => {
     getData();
-    const sidebarToggle = document.querySelector("#sidebarToggle");
-    const sidebar = document.querySelector("#layoutSidenav_nav");
-
-    if (sidebarToggle) {
-        sidebarToggle.addEventListener("click", (event) => {
-            event.preventDefault();
-            document.body.classList.toggle("sb-sidenav-toggled");
-            localStorage.setItem(
-                "sb|sidebar-toggle",
-                document.body.classList.contains("sb-sidenav-toggled")
-            );
-        });
-    }
-
-    document.addEventListener("click", (event) => {
-        if (
-            sidebar &&
-            !sidebar.contains(event.target) &&
-            !sidebarToggle.contains(event.target)
-        ) {
-            if (document.body.classList.contains("sb-sidenav-toggled")) {
-                document.body.classList.remove("sb-sidenav-toggled");
-                localStorage.setItem("sb|sidebar-toggle", false);
-            }
-        }
-    });
-
-    if (localStorage.getItem("sb|sidebar-toggle") === "true") {
-        document.body.classList.add("sb-sidenav-toggled");
-    }
 });
 </script>
+
+<template>
+    <nav class="sb-topnav navbar navbar-expand navbar-color">
+        <div class="d-flex align-items-center w-100 navbar-content">
+            <div class="d-flex align-items-center navbar-logo">
+                <div>
+                    <img
+                        src="/public/storage/uploads/1718087744_artisan.png"
+                        height="35px"
+                        width="35px"
+                        class="mx-3"
+                    />
+                </div>
+                <h3 class="text-white mb-0">ARTISAN HRM</h3>
+            </div>
+
+            <div class="ms-5">
+                <button
+                    class="btn btn-link btn-sm text-white"
+                    id="sidebarToggle"
+                    @click="toggleSidebar"
+                >
+                    <i class="fas fa-bars fa-2x"></i>
+                </button>
+            </div>
+
+            <div class="ms-auto nav-profile">
+                <div
+                    class="ms-auto d-flex align-items-center ms-md-0 me-3 me-lg-4"
+                >
+                    <div class="nav-item dropdown position-relative p-2">
+                        <a
+                            class="nav-link position-relative"
+                            id="navbarDropdown"
+                            href="#"
+                            role="button"
+                            data-bs-toggle="dropdown"
+                            aria-expanded="false"
+                        >
+                            <i
+                                class="fa-solid fa-bell"
+                                style="font-size: large; color: white"
+                            ></i>
+
+                            <span
+                                v-if="totalNotifications > 0"
+                                class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
+                            >
+                                {{ totalNotifications }}
+                                <span class="visually-hidden"
+                                    >unread messages</span
+                                >
+                            </span>
+                        </a>
+                        <ul
+                            class="dropdown-menu dropdown-menu-end"
+                            aria-labelledby="navbarDropdown"
+                            style="background-color: #c7d1cb"
+                        >
+                            <div v-for="item in notification" :key="item.id">
+                                <li
+                                    class="dropdown-item"
+                                    v-if="item.status === 'Pending'"
+                                    @click="goToSupervisorApproval(item)"
+                                >
+                                    {{ item.Full_Name }} Requested a Leave
+                                </li>
+                                <li
+                                    class="dropdown-item"
+                                    v-if="item.status === 'Approved (SV)'"
+                                    @click="goToHrApproval(item)"
+                                >
+                                    {{ item.Full_Name }} leave has been accepted
+                                    by his Supervisor.
+                                </li>
+                            </div>
+                        </ul>
+                    </div>
+                    <div class="nav-item dropdown nav-profile">
+                        <a
+                            class="nav-link dropdown-toggle"
+                            id="userDropdown"
+                            href="#"
+                            role="button"
+                            data-bs-toggle="dropdown"
+                            aria-expanded="false"
+                        >
+                            <span
+                                class="text-white fs-4 m-3 nav-profile-name"
+                                >{{ user.Full_Name }}</span
+                            >
+                            <img
+                                :src="user.img_url"
+                                alt="User Image"
+                                height="40px"
+                                width="40px"
+                                style="border-radius: 50%"
+                            />
+                        </a>
+                        <ul
+                            class="dropdown-menu dropdown-menu-end"
+                            aria-labelledby="userDropdown"
+                        >
+                            <li class="dropdown-item">Settings</li>
+                            <li class="dropdown-item">Activity Log</li>
+                            <li>
+                                <hr class="dropdown-divider" />
+                            </li>
+                            <li class="dropdown-item" @click="logout">
+                                Logout
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </nav>
+</template>
+
+<style scoped>
+.navbar-color {
+    /* background-color: rgb(39, 106, 70); */
+    /* background-color: #198754; */
+    background-color: #212529;
+    /* border-bottom: 0.1px solid #fbfffd; */
+}
+@media (max-width: 768px) {
+    .navbar-logo {
+        display: none !important;
+    }
+    /* .navbar-content{
+
+
+   } */
+    .nav-profile-name {
+        display: none;
+    }
+    .nav-profile {
+        margin-left: 10px;
+    }
+}
+</style>

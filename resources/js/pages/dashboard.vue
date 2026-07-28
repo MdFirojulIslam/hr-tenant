@@ -1,66 +1,46 @@
 <script setup>
 import { ref, onMounted, watch, computed } from "vue";
 import api from "@/api";
-import { RouterLink } from "vue-router";
 import dashboardChart from "./commonComponent/dashboardChart.vue";
-import ApexCharts from "vue3-apexcharts";
-
 import Multiselect from "vue-multiselect";
 import "vue-multiselect/dist/vue-multiselect.min.css";
 
-import DataTable from "datatables.net-vue3";
-import DataTablesCore from "datatables.net-bs5";
-
-DataTable.use(DataTablesCore);
-
+// Dynamic Data State
 const dataMode = ref("all");
-const dashCount = ref([]);
-const pieSeries = ref([]);
-const pieChartOptions = ref({});
-
-const attendancePieSeries = ref([]);
-const AttendancepieChartOptions = ref({});
+const dashCount = ref({});
 const dashattendanceData = ref([]);
-
-const attendanceTableData = ref([]);
-
+const dashattendanceDataByDept = ref({});
 const departmentList = ref([]);
 
+// Controls
 const dateInput = ref(null);
 const selectedDepartment = ref(null);
 const currentDate = ref("");
 const selectedDate = ref("");
-const dashattendanceDataByDept = ref({});
-const openCalendar = () => {
-    dateInput.value.showPicker();
-};
 
-const getAttendanceTableData = async () => {
-    try {
-        const response = await api.get("/dashboard-attendance-table-data");
-        attendanceTableData.value = response.data;
-    } catch (error) {
-        console.error("Error fetching attendance table data:", error);
+const openCalendar = () => {
+    if (dateInput.value) {
+        dateInput.value.showPicker();
     }
 };
 
-const attendanceDataTableData = ref([
-    ["EMP001", "Firoj", "IT", 10, 2, 1, 2, "80%"],
-    ["EMP002", "John Doe", "HR", 12, 0, 0, 1, "92%"],
-    ["EMP003", "Jane Smith", "Finance", 9, 3, 2, 0, "75%"],
-]);
-
 const initializeChart = async () => {
-    const dashCountres = await api.get("/dashboard-count");
-    dashCount.value = dashCountres.data;
+    try {
+        const dashCountres = await api.get("/dashboard-count");
+        dashCount.value = dashCountres.data;
+    } catch (error) {
+        console.error("Error fetching dashboard count:", error);
+    }
 };
 
 const setCurrentDate = () => {
     const today = new Date();
-
     selectedDate.value = today.toISOString().split("T")[0];
+    formatDateLabel(today);
+};
 
-    currentDate.value = today.toLocaleDateString("en-US", {
+const formatDateLabel = (dateObj) => {
+    currentDate.value = dateObj.toLocaleDateString("en-US", {
         month: "short",
         day: "2-digit",
         year: "numeric",
@@ -69,13 +49,7 @@ const setCurrentDate = () => {
 
 watch(selectedDate, (newDate) => {
     if (!newDate) return;
-
-    currentDate.value = new Date(newDate).toLocaleDateString("en-US", {
-        month: "short",
-        day: "2-digit",
-        year: "numeric",
-    });
-
+    formatDateLabel(new Date(newDate));
     fetchAttendanceData();
 });
 
@@ -105,22 +79,20 @@ const getDataByDept = async () => {
         });
         dashattendanceDataByDept.value = response.data;
     } catch (error) {
-        console.error("Error fetching dashboard data by department:", error);
+        console.error("Error fetching data by department:", error);
     }
 };
 
 const getData = async () => {
     try {
-        const [responseDept, responseAtendanceData] = await Promise.all([
+        const [responseDept, responseAttendanceData] = await Promise.all([
             api.get("/dashboard-department-list"),
             api.get("/dashboard-attendance-data", {
-                params: {
-                    date: selectedDate.value,
-                },
+                params: { date: selectedDate.value },
             }),
         ]);
         departmentList.value = responseDept.data;
-        dashattendanceData.value = responseAtendanceData.data;
+        dashattendanceData.value = responseAttendanceData.data;
     } catch (error) {
         console.error("Error fetching dashboard data:", error);
     }
@@ -128,47 +100,9 @@ const getData = async () => {
 
 const activeAttendanceData = computed(() => {
     return dataMode.value === "dept"
-        ? dashattendanceDataByDept.value
-        : dashattendanceData.value;
+        ? dashattendanceDataByDept.value || {}
+        : dashattendanceData.value || {};
 });
-
-watch(activeAttendanceData, (newVal) => {
-    if (!newVal) return;
-
-    attendancePieSeries.value = [
-        Number(newVal.total_present || 0),
-        Number(newVal.total_absent || 0),
-        Number(newVal.total_late || 0),
-    ];
-
-    AttendancepieChartOptions.value = {
-        labels: [
-            `Present - ${newVal.total_present || 0}`,
-            `Absent - ${newVal.total_absent || 0}`,
-            `Late - ${newVal.total_late || 0}`,
-        ],
-        colors: ["#6de975", "#ff7d4c", "#f7b731"],
-    };
-});
-
-watch(
-    dashCount,
-    (newVal) => {
-        if (
-            newVal &&
-            typeof newVal.employee_act === "number" &&
-            typeof newVal.employee_inact === "number"
-        ) {
-            pieSeries.value = [newVal.employee_act, newVal.employee_inact];
-
-            pieChartOptions.value = {
-                labels: ["Active Employees", "Inactive Employees"],
-                colors: ["#6de975", "#ff7d4c"],
-            };
-        }
-    },
-    { immediate: true },
-);
 
 onMounted(() => {
     initializeChart();
@@ -177,494 +111,478 @@ onMounted(() => {
 </script>
 
 <template>
-    <main>
-        <div class="container-fluid">
-            <div class="d-flex align-items-center gap-2 py-3">
-                <i class="fa-solid fa-gauge dashboard-icon"></i>
-                <h2 class="dashboard-title mb-0">Dashboard</h2>
-            </div>
+    <main class="dashboard-wrapper">
+        <div class="container-fluid px-4 py-3">
+            <!-- Header Section -->
+            <header
+                class="dashboard-header d-flex align-items-center justify-content-between mb-4"
+            >
+                <div class="d-flex align-items-center gap-1">
+                    <div class="icon-badge">
+                        <i class="fa-solid fa-gauge-high"></i>
+                    </div>
+                    <div>
+                        <h1 class="dashboard-title">Dashboard Overview</h1>
+                    </div>
+                </div>
+            </header>
 
-            <div class="row dashboard-background mb-3">
-                <div col-md-12>
-                    <div class="card p-2">
-                        <div class="d-flex gap-3">
-                            <div class="col-md-3 card p-2">
-                                <div
-                                    class="d-flex justify-content-between align-items-center"
+            <!-- Filter Controls Bar -->
+            <section class="filter-card mb-4">
+                <div class="row g-3 align-items-center">
+                    <!-- Date Selector -->
+                    <div class="col-12 col-md-5 col-lg-4">
+                        <div
+                            class="control-box d-flex align-items-center justify-content-between"
+                            @click="openCalendar"
+                        >
+                            <div>
+                                <span class="control-label d-block"
+                                    >Selected Date</span
                                 >
-                                    <div class="view-data-date">
-                                        <div>Date Range</div>
-                                        <div>{{ currentDate }}</div>
-                                    </div>
-                                    <label
-                                        class="attendance-calender-select"
-                                        @click="openCalendar()"
-                                        style="cursor: pointer"
-                                    >
-                                        <i
-                                            class="fa-solid fa-calendar-days"
-                                        ></i>
-                                        <input
-                                            type="date"
-                                            ref="dateInput"
-                                            v-model="selectedDate"
-                                            style="
-                                                opacity: 0;
-                                                position: absolute;
-                                                pointer-events: none;
-                                            "
-                                        />
-                                    </label>
-                                </div>
+                                <span class="control-value">{{
+                                    currentDate || "Select Date"
+                                }}</span>
                             </div>
+                            <div class="calendar-trigger">
+                                <i class="fa-regular fa-calendar-days"></i>
+                                <input
+                                    type="date"
+                                    ref="dateInput"
+                                    v-model="selectedDate"
+                                    class="hidden-date-input"
+                                />
+                            </div>
+                        </div>
+                    </div>
 
-                            <div class="col-md-3">
-                                <div class="card p-1">
-                                    <multiselect
-                                        v-model="selectedDepartment"
-                                        :options="departmentList"
-                                        label="Name"
-                                        track-by="id"
-                                        :searchable="true"
-                                        :close-on-select="true"
-                                        :allow-empty="true"
-                                        placeholder="Select
-                                    Department"
-                                        class="mb-2"
-                                    />
-                                </div>
-                            </div>
+                    <!-- Department Selector -->
+                    <div class="col-12 col-md-5 col-lg-4">
+                        <div class="control-box multiselect-wrapper">
+                            <multiselect
+                                v-model="selectedDepartment"
+                                :options="departmentList"
+                                label="Name"
+                                track-by="id"
+                                :searchable="true"
+                                :close-on-select="true"
+                                :allow-empty="true"
+                                placeholder="All Departments"
+                            />
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Metrics Grid -->
+            <section class="metrics-grid mb-4">
+                <!-- Card 1: Total Employees -->
+                <div class="metric-card">
+                    <div class="metric-header">
+                        <span class="metric-title">Total Employees</span>
+                        <i class="fa-solid fa-users metric-icon"></i>
+                    </div>
+                    <div class="metric-body">
+                        <div class="primary-stat">
+                            {{ activeAttendanceData.active_employee || 0 }}
+                        </div>
+                        <div class="sub-stat-group mt-2">
+                            <span class="lob-badge">
+                                <strong>{{
+                                    activeAttendanceData.gulshan_office_total_employee ||
+                                    0
+                                }}</strong>
+                                <small>G</small>
+                            </span>
+                            <span class="lob-badge">
+                                <strong>{{
+                                    activeAttendanceData.warehouse_total_employee ||
+                                    0
+                                }}</strong>
+                                <small>W</small>
+                            </span>
+                            <span class="lob-badge">
+                                <strong>{{
+                                    activeAttendanceData.field_force_total_employee ||
+                                    0
+                                }}</strong>
+                                <small>F</small>
+                            </span>
                         </div>
                     </div>
                 </div>
 
-                <div class="col-md-12 mt-2">
-                    <div class="card-grid gap-2">
-                        <div class="card-design">
-                            <div class="p-1">
-                                <div class="height-define">
-                                    <div class="grid-data">
-                                        {{
-                                            activeAttendanceData.active_employee
-                                        }}
-                                    </div>
-                                    <div class="grid-data">
-                                        {{
-                                            activeAttendanceData.gulshan_office_total_employee
-                                        }}
-                                        /<span class="lob-location-status"
-                                            >G</span
-                                        >
-                                        {{
-                                            activeAttendanceData.warehouse_total_employee
-                                        }}
-                                        /<span class="lob-location-status"
-                                            >W</span
-                                        >
-                                        {{
-                                            activeAttendanceData.field_force_total_employee
-                                        }}
-                                        /<span class="lob-location-status"
-                                            >F</span
-                                        >
-                                    </div>
-                                </div>
-
-                                <label class="card-title"
-                                    >Total Employees
-                                </label>
-                            </div>
-                        </div>
-                        <div class="card-design">
-                            <div class="p-1">
-                                <div class="height-define">
-                                    <div class="grid-data">
-                                        P -
-                                        {{ activeAttendanceData.total_present }}
-                                        ({{ activeAttendanceData.avg_present
-                                        }}<span>%</span>)
-                                    </div>
-                                    <div class="grid-data">
-                                        A -
-                                        {{ activeAttendanceData.total_absent }}
-                                        ({{ activeAttendanceData.avg_absent
-                                        }}<span>%</span>)
-                                    </div>
-                                </div>
-                                <label class="card-title"> Attendance </label>
-                            </div>
-                        </div>
-                        <div class="card-design">
-                            <div class="p-1">
-                                <div class="height-define">
-                                    <div class="grid-data">
-                                        Late -
-                                        {{ activeAttendanceData.total_late }}
-                                        ({{ activeAttendanceData.avg_late }}%)
-                                    </div>
-                                    <div class="grid-data">
-                                        {{
-                                            activeAttendanceData.average_work_hours
-                                        }}
-                                        Hours
-                                    </div>
-                                </div>
-                                <label class="card-title">
-                                    Average Working hours
-                                </label>
-                            </div>
-                        </div>
-
-                        <!-- <div class="card-design">
-                            <div class="p-1">
-                                <div class="card-values"> {{ dashCount.employee_inact }}
-                                </div>
-                                <label for="">Inactive Employees</label>
-                            </div>
-                        </div> -->
-
-                        <div class="card-design">
-                            <div class="p-1">
-                                <div class="height-define">
-                                    <div class="grid-data">
-                                        Approved -
-                                        {{ activeAttendanceData.total_leave }}
-                                    </div>
-                                    <div class="grid-data">
-                                        Pending -
-                                        {{
-                                            activeAttendanceData.total_pending_leave
-                                                ? activeAttendanceData.total_pending_leave
-                                                : 0
-                                        }}
-                                    </div>
-                                </div>
-                                <label class="card-title"> Leave</label>
-                            </div>
-                        </div>
-
-                        <div class="card-design">
-                            <div class="p-1">
-                                <div class="height-define">
-                                    <div class="grid-data">
-                                        {{ activeAttendanceData.averageTenure }}
-                                        Years
-                                    </div>
-                                    <div class="grid-data"></div>
-                                </div>
-                                <label class="card-title">Average Tenure</label>
-                            </div>
-                        </div>
-
-                        <!-- <div class="card-design">
-                            <div class="p-1">
-                                <div class="card-values"> {{ activeAttendanceData.total_absent }} - {{
-                                    activeAttendanceData.avg_absent
-                                }}%</div>
-                                <label> Absent Employee </label>
-                            </div>
-                        </div> -->
-
-                        <div class="card-design">
-                            <div class="p-1">
-                                <div class="single-line-height-define">
-                                    <div class="grid-data">
-                                        {{ activeAttendanceData.total_expense }}
-                                        Taka/-
-                                    </div>
-                                </div>
-                                <label class="card-title"> TA/DA (MTD) </label>
-                            </div>
-                        </div>
-                        <div class="card-design">
-                            <div class="p-1">
-                                <div class="single-line-height-define">
-                                    <div class="grid-data">
-                                        {{
-                                            activeAttendanceData.department_total
-                                        }}
-                                    </div>
-                                </div>
-                                <label class="card-title"
-                                    >Department Count</label
+                <!-- Card 2: Attendance Split -->
+                <div class="metric-card">
+                    <div class="metric-header">
+                        <span class="metric-title">Attendance</span>
+                        <i
+                            class="fa-solid fa-user-check metric-icon text-success"
+                        ></i>
+                    </div>
+                    <div class="metric-body">
+                        <div class="stat-row">
+                            <span class="stat-label text-success"
+                                ><i class="fa-solid fa-circle me-1 small"></i>
+                                Present</span
+                            >
+                            <span class="stat-value">
+                                {{ activeAttendanceData.total_present || 0 }}
+                                <small class="text-muted"
+                                    >({{
+                                        activeAttendanceData.avg_present || 0
+                                    }}%)</small
                                 >
-                            </div>
+                            </span>
                         </div>
-                        <div class="card-design">
-                            <div class="p-1">
-                                <div class="single-line-height-define">
-                                    <div class="grid-data">
-                                        {{ activeAttendanceData.averageAge }}
-                                        Years
-                                    </div>
-                                </div>
-                                <label class="card-title">Average Age</label>
-                            </div>
+                        <div class="stat-row mt-2">
+                            <span class="stat-label text-danger"
+                                ><i class="fa-solid fa-circle me-1 small"></i>
+                                Absent</span
+                            >
+                            <span class="stat-value">
+                                {{ activeAttendanceData.total_absent || 0 }}
+                                <small class="text-muted"
+                                    >({{
+                                        activeAttendanceData.avg_absent || 0
+                                    }}%)</small
+                                >
+                            </span>
                         </div>
-                        <!-- <div class="card-design">
-                            <div class="p-1">
-                                <div class="card-values"> {{
-                                    activeAttendanceData.total_pending_leave ?
-                                        activeAttendanceData.total_pending_leave
-                                        : 0
-                                }}</div>
-                                <label> PENDING LEAVE </label>
-                            </div>
-                        </div> -->
-                        <!-- <div class="card-design">
-                            <div class="p-1">
-                                <div class="card-values"> </div>
-                                <label> TOTAL LEAVE </label>
-                            </div>
-                        </div> -->
                     </div>
                 </div>
 
-                <!-- <div class="col-md-6 mt-3">
-                    <div class="card p-2 mb-4">
-                        <div class="d-flex justify-content-space-between gap-2 mb-2">
-                            <div class="col-md-8">
-                                <div class="card p-2">
-                                    <label class="d-block text-center mb-2 attendance-card-title">
-                                        ATTENDANCE SUMMARY
-                                    </label>
-                                    <div class="">
-                                        <ApexCharts type="donut" height="180" :options="AttendancepieChartOptions"
-                                            :series="attendancePieSeries" />
-                                    </div>
-                                </div>
-                            </div>
+                <!-- Card 3: Working Hours & Late -->
+                <div class="metric-card">
+                    <div class="metric-header">
+                        <span class="metric-title">Work Hours & Late</span>
+                        <i
+                            class="fa-solid fa-clock metric-icon text-warning"
+                        ></i>
+                    </div>
+                    <div class="metric-body">
+                        <div class="stat-row">
+                            <span class="stat-label">Late Arrivals</span>
+                            <span class="stat-value text-warning">
+                                {{ activeAttendanceData.total_late || 0 }}
+                                <small class="text-muted"
+                                    >({{
+                                        activeAttendanceData.avg_late || 0
+                                    }}%)</small
+                                >
+                            </span>
                         </div>
-
-
-                        <div class="d-flex justify-content-space-between gap-2 mb-2">
-                        </div>
-                        <div class="col-md-12 card p-2 mb-2">
-                            <div class="d-flex justify-content-between mb-2">
-                                <label class="attendance-table-header">EMPLOYEE ATTENDANCE OVERVIEW</label>
-                                <label class="attendance-table-header export-excel">
-                                    <i class="fa-solid fa-circle-arrow-down"></i>
-                                </label>
-                            </div>
-
-
-                            <DataTable :data="attendanceDataTableData" class="table table-striped">
-                                <thead>
-                                    <tr>
-                                        <th>EMP ID</th>
-                                        <th>EMP NAME</th>
-                                        <th>DEPARTMENT</th>
-                                        <th>PRESENT</th>
-                                        <th>ABSENT</th>
-                                        <th>LATE</th>
-                                        <th>LEAVE</th>
-                                        <th>ATTENDANCE %</th>
-                                    </tr>
-                                </thead>
-                            </DataTable>
+                        <div class="stat-row mt-2">
+                            <span class="stat-label">Avg. Work Hours</span>
+                            <span class="stat-value">
+                                {{
+                                    activeAttendanceData.average_work_hours || 0
+                                }}
+                                hrs
+                            </span>
                         </div>
                     </div>
-                </div> -->
-                <!-- <div class="col-xl-6 col-md-6 mt-3 ">
-                    <div class="col-xl-12 col-md-12">
-                        <div class="card mb-4">
-                            <div class="card-header">
-                                <i class="fas fa-chart-pie me-1"></i>
-                                Employee Active/Inactive
-                            </div>
-                            <div class="card-body">
-                                <ApexCharts type="pie" height="122" :options="pieChartOptions" :series="pieSeries" />
-                            </div>
+                </div>
+
+                <!-- Card 4: Leave Summary -->
+                <div class="metric-card">
+                    <div class="metric-header">
+                        <span class="metric-title">Leave Status</span>
+                        <i class="fa-solid fa-plane-departure metric-icon"></i>
+                    </div>
+                    <div class="metric-body">
+                        <div class="stat-row">
+                            <span class="stat-label">Approved</span>
+                            <span class="stat-value text-success">
+                                {{ activeAttendanceData.total_leave || 0 }}
+                            </span>
+                        </div>
+                        <div class="stat-row mt-2">
+                            <span class="stat-label">Pending</span>
+                            <span class="stat-value text-warning">
+                                {{
+                                    activeAttendanceData.total_pending_leave ||
+                                    0
+                                }}
+                            </span>
                         </div>
                     </div>
-                </div> -->
-            </div>
-            <dashboardChart :dashData="dashCount" />
+                </div>
+
+                <!-- Card 5: Average Tenure -->
+                <div class="metric-card">
+                    <div class="metric-header">
+                        <span class="metric-title">Average Tenure</span>
+                        <i class="fa-solid fa-award metric-icon"></i>
+                    </div>
+                    <div class="metric-body">
+                        <div class="primary-stat">
+                            {{ activeAttendanceData.averageTenure || 0 }}
+                            <small class="unit">Years</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 6: TA/DA Expense -->
+                <div class="metric-card">
+                    <div class="metric-header">
+                        <span class="metric-title">TA/DA (MTD)</span>
+                        <i class="fa-solid fa-receipt metric-icon"></i>
+                    </div>
+                    <div class="metric-body">
+                        <div class="primary-stat highlight-currency">
+                            {{ activeAttendanceData.total_expense || 0 }}
+                            <small class="unit">BDT</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 7: Department Count -->
+                <div class="metric-card">
+                    <div class="metric-header">
+                        <span class="metric-title">Departments</span>
+                        <i class="fa-solid fa-sitemap metric-icon"></i>
+                    </div>
+                    <div class="metric-body">
+                        <div class="primary-stat">
+                            {{ activeAttendanceData.department_total || 0 }}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card 8: Average Age -->
+                <div class="metric-card">
+                    <div class="metric-header">
+                        <span class="metric-title">Average Age</span>
+                        <i class="fa-solid fa-cake-candles metric-icon"></i>
+                    </div>
+                    <div class="metric-body">
+                        <div class="primary-stat">
+                            {{ activeAttendanceData.averageAge || 0 }}
+                            <small class="unit">Years</small>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Secondary Analytics / Charts Section -->
+            <section class="chart-section">
+                <dashboardChart :dashData="dashCount" />
+            </section>
         </div>
     </main>
 </template>
 
 <style scoped>
-.dashboard-background {
-    background-color: #f6f3f39c;
-    padding-top: 7px;
-    padding-bottom: 7px;
-    border-radius: 5px;
+.dashboard-wrapper {
+    background-color: #f8fafc;
+    min-height: 100vh;
+    font-family:
+        "Inter",
+        system-ui,
+        -apple-system,
+        sans-serif;
+    color: #0f172a;
 }
 
-.card-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-    gap: 12px;
-}
-
-.first-dev {
-    font-size: 15px;
-}
-
-.lob-location-status {
-    font-size: 10px;
-    margin-right: 6px;
-}
-
-.height-define {
-    height: 55px;
-}
-
-.second-dev {
-    font-size: 13px;
-}
-
-.single-line-height-define {
-    height: 40px;
-}
-
-.first-span {
-    font-size: 17px;
-}
-
-.card-title {
-    font-family: sans-serif;
-}
-
-.card-design {
-    background: #fff;
-    border: 1px solid #dbe3ef;
+/* Header */
+.icon-badge {
+    width: 44px;
+    height: 44px;
+    background: #eff6ff;
+    color: #2563eb;
     border-radius: 10px;
-    padding: 12px;
-    min-height: 92px;
-    box-shadow: 0 4px 10px #020b190f;
-}
-
-.grid-data {
-    font-family: "Times New Roman", Times, serif;
-    font-weight: 600;
-    font-size: 14px;
-}
-
-.card-values {
-    font-weight: 500;
-    font-size: 18px;
-}
-
-.fa-gauge {
-    font-size: 20px;
-    color: #000000;
-    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
 }
 
 .dashboard-title {
-    font-size: 25px;
+    font-size: 1.5rem;
     font-weight: 700;
     margin: 0;
-    line-height: 1;
+    line-height: 1.2;
 }
 
-.attendance-title {
-    font-size: 25px;
-    font-weight: 700;
-    color: #470202;
+.dashboard-subtitle {
+    font-size: 0.875rem;
 }
 
-.fa-calendar-days {
-    font-size: 25px;
-    color: #515251;
+/* Filter Controls Card */
+.filter-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 1rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
-.fa-calendar-days:hover {
-    color: #c20606;
-}
-
-.view-data-date {
-    font-size: 20px;
-    font-weight: 700;
-}
-
-.fa-arrow-rotate-right {
-    font-size: 25px;
-    color: #515251;
-}
-
-.centered-content {
-    display: flex;
-    width: 100%;
-    height: 100vh;
-    /* Full viewport height */
-    text-align: center;
-    flex-direction: column;
-    /* Ensure content stacks vertically */
-}
-
-h1 {
-    margin: 0;
-    font-size: 50px;
-    font-weight: 700;
-}
-
-.highlight {
-    font-size: 40px;
-    font-weight: 700;
-    color: #3a6b4c;
-}
-
-.number {
-    font-size: 40px;
-}
-
-.attendance-card-title {
-    font-size: 20px;
-    font-weight: 700;
-}
-
-.fa-circle-check {
-    font-size: 25px;
-    color: #517453;
-}
-
-.fa-user-xmark {
-    font-size: 25px;
-    color: #ff7d4c;
-}
-
-.fa-clock {
-    font-size: 25px;
-    color: #ff7d4c;
-}
-
-.fa-umbrella {
-    font-size: 25px;
-    color: #517453;
-}
-
-.fa-alarm-clock {
-    font-size: 25px;
-    color: #517453;
-}
-
-.card-count {
-    font-size: 20px;
-    font-weight: 700;
-}
-
-.card-percentage {
-    font-size: 15px;
-    font-weight: 600;
-}
-
-.summary-name {
-    font-size: 15px;
-    font-weight: 600;
-}
-
-.attendance-table-header {
-    font-size: 20px;
-    font-weight: 700;
-}
-
-.fa-circle-arrow-down {
-    font-size: 20px;
-    color: #000000;
-    margin-right: 5px;
+.control-box {
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 0.5rem 0.875rem;
     cursor: pointer;
+    transition: border-color 0.2s ease;
+    min-height: 46px;
+}
+
+.control-box:hover {
+    border-color: #2563eb;
+}
+
+.control-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #64748b;
+}
+
+.control-value {
+    font-size: 0.925rem;
+    font-weight: 600;
+    color: #0f172a;
+}
+
+.calendar-trigger {
+    position: relative;
+    color: #64748b;
+    font-size: 1.25rem;
+}
+
+.hidden-date-input {
+    opacity: 0;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    cursor: pointer;
+}
+
+.multiselect-wrapper {
+    padding: 0.25rem 0.5rem;
+    cursor: default;
+}
+
+/* Multiselect Custom Overrides */
+:deep(.multiselect__tags) {
+    border: none !important;
+    background: transparent !important;
+    padding-left: 0 !important;
+    min-height: 28px !important;
+}
+
+:deep(.multiselect__single) {
+    background: transparent !important;
+    font-size: 0.925rem !important;
+    font-weight: 600 !important;
+    color: #0f172a !important;
+    padding-left: 0 !important;
+}
+
+/* Metrics Grid */
+.metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: 1rem;
+}
+
+.metric-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 1.125rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    transition:
+        transform 0.15s ease,
+        box-shadow 0.15s ease;
+}
+
+.metric-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+.metric-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+}
+
+.metric-title {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #64748b;
+}
+
+.metric-icon {
+    font-size: 1rem;
+    color: #94a3b8;
+}
+
+.primary-stat {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: #0f172a;
+    line-height: 1.1;
+}
+
+.primary-stat .unit {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #64748b;
+}
+
+.highlight-currency {
+    color: #2563eb;
+}
+
+.stat-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.875rem;
+}
+
+.stat-label {
+    color: #64748b;
+    font-weight: 500;
+}
+
+.stat-value {
+    font-weight: 700;
+    color: #0f172a;
+}
+
+/* Location Badges (LOB) */
+.sub-stat-group {
+    display: flex;
+    gap: 0.35rem;
+}
+
+.lob-badge {
+    background: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    padding: 0.2rem 0.4rem;
+    font-size: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.lob-badge small {
+    font-weight: 700;
+    color: #2563eb;
+    background: #dbeafe;
+    padding: 0 0.25rem;
+    border-radius: 3px;
 }
 </style>

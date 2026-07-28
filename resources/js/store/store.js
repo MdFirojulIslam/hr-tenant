@@ -8,6 +8,7 @@ const store = createStore({
         token: localStorage.getItem("token") || 0,
         employeeId: null,
         roleId: localStorage.getItem("roleId") || null,
+        sidebarOpen: true,
         user: (() => {
             try {
                 return JSON.parse(localStorage.getItem("user"));
@@ -48,6 +49,9 @@ const store = createStore({
         },
         SET_PERMISSIONS(state, payload) {
             state.permissions = payload;
+        },
+        TOGGLE_SIDEBAR(state) {
+            state.sidebarOpen = !state.sidebarOpen;
         },
         setSuccess(state, message) {
             state.notification.successMessage = message;
@@ -135,6 +139,9 @@ const store = createStore({
         },
         getUser(state) {
             return state.user;
+        },
+        getSidebarOpen(state) {
+            return state.sidebarOpen;
         },
         getPermissions(state) {
             return state.permissions;

@@ -23,23 +23,96 @@ onMounted(() => getData());
 </script>
 
 <template>
-    <NavBar v-if="$store.getters.getToken !== 0"></NavBar>
-    <div id="layoutSidenav">
-        <SideBar v-if="$store.getters.getToken !== 0"></SideBar>
-        <div id="layoutSidenav_content">
-            <div class="main">
-                <div class="container-fluid px-4 py-4">
-                    <router-view></router-view>
-                </div>
+    <div class="layout-wrapper">
+        <!-- Top Fixed Navbar -->
+        <NavBar v-if="$store.getters.getToken !== 0"></NavBar>
+
+        <div id="layoutSidenav">
+            <!-- Fixed Sidebar -->
+            <SideBar v-if="$store.getters.getToken !== 0"></SideBar>
+
+            <!-- Content Area (Body + Footer) -->
+            <div id="layoutSidenav_content">
+                <!-- Main Body (Scrollable Area) -->
+                <main class="main">
+                    <div class="container-fluid px-2 py-3 body-background">
+                        <router-view></router-view>
+                    </div>
+                </main>
+
+                <!-- Fixed Bottom Footer -->
+                <Footer v-if="$store.getters.getToken !== 0" />
             </div>
-            <Footer v-if="$store.getters.getToken !== 0" />
         </div>
     </div>
 </template>
 
 <style scoped>
+.body-background {
+    background-color: #ffffff;
+}
+
+.layout-wrapper {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+}
+
+#layoutSidenav {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+}
+
+#layoutSidenav_content {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    overflow: hidden;
+}
+
+:deep(#layoutSidenav #layoutSidenav_nav) {
+    transform: translateX(0) !important;
+}
+
+.main {
+    flex: 1;
+    overflow-y: auto;
+}
+
 .tech-assist-btn:hover {
     background-color: #019d19f7;
     color: #fff !important;
+}
+
+@media (max-width: 768px) {
+    /* #layoutSidenav_content {
+       margin-left: 0 !important;
+   } */
+
+    /* .sidebar-hidden #layoutSidenav_content {
+       margin-left: 0 !important;
+   } */
+    /* :deep(#layoutSidenav #layoutSidenav_content) {
+       margin-left: 0 !important;
+   } */
+    /* #layoutSidenav {
+       display: block;
+   } */
+
+    :deep(#layoutSidenav #layoutSidenav_nav) {
+        position: fixed;
+        left: 0;
+        top: 56px; /* Navbar height */
+        width: 230px;
+        height: calc(100vh - 56px);
+        z-index: 1050;
+    }
+
+    #layoutSidenav_content {
+        width: 100%;
+        margin-left: 0 !important;
+    }
 }
 </style>
