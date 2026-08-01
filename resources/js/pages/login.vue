@@ -17,7 +17,7 @@ const login = async () => {
         const res = await api.post("/login", form);
         // console.log("Login API Response Data:", res.data.data);
         if (res.data.success) {
-            const permissions = res.data.data.permissions
+            const permissions = res.data.data.permissions;
 
             // console.log("Token:", res.data.data.token);
             // console.log("User:", res.data.data.user);
@@ -34,7 +34,6 @@ const login = async () => {
             } else {
                 router.push({ name: "Profile" });
             }
-
         } else {
             err.value = res.data.message || "An unknown error occurred";
         }
@@ -56,11 +55,25 @@ onMounted(() => {
 <template>
     <div class="form-wrapper">
         <div class="form-container">
-            <img src="/public/storage/uploads/1718087744_artisan.png" height="150px" width="150px" />
+            <img
+                src="/public/storage/uploads/1718087744_artisan.png"
+                height="150px"
+                width="150px"
+            />
             <form class="form" @submit.prevent="login">
                 <span class="text-danger">{{ err }}</span>
-                <input type="text" class="input" placeholder="Username" v-model="form.username" />
-                <input type="password" class="input" placeholder="Password" v-model="form.password" />
+                <input
+                    type="text"
+                    class="input"
+                    placeholder="Username"
+                    v-model="form.username"
+                />
+                <input
+                    type="password"
+                    class="input"
+                    placeholder="Password"
+                    v-model="form.password"
+                />
                 <p class="page-link">
                     <span class="page-link-label">Forgot Password?</span>
                 </p>
@@ -90,7 +103,7 @@ html {
     display: flex;
     justify-content: center;
     align-items: center;
-    height: 100vh;
+    height: 96vh;
 }
 
 .form-container {
@@ -132,7 +145,8 @@ html {
 
 .page-link-label {
     cursor: pointer;
-    font-family: "Lucida Sans", "Lucida Sans Regular", "Lucida Grande",
+    font-family:
+        "Lucida Sans", "Lucida Sans Regular", "Lucida Grande",
         "Lucida Sans Unicode", Geneva, Verdana, sans-serif;
     font-size: 9px;
     font-weight: 700;
@@ -144,7 +158,8 @@ html {
 
 .form-btn {
     padding: 10px 15px;
-    font-family: "Lucida Sans", "Lucida Sans Regular", "Lucida Grande",
+    font-family:
+        "Lucida Sans", "Lucida Sans Regular", "Lucida Grande",
         "Lucida Sans Unicode", Geneva, Verdana, sans-serif;
     border-radius: 20px;
     border: 0 !important;
@@ -156,10 +171,12 @@ html {
 }
 
 @media (max-width: 768px) {
-
     .form-wrapper {
-        padding: 0 10px;
+        /* padding: 0 10px;
         margin-left: 225px !important;
+        background-image: url("/public/storage/uploads/bg-img-1.jpg"); */
+        background-size: cover;
+        background-repeat: no-repeat;
     }
 
     .form-container {
