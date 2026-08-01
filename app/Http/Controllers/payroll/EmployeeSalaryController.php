@@ -776,17 +776,21 @@ class EmployeeSalaryController extends Controller
             )
             ->get();
 
+        $net_total = $salaries->sum(fn($s) => (float) $s->final_payments);
         // Calculate totals
         $bankTotal = $salaries
             ->whereNotNull('bank_account_no')   // only bank accounts
             ->sum(fn($s) => (float) $s->final_payments);
 
+
         $cashTotal = $salaries
             ->whereNull('bank_account_no')      // only cash payments
             ->sum(fn($s) => (float) $s->final_payments);
 
+
         return response()->json([
             'salaries' => $salaries,
+            'net_total' => $net_total,
             'bank_total' => $bankTotal,
             'cash_total' => $cashTotal,
         ]);

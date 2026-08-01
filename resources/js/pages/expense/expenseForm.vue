@@ -14,18 +14,64 @@ const route = useRoute();
 const loading = ref(false);
 const dateError = ref(false);
 const townData = ref([]);
-const lockPermission = ref();
+const lockPermission = ref({ Date_Lock: 1 });
 const fileWarningtravel = ref();
 const fileWarningallowance = ref();
 const selectedTown = ref("");
 const selectedDate = ref();
-const maxDate = computed(() => new Date().toISOString().split("T")[0]);
 const minDate = ref("");
-// const minDate = computed(() => {
-//     const today = new Date();
-//     today.setDate(today.getDate() - 3);
-//     return today.toISOString().split("T")[0];
-// });
+const maxDate = ref("");
+
+/** Local YYYY-MM-DD (avoids UTC shift from toISOString). */
+const formatLocalDate = (date) => {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, "0");
+    const d = String(date.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+};
+
+const applyDateLock = () => {
+    const isLocked = Number(lockPermission.value?.Date_Lock ?? 1) === 1;
+
+    if (isLocked) {
+        const today = new Date();
+        const min = new Date(today);
+        min.setDate(today.getDate() - 3);
+        minDate.value = formatLocalDate(min);
+        maxDate.value = formatLocalDate(today);
+    } else {
+        // Unlocked: all dates available
+        minDate.value = "";
+        maxDate.value = "";
+    }
+
+    if (selectedDate.value) {
+        checkDate();
+    }
+};
+
+const checkDate = () => {
+    if (!selectedDate.value) return;
+
+    if (minDate.value && selectedDate.value < minDate.value) {
+        selectedDate.value = "";
+        Swal.fire({
+            icon: "warning",
+            title: "Date not allowed",
+            text: `With date lock enabled, you can only select dates from ${minDate.value} to ${maxDate.value}.`,
+        });
+        return;
+    }
+
+    if (maxDate.value && selectedDate.value > maxDate.value) {
+        selectedDate.value = "";
+        Swal.fire({
+            icon: "warning",
+            title: "Date not allowed",
+            text: `With date lock enabled, you can only select dates from ${minDate.value} to ${maxDate.value}.`,
+        });
+    }
+};
 
 const travels = ref([
     {
@@ -58,7 +104,7 @@ const removeTravel = (index) => {
 const total_travel_amount = computed(() => {
     return travels.value.reduce(
         (acc, item) => acc + parseFloat(item.amount || 0),
-        0
+        0,
     );
 });
 
@@ -102,7 +148,7 @@ const removeAllowance = (index) => {
 const total_allowance_amount = computed(() => {
     return allowance.value.reduce(
         (acc, item) => acc + parseFloat(item.amount || 0),
-        0
+        0,
     );
 });
 
@@ -122,13 +168,8 @@ const getData = async () => {
     townData.value = responsetown.data;
 
     const permission = await api.get(`/lock-permission/${user.id}`);
-    lockPermission.value = permission.data;
-
-    if (lockPermission.value.Date_Lock == 1) {
-        const today = new Date();
-        today.setDate(today.getDate() - 3);
-        minDate.value = today.toISOString().split("T")[0];
-    }
+    lockPermission.value = permission.data ?? { Date_Lock: 1 };
+    applyDateLock();
 };
 
 const formattedTownData = computed(() => {
@@ -147,6 +188,22 @@ const submit = async () => {
             dateError.value = true;
             loading.value = false;
             return;
+        }
+
+        // Enforce date lock on submit (same rule as date picker)
+        if (Number(lockPermission.value?.Date_Lock ?? 1) === 1) {
+            if (
+                (minDate.value && selectedDate.value < minDate.value) ||
+                (maxDate.value && selectedDate.value > maxDate.value)
+            ) {
+                Swal.fire({
+                    icon: "error",
+                    title: "Date not allowed",
+                    text: `With date lock enabled, expense date must be between ${minDate.value} and ${maxDate.value}.`,
+                });
+                loading.value = false;
+                return;
+            }
         }
 
         const formData = new FormData();
@@ -168,25 +225,25 @@ const submit = async () => {
 
                 formData.append(
                     `allowance[${index}][town_id]`,
-                    item.town_id || selectedTown.value.id
+                    item.town_id || selectedTown.value.id,
                 );
                 formData.append(
                     `allowance[${index}][date]`,
-                    item.date || selectedDate.value
+                    item.date || selectedDate.value,
                 );
                 formData.append(
                     `allowance[${index}][particular]`,
-                    item.particular
+                    item.particular,
                 );
                 formData.append(
                     `allowance[${index}][description]`,
-                    item.description
+                    item.description,
                 );
                 formData.append(`allowance[${index}][amount]`, item.amount);
                 if (item.attachment) {
                     formData.append(
                         `allowance[${index}][attachment]`,
-                        item.attachment
+                        item.attachment,
                     );
                 }
             }
@@ -199,11 +256,11 @@ const submit = async () => {
             if (item.amount > 0) {
                 formData.append(
                     `travels[${index}][town_id]`,
-                    item.town_id || selectedTown.value.id
+                    item.town_id || selectedTown.value.id,
                 );
                 formData.append(
                     `travels[${index}][date]`,
-                    item.date || selectedDate.value
+                    item.date || selectedDate.value,
                 );
                 formData.append(`travels[${index}][from]`, item.from);
                 formData.append(`travels[${index}][to]`, item.to);
@@ -212,7 +269,7 @@ const submit = async () => {
                 if (item.attachment) {
                     formData.append(
                         `travels[${index}][attachment]`,
-                        item.attachment
+                        item.attachment,
                     );
                 }
             }
@@ -244,7 +301,6 @@ const submit = async () => {
         });
     }
 };
-//:min="minDate" :max="maxDate"
 onMounted(() => getData());
 </script>
 
@@ -285,8 +341,8 @@ onMounted(() => getData());
                         class="form-control py-2"
                         v-model="selectedDate"
                         @change="checkDate"
-                        :min="minDate"
-                        :max="maxDate"
+                        :min="minDate || null"
+                        :max="maxDate || null"
                         required
                     />
                 </div>
@@ -375,7 +431,7 @@ onMounted(() => getData());
                                             handleFileAllow(
                                                 e,
                                                 item,
-                                                'attachment'
+                                                'attachment',
                                             )
                                     "
                                 />
@@ -486,7 +542,7 @@ onMounted(() => getData());
                                             handleFileTravel(
                                                 e,
                                                 item,
-                                                'attachment'
+                                                'attachment',
                                             )
                                     "
                                 />

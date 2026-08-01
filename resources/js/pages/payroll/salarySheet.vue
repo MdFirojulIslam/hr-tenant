@@ -1,5 +1,12 @@
 <script setup>
-import { ref, onMounted, computed, watch } from "vue";
+import {
+    ref,
+    onMounted,
+    computed,
+    watch,
+    defineAsyncComponent,
+    onUpdated,
+} from "vue";
 import api from "@/api";
 import Swal from "sweetalert2";
 
@@ -15,6 +22,20 @@ const cashTotal = ref(0);
 
 const bankFormat = ref("");
 const cashFormat = ref("");
+
+const isDownload = ref(false);
+
+const downloadComponent = defineAsyncComponent(
+    () => import("./component/salarySheetDownload.vue"),
+);
+
+const exportSalary = () => {
+    isDownload.value = true;
+};
+
+const salaryModalClose = () => {
+    isDownload.value = false;
+};
 
 const years = ref([
     "2022",
@@ -48,6 +69,10 @@ const months = ref([
     "December",
 ]);
 
+const monthName = computed(() => {
+    return months.value[selectedMonth.value - 1];
+});
+
 const changeDate = () => {
     getData();
 };
@@ -70,12 +95,24 @@ const getData = async () => {
             salaries.value.length > 0 &&
             String(salaries.value[0].disbursement_status).toUpperCase() ===
                 "COMPLETED";
+
+        console.log("isDisbursed", isDisbursed.value);
     } catch (err) {
         error.value = err.message || "Error fetching data";
     }
 };
 
 const disburseSalary = async () => {
+    const monthName = months.value[selectedMonth.value - 1];
+
+    const confirm = await Swal.fire({
+        title: "Are you sure wants to Doisburse?",
+        text: `You are disbursing ${monthName} ${selectedYear.value} salary?`,
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonText: "Yes, Disburse",
+    });
+    if (!confirm.isConfirmed) return;
     try {
         const response = await api.post("/disburse-salary", {
             year: selectedYear.value,
@@ -102,6 +139,17 @@ const disburseSalary = async () => {
 };
 
 const generateSalary = async () => {
+    const monthName = months.value[selectedMonth.value - 1];
+
+    const confirm = await Swal.fire({
+        title: "Are you sure?",
+        text: `Do you want to generate salary for ${monthName} ${selectedYear.value}?`,
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonText: "Yes, Generate",
+    });
+    if (!confirm.isConfirmed) return;
+
     try {
         const response = await api.get(`/generate-salary`, {
             params: {
@@ -117,92 +165,17 @@ const generateSalary = async () => {
                 timer: 1500,
                 showConfirmButton: false,
             });
+            getData();
+        } else {
+            Swal.fire({
+                icon: "warning",
+                title: response.data.message,
+                timer: 1500,
+                showConfirmButton: false,
+            });
         }
-
-        getData();
     } catch (error) {
         console.error(error);
-    }
-};
-
-const downloadSalary = async () => {
-    try {
-        const response = await api.get("/export-salary-sheet", {
-            responseType: "blob",
-            params: {
-                year: selectedYear.value,
-                month: selectedMonth.value,
-            },
-        });
-
-        const url = window.URL.createObjectURL(new Blob([response.data]));
-        const link = document.createElement("a");
-        link.href = url;
-        link.setAttribute("download", "salary_sheet.xlsx");
-        document.body.appendChild(link);
-        link.click();
-    } catch (error) {
-        Swal.fire({
-            icon: "error",
-            title: "Download failed!",
-            text: "Please try again.",
-        });
-    }
-};
-
-const downloadFile = (response, filename) => {
-    const blob = new Blob([response.data], {
-        type: response.headers["content-type"],
-    });
-
-    const url = window.URL.createObjectURL(blob);
-
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = filename;
-
-    document.body.appendChild(link);
-    link.click();
-
-    window.URL.revokeObjectURL(url);
-    document.body.removeChild(link);
-};
-
-const downloadBank = async (type) => {
-    try {
-        const response = await api.get(`/salary-disbursement-bank-${type}`, {
-            responseType: "blob",
-            params: {
-                year: selectedYear.value,
-                month: selectedMonth.value,
-            },
-        });
-
-        downloadFile(
-            response,
-            `Salary_Disbursement_Bank_${selectedYear.value}_${selectedMonth.value}.${type === "word" ? "docx" : type}`,
-        );
-    } catch {
-        Swal.fire("Download failed!", "Please try again.", "error");
-    }
-};
-
-const downloadCash = async (type) => {
-    try {
-        const response = await api.get(`/salary-disbursement-cash-${type}`, {
-            responseType: "blob",
-            params: {
-                year: selectedYear.value,
-                month: selectedMonth.value,
-            },
-        });
-
-        downloadFile(
-            response,
-            `Salary_Disbursement_Cash_${selectedYear.value}_${selectedMonth.value}.${type === "word" ? "docx" : type}`,
-        );
-    } catch {
-        Swal.fire("Download failed!", "Please try again.", "error");
     }
 };
 
@@ -233,320 +206,517 @@ watch(cashFormat, (format) => {
 });
 
 onMounted(() => getData());
+onUpdated(() => {
+    console.log("SalarySheet Updated");
+});
 </script>
-
 <template>
-    <div class="container-fluid border rounded p-3 salary-page">
-        <!-- Header -->
-        <div class="d-flex justify-content-between align-items-center mb-3">
-            <h4 class="m-0">Monthly Salary Sheet</h4>
-        </div>
+    <component
+        v-if="isDownload"
+        :is="downloadComponent"
+        :selectedYear="selectedYear"
+        :selectedMonth="selectedMonth"
+        @modal-close="salaryModalClose"
+    />
 
-        <!-- Filters -->
-        <div class="row g-3 align-items-end">
-            <div class="col-12 col-md-1">
-                <label class="label-class">Salary Year</label>
-                <select
-                    class="form-control border-color"
-                    v-model="selectedYear"
-                    @change="changeDate"
-                >
-                    <option v-for="year in years" :key="year" :value="year">
-                        {{ year }}
-                    </option>
-                </select>
-            </div>
-
-            <div class="col-12 col-md-1">
-                <label class="label-class">Salary Month</label>
-                <select
-                    class="form-control border-color"
-                    v-model="selectedMonth"
-                    @change="changeDate"
-                >
-                    <option
-                        v-for="(month, index) in months"
-                        :key="month"
-                        :value="index + 1"
-                    >
-                        {{ month }}
-                    </option>
-                </select>
-            </div>
-
-            <div class="col-12 col-md-2">
-                <label class="label-class">Search</label>
-                <input
-                    class="form-control border-color"
-                    placeholder="Name, ID, Bank"
-                    v-model="searchQuery"
-                />
-            </div>
-            <div class="col-6 col-md-1 ms-auto">
-                <label class="total-label">Total</label>
-                <div class="total-amount-class">
-                    {{ netTotal }}
+    <div class="payroll-container py-2">
+        <!-- Page Header & Global Actions -->
+        <header
+            class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4"
+        >
+            <div>
+                <div class="d-flex align-items-center gap-2">
+                    <h2 class="h4 fw-bold text-dark m-0">
+                        {{ monthName }}'s Salary Sheet
+                    </h2>
                 </div>
             </div>
 
-            <div class="col-6 col-md-1">
-                <label class="bank-label">Bank</label>
-                <div class="bank-total-amount">{{ bankTotal }}</div>
-            </div>
-
-            <div class="col-6 col-md-1">
-                <label class="cash-label">Cash</label>
-                <div class="cash-total-amount">{{ cashTotal }}</div>
-            </div>
-        </div>
-
-        <div class="d-flex gap-3 mt-3">
-            <div class="col-12 col-md-1">
-                <label class="label-class">Download Bank</label>
-                <select
-                    class="form-control border-color selected-option"
-                    v-model="bankFormat"
-                >
-                    <option disabled value="">Select Format</option>
-                    <option value="pdf">PDF</option>
-                    <option value="xlsx">Excel</option>
-                    <option value="word">Word</option>
-                </select>
-            </div>
-
-            <div class="col-12 col-md-1">
-                <label class="label-class">Download Cash</label>
-                <select
-                    class="form-control border-color selected-option"
-                    v-model="cashFormat"
-                >
-                    <option disabled value="">Select Format</option>
-                    <option value="pdf">PDF</option>
-                    <option value="xlsx">Excel</option>
-                    <option value="word">Word</option>
-                </select>
-            </div>
-
-            <div class="col-6 col-md-1 disburse-button lable-margin">
+            <div class="d-flex align-items-center gap-2">
                 <button
-                    class="btn w-100"
+                    class="btn btn-action btn-outline-secondary export-button"
+                    @click="exportSalary"
+                >
+                    <i class="fa-solid fa-arrow-down-to-line me-2"></i>Export
+                </button>
+
+                <button
+                    v-if="!isDisbursed"
+                    class="btn btn-action btn-primary generate-button"
+                    @click="generateSalary"
+                >
+                    <i class="fa-solid fa-arrows-rotate me-2"></i>Generate
+                </button>
+                <button
+                    class="btn btn-action disburse-button"
                     :class="isDisbursed ? 'btn-secondary' : 'btn-success'"
                     :disabled="isDisbursed"
                     @click="disburseSalary"
                 >
-                    {{ isDisbursed ? "Disbursed" : "Disburse Salary" }}
+                    <i
+                        :class="
+                            isDisbursed
+                                ? 'fa-solid fa-check me-2'
+                                : 'fa-solid fa-paper-plane me-2'
+                        "
+                    ></i>
+                    {{ isDisbursed ? "Disbursed" : "Disburse" }}
                 </button>
+            </div>
+        </header>
+
+        <!-- Top KPI Cards -->
+        <section class="row g-3 mb-4">
+            <div class="col-12 col-sm-6 col-lg-3">
+                <div class="kpi-card">
+                    <div class="kpi-icon bg-primary-soft text-primary">
+                        <i class="fa-solid fa-users"></i>
+                    </div>
+                    <div>
+                        <span class="kpi-label">Total Employees</span>
+                        <h4 class="kpi-value mb-0">
+                            {{ filteredSalaries.length || 0 }}
+                        </h4>
+                    </div>
+                </div>
             </div>
 
-            <div class="col-12 col-md-1 lable-margin">
-                <button class="btn btn-info w-100" @click="downloadSalary">
-                    <i class="fa-solid fa-download me-2"></i> Download
-                </button>
+            <div class="col-12 col-sm-6 col-lg-3">
+                <div class="kpi-card">
+                    <div class="kpi-icon bg-success-soft text-success">
+                        <i class="fa-solid fa-wallet"></i>
+                    </div>
+                    <div>
+                        <span class="kpi-label">Total Net Pay</span>
+                        <h4 class="kpi-value mb-0">
+                            {{ netTotal || "0.00" }}
+                        </h4>
+                    </div>
+                </div>
             </div>
-            <div class="ms-auto generate-button lable-margin">
-                <button
-                    class="btn btn-warning generate-sheet-button"
-                    @click="generateSalary"
-                    :disabled="isDisbursed"
+
+            <div class="col-12 col-sm-6 col-lg-3">
+                <div class="kpi-card">
+                    <div class="kpi-icon bg-info-soft text-info">
+                        <i class="fa-solid fa-building-columns"></i>
+                    </div>
+                    <div>
+                        <span class="kpi-label">Bank Transfers</span>
+                        <h4 class="kpi-value mb-0">
+                            {{ bankTotal || "0.00" }}
+                        </h4>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12 col-sm-6 col-lg-3">
+                <div class="kpi-card">
+                    <div class="kpi-icon bg-warning-soft text-warning">
+                        <i class="fa-solid fa-money-bill-wave"></i>
+                    </div>
+                    <div>
+                        <span class="kpi-label">Cash Payments</span>
+                        <h4 class="kpi-value mb-0">
+                            {{ cashTotal || "0.00" }}
+                        </h4>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Main Content Card -->
+        <main class="content-card">
+            <!-- Toolbar Filter & Search Header -->
+            <div class="toolbar-header">
+                <div
+                    class="d-flex flex-wrap align-items-center justify-content-between gap-3"
                 >
-                    Generate Sheet
-                </button>
+                    <!-- Month & Year Selectors -->
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="select-wrapper">
+                            <i class="fa-regular fa-calendar select-icon"></i>
+                            <select
+                                class="form-select month-select"
+                                v-model="selectedMonth"
+                                @change="changeDate"
+                            >
+                                <option
+                                    v-for="(month, index) in months"
+                                    :key="month"
+                                    :value="index + 1"
+                                >
+                                    {{ month }}
+                                </option>
+                            </select>
+                        </div>
+
+                        <div class="select-wrapper">
+                            <select
+                                class="form-select year-select"
+                                v-model="selectedYear"
+                                @change="changeDate"
+                            >
+                                <option
+                                    v-for="year in years"
+                                    :key="year"
+                                    :value="year"
+                                >
+                                    {{ year }}
+                                </option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Search Input -->
+                    <div class="search-wrapper">
+                        <i class="fa-solid fa-magnifying-glass search-icon"></i>
+                        <input
+                            type="text"
+                            class="form-control search-input"
+                            placeholder="Search by name, ID, department..."
+                            v-model="searchQuery"
+                        />
+                    </div>
+                </div>
             </div>
-        </div>
 
-        <!-- Net Total -->
+            <!-- Desktop Table View -->
+            <div class="table-responsive d-lg-block">
+                <table
+                    class="table table-bordered table-sm custom-payroll-table"
+                >
+                    <thead>
+                        <tr class="text-nowrap">
+                            <th class="text-center">#</th>
+                            <th>ID</th>
+                            <th>Name</th>
+                            <th>Department</th>
+                            <th>Gross</th>
+                            <th>Allowance</th>
+                            <th>Deduct</th>
+                            <th class="text-center">Net Pay</th>
+                            <th class="text-center">Loan Deduct</th>
+                            <th class="text-center">Final Payments</th>
+                            <th class="text-center">Payment Method</th>
+                        </tr>
+                    </thead>
 
-        <!-- Total Employees -->
-        <div class="mt-4 fw-semibold border-bottom pb-2">
-            Total Employees :
-            <span class="badge bg-light text-dark ms-2">
-                {{ filteredSalaries.length }}
-            </span>
-        </div>
+                    <tbody>
+                        <tr
+                            v-for="(salary, index) in filteredSalaries"
+                            :key="salary.employee_id"
+                            class="text-nowrap"
+                        >
+                            <td class="text-center">{{ index + 1 }}</td>
+                            <td>ABNB{{ salary.employee_id }}</td>
+                            <td>{{ salary.full_name }}</td>
+                            <td>{{ salary.department_name }}</td>
+                            <td>
+                                {{ salary.gross_salary }}
+                            </td>
 
-        <!-- Table -->
-        <div class="table-responsive salary-table mt-3 shadow-sm">
-            <table class="table table-bordered table-hover table-sm">
-                <thead>
-                    <tr class="text-nowrap">
-                        <th class="text-center">S/N</th>
-                        <th class="text-center">EMP ID</th>
-                        <th>EMPLOYEE NAME</th>
-                        <th>DEPARTMENT</th>
-                        <th class="text-center">GROSS</th>
-                        <th class="text-center">TOTAL EARNING</th>
-                        <th class="text-center">TOTAL DEDUCTION</th>
-                        <th class="text-center">NET PAY</th>
-                        <th class="text-center">LOAN REPAYMENTS</th>
-                        <th class="text-center">FINAL PAYMENTS</th>
-                        <th class="text-center">PAYMENT METHOD</th>
-                    </tr>
-                </thead>
+                            <td>
+                                {{ salary.total_earning ?? "-" }}
+                            </td>
 
-                <tbody>
-                    <tr
-                        v-for="(salary, index) in filteredSalaries"
-                        :key="salary.employee_id"
-                        class="text-nowrap"
-                    >
-                        <td class="text-center">{{ index + 1 }}</td>
-                        <td class="text-center">
-                            ABNB-{{ salary.employee_id }}
-                        </td>
-                        <td>{{ salary.full_name }}</td>
-                        <td>{{ salary.department_name }}</td>
-                        <td class="text-center">{{ salary.gross_salary }}</td>
+                            <td>
+                                {{ salary.total_deduction ?? "-" }}
+                            </td>
 
-                        <td class="text-center">
-                            {{ salary.total_earning ?? "-" }}
-                        </td>
+                            <td class="text-center fw-bold">
+                                {{ salary.net_pay }}
+                            </td>
 
-                        <td class="text-center">
-                            {{ salary.total_deduction ?? "-" }}
-                        </td>
+                            <td class="text-center">
+                                {{ salary.monthly_loan_repayments ?? "-" }}
+                            </td>
 
-                        <td class="text-center fw-bold">
-                            {{ salary.net_pay }}
-                        </td>
+                            <td class="text-center">
+                                {{ salary.final_payments ?? "-" }}
+                            </td>
 
-                        <td class="text-center">
-                            {{ salary.monthly_loan_repayments ?? "-" }}
-                        </td>
+                            <td class="text-center">
+                                {{ salary.bank_account_no ?? "Cash" }}
+                            </td>
+                        </tr>
 
-                        <td class="text-center">
-                            {{ salary.final_payments ?? "-" }}
-                        </td>
+                        <tr v-if="filteredSalaries.length === 0">
+                            <td colspan="10" class="text-center">
+                                No matching salaries found.
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
 
-                        <td class="text-center">
-                            {{ salary.bank_account_no ?? "Cash" }}
-                        </td>
-                    </tr>
+            <!-- Mobile Card List View -->
 
-                    <tr v-if="filteredSalaries.length === 0">
-                        <td colspan="10" class="text-center">
-                            No matching salaries found.
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
+            <div v-if="filteredSalaries.length === 0" class="text-center py-5">
+                <i
+                    class="fa-solid fa-receipt fa-2x text-muted mb-2 opacity-50"
+                ></i>
+                <p class="text-muted small mb-0">No matching salary entries.</p>
+            </div>
+        </main>
     </div>
 </template>
 
 <style scoped>
-.border-color {
-    border: 1.8px solid #059223d5;
+/* Core Page Layout */
+.payroll-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding-left: 1rem;
+    padding-right: 1rem;
+    font-family:
+        -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
-.salary-table {
-    overflow-x: auto;
-}
-
-.total-class {
-    background: #10d431b2;
-    font-size: 15px;
-}
-
-.net-total-lable {
-    font-size: 12px;
-    font-weight: bold;
-}
-
-.lable-margin {
-    margin-top: 20px;
-}
-
-.label-class {
+/* Button & Action Styles */
+.btn-action {
+    font-size: 0.875rem;
     font-weight: 600;
-    font-size: 13px;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    transition: all 0.2s ease;
 }
 
-.cash-label,
-.bank-label,
-.total-label {
-    font-weight: 600;
-    font-size: 13px;
+.export-button {
+    background-color: #027a48;
+    color: white;
+}
+.export-button:hover {
+    background: #035332;
+}
+.generate-button:hover {
+    background: #042256;
+}
+.disburse-button:hover {
+    background: #064028;
+}
+
+/* KPI Card Styles */
+.kpi-card {
+    background: #ffffff;
+    border: 1px solid #eaecf0;
+    border-radius: 0.75rem;
+    padding: 0.25rem;
     display: flex;
-    justify-content: center; /* horizontal center */
     align-items: center;
+    gap: 1rem;
+    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04);
 }
 
-.total-amount-class,
-.bank-total-amount,
-.cash-total-amount {
-    font-size: 14px;
-    font-weight: 600;
-    background: #10d431b2;
-    padding: 5px 10px;
-    border-radius: 5px;
-    margin-top: 5px;
-
+.kpi-icon {
+    width: 30px;
+    height: 40px;
+    border-radius: 0.5rem;
     display: flex;
-    justify-content: center; /* horizontal center */
     align-items: center;
-
-    border: 1px solid #000000d5;
+    justify-content: center;
+    font-size: 1.5rem;
+    flex-shrink: 0;
 }
 
-.generate-sheet-button {
-    font-size: 14px;
-    border: 1px solid #000000d5;
-    width: 120px;
+.kpi-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #3b414f;
+    text-transform: uppercase;
+    letter-spacing: 0.025em;
+    display: block;
+    margin-bottom: 0.25rem;
 }
 
-.table thead th {
-    background: #4e4e4e;
-    color: #fff;
+.kpi-value {
+    font-size: 1.25rem;
     font-weight: 700;
+    letter-spacing: 1px;
+    color: #000000;
 }
 
-.table tbody tr:hover > td {
-    background: #717c73c7 !important;
+/* Soft Color Badges & Backgrounds */
+.bg-primary-soft {
+    background-color: #f0f5ff;
+}
+.bg-success-soft {
+    background-color: #ecfdf3;
+}
+.bg-info-soft {
+    background-color: #f0f9ff;
+}
+.bg-warning-soft {
+    background-color: #fff8f0;
 }
 
-/* MOBILE RESPONSIVE */
+.badge-soft-success {
+    background-color: #ecfdf3;
+    color: #027a48;
+    font-weight: 600;
+}
+.badge-soft-warning {
+    background-color: #fff8f0;
+    color: #b54708;
+    font-weight: 600;
+}
+.badge-soft-info {
+    background-color: #f0f9ff;
+    color: #026aa2;
+    font-weight: 600;
+}
+.badge-department {
+    background-color: #f2f4f7;
+    color: #344054;
+    font-weight: 500;
+    font-size: 0.75rem;
+}
 
-@media (max-width: 768px) {
-    .generate-button {
-        width: 100% !important;
-    }
-    .net-total {
-        display: flex; /* Make it flex */
-        justify-content: flex-start; /* ✅ Aligns items to the left horizontally */
-        width: 100% !important;
-        margin: 0 !important;
-        align-items: center; /* optional, aligns items vertically */
-    }
-    .disburse-button {
-        display: flex; /* Make it flex */
-        justify-content: flex-start; /* ✅ Aligns items to the left horizontally */
-        width: 100% !important;
-        align-items: center;
-    }
-    h4 {
-        font-size: 18px;
-    }
+/* Main Content Card */
+.content-card {
+    margin-top: 30px;
+    /* background: #ffffff;
+   border: 1px solid #eaecf0;
+   border-radius: 0.75rem;
+   box-shadow: 0 1px 3px rgba(16, 24, 40, 0.05);
+   overflow: hidden; */
+}
 
-    .table {
-        font-size: 12px;
-    }
+/* Toolbar Header Elements */
+.toolbar-header {
+    padding-bottom: 0.5rem;
+    /* border-bottom: 1px solid #eaecf0;
+   background-color: none; */
+}
 
-    .table th,
-    .table td {
-        padding: 6px;
-    }
+.select-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
 
-    .total-class {
-        font-size: 13px;
-    }
+.select-icon {
+    position: absolute;
+    left: 0.75rem;
+    color: #0d0e10;
+    font-size: 0.875rem;
+    pointer-events: none;
+}
 
-    .label-class {
-        font-size: 11px;
-    }
+.month-select {
+    padding-left: 2.25rem;
+    padding-right: 2.5rem;
+    height: 30px;
+    border-radius: 0.5rem;
+    border: 1px solid #d0d5dd;
+    font-size: 14px;
+}
+.year-select {
+    padding-left: 1rem;
+    padding-right: 3rem;
+    height: 30px;
+    border-radius: 0.5rem;
+    border: 1px solid #d0d5dd;
+    font-size: 14px;
+}
 
-    .btn {
-        font-size: 12px;
-        padding: 6px;
-    }
+.search-wrapper {
+    position: relative;
+    min-width: 280px;
+}
+
+.search-icon {
+    position: absolute;
+    left: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #667085;
+    font-size: 0.875rem;
+}
+
+.search-input {
+    padding-left: 2.25rem;
+    height: 30px;
+    border-radius: 0.5rem;
+    border: 1px solid #d0d5dd;
+    font-size: 14px;
+}
+
+/* Desktop Data Table */
+.custom-payroll-table thead th {
+    background-color: #423434;
+    color: #ffffff;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding-top: 5px;
+    padding-bottom: 5px;
+    border-bottom: 1px solid #eaecf0;
+}
+
+.custom-payroll-table tbody td {
+    padding-top: 6px;
+    padding-bottom: 6px;
+    font-size: 0.875rem;
+}
+
+.custom-payroll-table tbody tr:hover td {
+    background-color: #7e6666;
+    color: #fff;
+    font-size: 11px;
+}
+
+/* User Avatars */
+.avatar-circle {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background-color: #e0e7ff;
+    color: #4338ca;
+    font-weight: 700;
+    font-size: 0.875rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+.avatar-circle.sm {
+    width: 32px;
+    height: 32px;
+    font-size: 0.75rem;
+}
+
+/* Mobile View Styles */
+.mobile-salary-card {
+    border: 1px solid #eaecf0;
+    border-radius: 0.5rem;
+    padding: 1rem;
+    background-color: #ffffff;
+}
+
+.mobile-card-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+    background-color: #f9fafb;
+    padding: 0.75rem;
+    border-radius: 0.375rem;
+}
+
+.mobile-label {
+    font-size: 0.7rem;
+    color: #667085;
+    text-transform: uppercase;
+    font-weight: 600;
+    display: block;
+}
+
+.mobile-value {
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.fs-7 {
+    font-size: 0.75rem;
 }
 </style>

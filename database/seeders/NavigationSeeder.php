@@ -75,6 +75,8 @@ class NavigationSeeder extends Seeder
             ['id' => '63', 'name' => 'Manual Attendance', 'url' => '/manual-attendance', 'icon' => 'NULL', 'page' => 'ManualAttendance', 'path' => './pages/attendance/manualAttendance.vue', 'parent_id' => '9', 'active' => '1'],
             ['id' => '64', 'name' => 'Incentive', 'url' => '/incentive', 'icon' => 'fa-solid fa-money-check-dollar', 'page' => 'NULL', 'path' => 'NULL', 'parent_id' => '0', 'active' => '1'],
             ['id' => '65', 'name' => 'Incentive Setup', 'url' => '/incentive/incentive-setup', 'icon' => 'NULL', 'page' => 'IncentiveSetup', 'path' => './pages/attendance/incentiveSetup.vue', 'parent_id' => '64', 'active' => '1'],
+            ['id' => '66', 'name' => 'Daily Order Target', 'url' => '/workstation/daily-order-target', 'icon' => 'fa-solid fa-bullseye', 'page' => 'DailyOrderTarget', 'path' => 'NULL', 'parent_id' => '34', 'active' => '1'],
+            ['id' => '67', 'name' => 'Market Intelligence', 'url' => '/workstation/market-intelligence', 'icon' => 'fa-solid fa-chart-line', 'page' => 'MarketIntelligence', 'path' => 'NULL', 'parent_id' => '34', 'active' => '1'],
         ];
 
         foreach ($navigations as $item) {
