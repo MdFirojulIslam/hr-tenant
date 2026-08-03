@@ -352,10 +352,10 @@ onMounted(() => getData());
                             <thead class="table-light">
                                 <tr class="text-nowrap fw-bold">
                                     <th class="text-center" style="width: 3%">
-                                        S/N
+                                        #
                                     </th>
                                     <th class="text-center" style="width: 8%">
-                                        EMP ID
+                                        ID
                                     </th>
                                     <th style="width: 16%">EMPLOYEE NAME</th>
                                     <th style="width: 13%">DEPARTMENT</th>
@@ -385,7 +385,7 @@ onMounted(() => getData());
                                 >
                                     <td class="text-center">{{ index + 1 }}</td>
                                     <td class="text-center">
-                                        ANBN-{{ item.employee_official_id }}
+                                        ANBN{{ item.employee_official_id }}
                                     </td>
                                     <td>{{ item.emp_name }}</td>
                                     <td>{{ item.emp_dept }}</td>

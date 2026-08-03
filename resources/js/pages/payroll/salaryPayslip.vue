@@ -2,12 +2,23 @@
 import { ref, computed, watch, onMounted } from "vue";
 import { useStore } from "vuex";
 import api from "@/api";
-import Multiselect from "vue-multiselect";
-import "vue-multiselect/dist/vue-multiselect.min.css";
+import BaseDept from "@/pages/components/input_field/BaseDept.vue";
+import BaseDeptEmp from "@/pages/components/input_field/BaseDeptEmp.vue";
+import Label from "@/pages/components/label/Label.vue";
 
 const store = useStore();
 const role_id = store.getters.getRoleId;
 const user = store.getters.getUser;
+
+const payslip = ref([]);
+const loading = ref(false);
+const error = ref(null);
+const check = ref([]);
+
+const userID = user.id;
+
+const department_id = ref(null);
+const employee_id = ref(null);
 
 const years = ref(["2022", "2023", "2024", "2025", "2026"]);
 const months = ref([
@@ -28,22 +39,12 @@ const months = ref([
 const selectedYear = ref(new Date().getFullYear().toString());
 const selectedMonth = ref(months.value[new Date().getMonth()]);
 
-const searchDept = ref(""); // Department filter
-const searchEmp = ref(""); // Employee filter
-const department = ref([]);
-const employee = ref([]);
-const selectedEmployee = ref(null);
-const payslip = ref([]);
-const loading = ref(false);
-const error = ref(null);
-const check = ref([]);
-
 const monthNumber = computed(
     () => months.value.indexOf(selectedMonth.value) + 1,
 );
 
 const printFormate = async () => {
-    const idToFetch = searchEmp.value || user.id;
+    const idToFetch = employee_id.value || user.id;
 
     try {
         const res = await api.get(`/payslip-print-view/${idToFetch}`, {
@@ -71,47 +72,12 @@ const printFormate = async () => {
     }
 };
 
-// ---------------- Fetch Departments ----------------
-const getDepartments = async () => {
-    try {
-        const res = await api.get(`/department-list/${user.id}`);
-        department.value = res.data;
-    } catch (err) {
-        console.error(err);
-    }
-};
-
-// ---------------- Fetch Employees by Department ----------------
-const getEmployee = async (deptID) => {
-    if (!deptID) {
-        employee.value = [];
-        selectedEmployee.value = null;
-        searchEmp.value = "";
-        return;
-    }
-    try {
-        const res = await api.get(`/emp/${deptID}`);
-        employee.value = res.data;
-        selectedEmployee.value = null;
-        searchEmp.value = "";
-    } catch (err) {
-        console.error(err);
-    }
-};
-
-// ---------------- Employee Select ----------------
-const onEmployeeSelect = (value) => {
-    selectedEmployee.value = value;
-    searchEmp.value = value ? value.id : "";
-    getData(); // fetch payslip for selected employee
-};
-
 // ---------------- Fetch Payslip ----------------
 const getData = async (employeeId = null) => {
     loading.value = true;
     error.value = null;
 
-    const idToFetch = employeeId || searchEmp.value || user.id;
+    const idToFetch = employeeId || employee_id.value || userID;
 
     try {
         const res = await api.get(`/payslip/${idToFetch}`, {
@@ -131,12 +97,13 @@ const getData = async (employeeId = null) => {
     }
 };
 
+const selectedEmployee = computed(() => employee_id.value);
+
 // ---------------- Watch Filters ----------------
-watch([selectedYear, selectedMonth], () => getData());
+watch([selectedYear, selectedMonth, selectedEmployee], () => getData());
 
 // ---------------- Initial Load ----------------
 onMounted(async () => {
-    await getDepartments();
     getData(user.id); // load logged-in user's payslip on page load
 });
 </script>
@@ -145,64 +112,28 @@ onMounted(async () => {
     <div class="container mt-2 p-3">
         <div class="row mb-3">
             <!-- Department Filter -->
-            <div class="col-lg-3 position-relative" v-if="role_id == 1">
-                <label class="form-label label-class">Select Department</label>
-                <select
-                    v-model="searchDept"
-                    @change="getEmployee(searchDept)"
-                    class="form-control field-height field-hover"
-                >
-                    <option value="">All Department</option>
-                    <option
-                        v-for="dept in department"
-                        :key="dept.department_id"
-                        :value="dept.department_id"
-                    >
-                        {{ dept.department_name }}
-                    </option>
-                </select>
-                <button
-                    v-if="searchDept"
-                    type="button"
-                    class="btn btn-sm btn-link position-absolute top-0 end-0 mt-5 me-3"
-                    @click="
-                        searchDept = '';
-                        employee = [];
-                        selectedEmployee = null;
-                    "
-                >
-                    <i class="fa fa-times"></i>
-                </button>
+            <div class="col-lg-4 position-relative" v-if="role_id == 1">
+                <Label label="Department Name" class="dept-labels" />
+                <BaseDept
+                    v-model:departmentID="department_id"
+                    :userID="userID"
+                />
             </div>
 
             <!-- Employee Filter -->
             <div class="col-lg-3 position-relative me-3" v-if="role_id == 1">
-                <label class="form-label label-class">Select Employee</label>
-                <Multiselect
-                    v-model="selectedEmployee"
-                    :options="employee"
-                    label="Full_Name"
-                    track-by="id"
-                    placeholder="Select or search employee"
-                    @update:modelValue="onEmployeeSelect"
+                <Label label="Employee Name" class="employee-labels" />
+                <BaseDeptEmp
+                    v-model:employeeID="employee_id"
+                    :deptID="department_id"
+                    :isEdit="false"
                 />
-                <button
-                    v-if="selectedEmployee"
-                    type="button"
-                    class="btn btn-sm btn-link position-absolute top-0 end-0 mt-5 me-5"
-                    @click="
-                        selectedEmployee = null;
-                        searchEmp = '';
-                    "
-                >
-                    <i class="fa fa-times"></i>
-                </button>
             </div>
 
             <!-- Year & Month -->
             <div class="col-lg-4 d-flex align-items-end gap-2">
-                <div class="col-lg-6">
-                    <label class="form-label label-class"> Select Year </label>
+                <div class="col-lg-4">
+                    <Label label="Select Year" class="year-labels" />
                     <select
                         v-model="selectedYear"
                         class="form-control field-height field-hover"
@@ -212,8 +143,8 @@ onMounted(async () => {
                         </option>
                     </select>
                 </div>
-                <div class="col-lg-6 label-class">
-                    <label class="form-label"> Select Month </label>
+                <div class="col-lg-4 label-class">
+                    <Label label="Select Month" class="month-labels" />
                     <select
                         v-model="selectedMonth"
                         class="form-control field-height field-hover"
@@ -227,28 +158,25 @@ onMounted(async () => {
                         </option>
                     </select>
                 </div>
-                <div class="col-lg-1 ms-auto">
-                    <button class="print-button" @click="printFormate()">
-                        PRINT
-                    </button>
-                </div>
             </div>
         </div>
 
         <!-- Payslip Cards -->
-        <div v-if="payslip.length">
-            <div v-for="p in payslip" :key="p.id" class="card mb-4 p-3 payslip">
+        <div class="content" v-if="payslip.length">
+            <div v-for="p in payslip" :key="p.id" class="card p-2 payslip">
                 <!-- Header -->
                 <div class="payslip-header text-center">
                     <h3>Salary Payslip</h3>
                 </div>
 
                 <!-- Employee Info -->
-                <div class="row mb-3 info">
+                <div class="row info mt-2 mb-2">
                     <div class="col-md-6">
                         <div class="label-row">
                             <span class="label-basic">Employee ID</span>:
-                            <span class="value ms-1">{{ p.Employee_Id }}</span>
+                            <span class="value ms-1"
+                                >ABNB{{ p.Employee_Id }}</span
+                            >
                         </div>
                         <div class="label-row">
                             <span class="label-basic">Full Name</span>:
@@ -364,10 +292,7 @@ onMounted(async () => {
                                     <tr class="fw-bold table-light">
                                         <td>Total Earnings</td>
                                         <td class="text-end">
-                                            {{
-                                                Number(p.total_payment) +
-                                                Number(p.bonus_amounts)
-                                            }}
+                                            {{ p.net_total_earning }}
                                         </td>
                                     </tr>
                                 </tbody>
@@ -414,7 +339,7 @@ onMounted(async () => {
                                     <tr class="fw-bold table-light">
                                         <td>Total Deductions</td>
                                         <td class="text-end">
-                                            {{ p.total_deduction }}
+                                            {{ p.net_total_deduction }}
                                         </td>
                                     </tr>
                                 </tbody>
@@ -424,9 +349,18 @@ onMounted(async () => {
                             <h3>
                                 Net Pay:
                                 <span class="amount">{{
-                                    Number(p.net_pay) + Number(p.bonus_amounts)
+                                    Number(p.net_total_earning) -
+                                    p.net_total_deduction
                                 }}</span>
                             </h3>
+                        </div>
+                        <div class="text-end print-button-align">
+                            <button
+                                class="print-button"
+                                @click="printFormate()"
+                            >
+                                PRINT
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -456,15 +390,24 @@ onMounted(async () => {
     height: 38px;
 }
 
+/* .content {
+   display: flex;
+   align-items: center;
+   justify-content: center;
+} */
+
 .print-button {
-    height: 38px;
+    height: 30px;
     background-color: rgb(3, 102, 28);
     letter-spacing: 2px;
     color: white;
     border-radius: 5px;
     font-weight: 400;
 }
-
+.print-button-align {
+    margin-top: 50px;
+    margin-right: 8px;
+}
 .field-hover:hover {
     border-color: #80bdff;
     box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
@@ -487,15 +430,14 @@ onMounted(async () => {
 }
 .payslip-header {
     border-bottom: 2px solid #000;
-    padding-bottom: 10px;
-    margin-bottom: 15px;
 }
 .section {
-    padding: 12px;
+    padding: 5px;
+    margin-left: 8px;
+    margin-right: 8px;
 }
 .section-title {
     font-weight: 600;
-    margin-bottom: 10px;
 }
 .table td {
     padding: 6px 8px;
@@ -503,6 +445,8 @@ onMounted(async () => {
 .net-pay {
     border-top: 2px solid #000;
     padding-top: 10px;
+    margin-left: 8px;
+    margin-right: 8px;
 }
 .net-pay .amount {
     color: #198754;
@@ -524,12 +468,16 @@ onMounted(async () => {
     color: #fff;
 }
 
+.table tbody td {
+    font-size: 10px;
+}
+
 .table thead {
     height: 30px;
 }
 
 .field-height {
-    height: 35px;
+    height: 38px;
 }
 .placeholder-text {
     color: #999; /* faded text for placeholder */
@@ -579,7 +527,8 @@ onMounted(async () => {
     padding-top: 5px;
     /* background-color: #d6d6d6f5;
 
-    border-radius: 5px; */
+
+   border-radius: 5px; */
 }
 @media (max-width: 768px) {
     .label-info {

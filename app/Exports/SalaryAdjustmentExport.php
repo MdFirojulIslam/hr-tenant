@@ -43,7 +43,7 @@ class SalaryAdjustmentExport implements
             ->join('employees', 'employees.id', '=', 'se.employee_id')
             ->join('salary_adjustment_types as sat', 'sat.id', '=', 'se.adjustment_types_id')
             ->select(
-                DB::raw("CONCAT('ABNB-', employees.Employee_Id) as Employee_ID"),
+                DB::raw("CONCAT('ABNB', employees.Employee_Id) as Employee_ID"),
                 'employees.Full_Name as Employee_Name',
                 DB::raw("'Earning' as Type"),
                 'sat.adjustment_name as Adjustment_Name',
@@ -58,7 +58,7 @@ class SalaryAdjustmentExport implements
             ->join('employees', 'employees.id', '=', 'sd.employee_id')
             ->join('salary_adjustment_types as sat', 'sat.id', '=', 'sd.adjustment_types_id')
             ->select(
-                DB::raw("CONCAT('ABNB-', employees.Employee_Id) as Employee_ID"),
+                DB::raw("CONCAT('ABNB', employees.Employee_Id) as Employee_ID"),
                 'employees.Full_Name as Employee_Name',
                 DB::raw("'Deduction' as Type"),
                 'sat.adjustment_name as Adjustment_Name',

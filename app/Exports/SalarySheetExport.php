@@ -42,22 +42,43 @@ class SalarySheetExport extends DefaultValueBinder implements
     }
 
     /**
-     * Force specific columns to be treated as Strings to prevent Exponential notation.
+     * Force Bank Account No (AE) as text so Excel does not show scientific notation.
      */
     public function bindValue($cell, $value)
     {
-        // AC is the 29th column where bank_account_no resides
-        if ($cell->getColumn() == 'AC') {
-            $cell->setValueExplicit($value, DataType::TYPE_STRING);
+        if ($cell->getColumn() === 'AE') {
+            $cell->setValueExplicit((string) ($value ?? ''), DataType::TYPE_STRING);
             return true;
         }
 
-        // Return default behavior for all other cells
         return parent::bindValue($cell, $value);
     }
 
     public function query(): Builder
     {
+        $monthStart = sprintf('%04d-%02d-01', $this->year, $this->month);
+        $monthEnd   = date('Y-m-t', strtotime($monthStart));
+
+        $earningRemarks = DB::table('salary_earnings')
+            ->select(
+                'employee_id',
+                DB::raw("GROUP_CONCAT(NULLIF(TRIM(remarks), '') SEPARATOR '; ') as remarks")
+            )
+            ->whereBetween('date', [$monthStart, $monthEnd])
+            ->whereNotNull('remarks')
+            ->where('remarks', '!=', '')
+            ->groupBy('employee_id');
+
+        $deductionRemarks = DB::table('salary_deductions')
+            ->select(
+                'employee_id',
+                DB::raw("GROUP_CONCAT(NULLIF(TRIM(remarks), '') SEPARATOR '; ') as remarks")
+            )
+            ->whereBetween('date', [$monthStart, $monthEnd])
+            ->whereNotNull('remarks')
+            ->where('remarks', '!=', '')
+            ->groupBy('employee_id');
+
         return salary_sheet::query()
             ->select(
                 DB::raw("CONCAT('ABNB', employees.Employee_Id) as employee_code"),
@@ -90,12 +111,19 @@ class SalarySheetExport extends DefaultValueBinder implements
                 'salary_sheets.monthly_loan_repayments',
                 'salary_sheets.final_payments',
                 'salary_sheets.payment_method',
-                'salary_sheets.bank_account_no'
+                'salary_sheets.bank_account_no',
+                DB::raw("CONCAT_WS('/', er.remarks, dr.remarks) as adjustment_remarks")
             )
             ->join('employees', 'salary_sheets.employee_id', '=', 'employees.id')
             ->join('officials', 'officials.EID', '=', 'employees.id')
             ->join('departments', 'officials.Department_Id', '=', 'departments.id')
             ->join('designations', 'officials.Designation_Id', '=', 'designations.id')
+            ->leftJoinSub($earningRemarks, 'er', function ($join) {
+                $join->on('er.employee_id', '=', 'salary_sheets.employee_id');
+            })
+            ->leftJoinSub($deductionRemarks, 'dr', function ($join) {
+                $join->on('dr.employee_id', '=', 'salary_sheets.employee_id');
+            })
             ->whereYear('salary_date', $this->year)
             ->whereMonth('salary_date', $this->month)
             ->orderBy('departments.id')
@@ -135,7 +163,8 @@ class SalarySheetExport extends DefaultValueBinder implements
             $row->monthly_loan_repayments,
             (float) $row->final_payments,
             ucfirst($row->payment_method),
-            (string) $row->bank_account_no, // Cast to string here as well
+            (string) ($row->bank_account_no ?? ''),
+            $row->adjustment_remarks ?? '',
         ];
     }
 
@@ -175,7 +204,8 @@ class SalarySheetExport extends DefaultValueBinder implements
                 'Monthly Loan Repayment',
                 'Payment Current Month',
                 'Payment Method',
-                'Bank Account No'
+                'Bank Account No',
+                'Remarks',
             ]
         ];
     }
@@ -183,7 +213,8 @@ class SalarySheetExport extends DefaultValueBinder implements
     public function columnFormats(): array
     {
         return [
-            'AC' => NumberFormat::FORMAT_TEXT,
+            // AE = Bank Account No (31st column)
+            'AE' => NumberFormat::FORMAT_TEXT,
         ];
     }
 
@@ -224,6 +255,8 @@ class SalarySheetExport extends DefaultValueBinder implements
 
                 $sheet->setCellValue("G{$totalRow}", "Total");
 
+                // Sum numeric money/day columns only: H (Gross) through AC (Payment Current Month).
+                // Do not sum AD (Payment Method), AE (Bank Account No), or AF (Remarks).
                 $startColumn = 'H';
                 $endColumn   = 'AC';
 
@@ -242,6 +275,11 @@ class SalarySheetExport extends DefaultValueBinder implements
                 $sheet->getStyle("G{$totalRow}:AC{$totalRow}")
                     ->getFont()
                     ->setBold(true);
+
+                // Keep bank account column as text after formulas/styles are applied
+                $sheet->getStyle("AE4:AE{$lastRow}")
+                    ->getNumberFormat()
+                    ->setFormatCode(NumberFormat::FORMAT_TEXT);
 
                 $sheet->getStyle("A3:{$lastColumn}{$totalRow}")
                     ->applyFromArray([

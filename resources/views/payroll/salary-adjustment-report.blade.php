@@ -64,7 +64,7 @@
     @php $totalAmount += $row->amount; @endphp
     <tr>
       <td>{{ $key+1 }}</td>
-      <td>ABNB-{{ $row->employee_id }}</td>
+      <td>ABNB{{ $row->employee_id }}</td>
       <td>{{ $row->employee_name }}</td>
       <td>{{ $row->adjustment_name }}</td>
       <td>{{ $row->adjustment_type }}</td>

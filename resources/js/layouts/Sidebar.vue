@@ -7,7 +7,6 @@ const error = ref([]);
 const nav_tree = ref([]);
 const dashboard = ref("");
 
-// খোলা থাকা মেনুগুলোর ID ধরে রাখার জন্য reactive state
 const openMenus = ref([]);
 
 const store = useStore();
@@ -15,13 +14,10 @@ const user = store.getters.getUser;
 
 const sidebarOpen = computed(() => store.getters.getSidebarOpen);
 
-// ক্লিক করলে মেনু খোলা/বন্ধ (Toggle) করার ফাংশন
 const toggleMenu = (id) => {
     if (openMenus.value.includes(id)) {
-        // যদি আগে থেকেই খোলা থাকে, তবে বাদ দিয়ে বন্ধ করবো
         openMenus.value = openMenus.value.filter((menuId) => menuId !== id);
     } else {
-        // না থাকলে Array-তে যোগ করে খুলবো
         openMenus.value.push(id);
     }
 };
@@ -88,7 +84,6 @@ onMounted(() => getData());
                     </div>
 
                     <div v-for="nav in nav_tree" :key="nav.id">
-                        <!-- Click Event যুক্ত করা হয়েছে এবং Bootstrap data tag তুলে দেওয়া হয়েছে -->
                         <a
                             class="nav-link"
                             :class="{ collapsed: !openMenus.includes(nav.id) }"
@@ -103,7 +98,6 @@ onMounted(() => getData());
                                 class="sb-sidenav-collapse-arrow"
                                 v-if="nav.children && nav.children.length"
                             >
-                                <!-- Arrow rotate করার জন্য dynamic class -->
                                 <i
                                     class="fas fa-angle-down text-white arrow-icon"
                                     :class="{
@@ -115,7 +109,6 @@ onMounted(() => getData());
                             </div>
                         </a>
 
-                        <!-- Vue v-show দিয়ে Child Expand & Collapse নিয়ন্ত্রণ -->
                         <div
                             class="collapse-menu"
                             v-if="nav.children && nav.children.length"

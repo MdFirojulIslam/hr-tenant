@@ -1,10 +1,12 @@
 <!DOCTYPE html>
 <html lang="en">
 
+
 <head>
   <meta charset="UTF-8">
   <title>Payslip - {{ $monthName }} {{ $year }}</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+
 
   <style>
     body {
@@ -12,11 +14,13 @@
       font-family: 'Segoe UI', sans-serif;
     }
 
+
     .payslip {
       max-width: 900px;
       margin: auto;
       font-size: 12px;
     }
+
 
     .payslip-header {
       border-bottom: 2px solid #000;
@@ -24,11 +28,13 @@
       text-align: center;
     }
 
+
     .net-pay {
       border-top: 2px solid #000;
       padding-top: 10px;
       text-align: center;
     }
+
 
     .amount {
       color: #198754;
@@ -38,14 +44,18 @@
   </style>
 </head>
 
+
 <body>
 
+
   <div class="card mb-4 p-3 payslip">
+
 
     <div class="payslip-header">
       <h3>Salary Payslip</h3>
       <div>{{ $monthName }} {{ $year }}</div>
     </div>
+
 
     <div class="row mb-3">
       <div class="col-md-6">
@@ -54,6 +64,7 @@
         <div><b>Department:</b> {{ $payslip->departmentName }}</div>
         <div><b>Designation:</b> {{ $payslip->designationName }}</div>
       </div>
+
 
       <div class="col-md-6">
         <div><b>Salary Date:</b> {{ $payslip->salary_date }}</div>
@@ -65,8 +76,10 @@
       </div>
     </div>
 
+
     <div class="row">
       <div class="col-12">
+
 
         <table class="table table-bordered">
           <thead class="table-light">
@@ -75,6 +88,7 @@
               <th class="text-center">Deductions</th>
             </tr>
           </thead>
+
 
           <tbody>
             <tr>
@@ -106,10 +120,11 @@
                   </tr>
                   <tr class="fw-bold">
                     <td>Total Earnings</td>
-                    <td class="text-end">{{ $payslip->total_payment + $payslip->bonus_amounts }}</td>
+                    <td class="text-end">{{ $payslip->net_total_earning }}</td>
                   </tr>
                 </table>
               </td>
+
 
               <td>
                 <table class="table mb-0">
@@ -127,20 +142,24 @@
                   </tr>
                   <tr class="fw-bold">
                     <td>Total Deductions</td>
-                    <td class="text-end">{{ $payslip->total_deduction }}</td>
+                    <td class="text-end">{{ $payslip->net_total_deduction}}</td>
                   </tr>
                 </table>
-                <div class="net-pay mt-3"> Net Pay : <span class="amount">{{ $payslip->net_pay + $payslip->bonus_amounts}}</span> </div>
+                <div class="net-pay mt-3"> Net Pay : <span class="amount">{{ ($payslip->net_total_earning) - ($payslip->net_total_deduction)}}</span> </div>
               </td>
             </tr>
           </tbody>
         </table>
 
+
       </div>
     </div>
 
+
   </div>
 
+
 </body>
+
 
 </html>

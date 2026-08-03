@@ -290,7 +290,14 @@ const downloadSalary = async () => {
 
 const downloadBank = async (type) => {
     try {
-        const response = await api.get(`/salary-disbursement-bank-${type}`, {
+        const endpoint =
+            type === "excel"
+                ? "/salary-disbursement-bank-xlsx"
+                : type === "pdf"
+                  ? "/salary-disbursement-bank-pdf"
+                  : "/salary-disbursement-bank-word";
+
+        const response = await api.get(endpoint, {
             responseType: "blob",
             params: {
                 year: props.selectedYear,
@@ -298,20 +305,28 @@ const downloadBank = async (type) => {
             },
         });
 
-        const ext =
-            type === "word" ? "docx" : type === "excel" ? "xlsx" : "pdf";
+        const ext = type === "excel" ? "xlsx" : type === "pdf" ? "pdf" : "docx";
+
         downloadFile(
             response,
             `Salary_Disbursement_Bank_${props.selectedYear}_${props.selectedMonth}.${ext}`,
         );
-    } catch {
+    } catch (error) {
+        console.error(error);
         Swal.fire("Download failed!", "Please try again.", "error");
     }
 };
 
 const downloadCash = async (type) => {
     try {
-        const response = await api.get(`/salary-disbursement-cash-${type}`, {
+        const endpoint =
+            type === "excel"
+                ? "/salary-disbursement-cash-xlsx"
+                : type === "pdf"
+                  ? "/salary-disbursement-cash-pdf"
+                  : "/salary-disbursement-cash-word";
+
+        const response = await api.get(endpoint, {
             responseType: "blob",
             params: {
                 year: props.selectedYear,
@@ -319,16 +334,59 @@ const downloadCash = async (type) => {
             },
         });
 
-        const ext =
-            type === "word" ? "docx" : type === "excel" ? "xlsx" : "pdf";
+        const ext = type === "excel" ? "xlsx" : type === "pdf" ? "pdf" : "docx";
+
         downloadFile(
             response,
             `Salary_Disbursement_Cash_${props.selectedYear}_${props.selectedMonth}.${ext}`,
         );
-    } catch {
+    } catch (error) {
+        console.error(error);
         Swal.fire("Download failed!", "Please try again.", "error");
     }
 };
+
+// const downloadBank = async (type) => {
+//     try {
+//         const response = await api.get(`/salary-disbursement-bank-${type}`, {
+//             responseType: "blob",
+//             params: {
+//                 year: props.selectedYear,
+//                 month: props.selectedMonth,
+//             },
+//         });
+
+//         const ext =
+//             type === "word" ? "docx" : type === "excel" ? "xlsx" : "pdf";
+//         downloadFile(
+//             response,
+//             `Salary_Disbursement_Bank_${props.selectedYear}_${props.selectedMonth}.${ext}`,
+//         );
+//     } catch {
+//         Swal.fire("Download failed!", "Please try again.", "error");
+//     }
+// };
+
+// const downloadCash = async (type) => {
+//     try {
+//         const response = await api.get(`/salary-disbursement-cash-${type}`, {
+//             responseType: "blob",
+//             params: {
+//                 year: props.selectedYear,
+//                 month: props.selectedMonth,
+//             },
+//         });
+
+//         const ext =
+//             type === "word" ? "docx" : type === "excel" ? "xlsx" : "pdf";
+//         downloadFile(
+//             response,
+//             `Salary_Disbursement_Cash_${props.selectedYear}_${props.selectedMonth}.${ext}`,
+//         );
+//     } catch {
+//         Swal.fire("Download failed!", "Please try again.", "error");
+//     }
+// };
 </script>
 
 <style scoped>
