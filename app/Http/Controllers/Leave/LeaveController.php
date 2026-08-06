@@ -103,6 +103,7 @@ class LeaveController extends Controller
             ->where('officials.Supervisor_Id', '=', $userId)
             ->where('officials.Status', '=', 'N')
             ->whereYear('leaves.from_date', '=', $currentYear)
+            ->orderBy('leaves.from_date', 'desc')
             ->get();
         return $data;
     }
