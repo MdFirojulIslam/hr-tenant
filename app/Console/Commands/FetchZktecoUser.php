@@ -21,11 +21,12 @@ class FetchZktecoUser extends Command
 
     public function handle()
     {
+
         $zkt_info = zkt_machine::where('Status', 1)->get();
         foreach ($zkt_info as $info) {
             $this->info($info->IP);
             $this->info($info->port);
-            $zk = new ZKTeco($info->IP, $info->port); 
+            $zk = new ZKTeco($info->IP, $info->port);
 
             if ($zk->connect()) {
                 $userData = $zk->getUser();
@@ -47,7 +48,5 @@ class FetchZktecoUser extends Command
                 $this->error('Unable to connect to the device.');
             }
         }
-
-       
     }
 }

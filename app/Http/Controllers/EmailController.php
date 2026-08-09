@@ -604,42 +604,9 @@ class EmailController extends Controller
                 return $attendance;
             });
 
-            dd($employeeEmail);
             Mail::to($employeeEmail)
                 ->send(new MonthlyAttendence($employeeAttendance, $monthName, $year));
         }
-
-
-        // foreach ($attendances as $employeeId => $records) {
-
-        //     $employeeEmail = $records->Official_Email;
-
-        //     foreach ($records as $item) {
-        //         $item->weekday = Carbon::parse($item->Date)->format('l');
-        //     }
-
-        //     $employeeLeaves = $leaveData->where('EID', $records->first()->id);
-
-        //     $employeeAttendance = $records->map(function ($attendance) use ($employeeLeaves) {
-        //         $attendanceDate = $attendance->Date;
-
-        //         $leaveOnDate = $employeeLeaves->first(function ($leave) use ($attendanceDate) {
-        //             return $attendanceDate >= $leave->From_Date && $attendanceDate <= $leave->To_Date;
-        //         });
-
-        //         if ($leaveOnDate) {
-        //             $attendance->Time_In = $leaveOnDate->leave_type;
-        //             $attendance->Time_Out = $leaveOnDate->leave_type;
-        //         }
-
-        //         return $attendance;
-
-        //     });
-
-        //     dd($employeeEmail);
-        //     Mail::to($employeeEmail)
-        //         ->send(new MonthlyAttendence($employeeAttendance, $monthName, $year));
-        // }
 
 
         return response()->json(['message' => 'Emails sent successfully', 'success' => true]);

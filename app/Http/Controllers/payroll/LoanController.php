@@ -481,7 +481,6 @@ class LoanController extends Controller
     // }
     // public function updateRepayment(Request $request)
     // {
-    //     dd($request);
     //     $request->validate([
     //         '*.employee_id' => 'required|integer',
     //         '*.installment_date' => 'required|date',

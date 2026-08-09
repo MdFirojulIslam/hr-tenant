@@ -626,6 +626,15 @@ const routes = [
         component: () =>
             import("./pages/incentive/component/incentiveSetupFormEdit.vue"),
     },
+    {
+        path: "/outlet-visit/setup",
+        name: "OutletVisitSetup",
+        component: () => import("./pages/outletVisit/outletVisitSetup.vue"),
+        meta: {
+            requireAuth: true,
+            pageId: 69,
+        },
+    },
 ];
 
 const router = createRouter({

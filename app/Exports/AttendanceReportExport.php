@@ -56,7 +56,6 @@ class AttendanceReportExport implements FromCollection
                     ->whereDate('Date', $date)
                     ->first();
 
-                dd($emp->Full_Name, $att);
 
                 if ($att) {
                     $timeIn  = $att->Time_In  ? Carbon::parse($att->Time_In)->format('H:i')  : '';
@@ -69,7 +68,6 @@ class AttendanceReportExport implements FromCollection
 
             $data[] = $row;
         }
-        dd($data);
 
         return collect($data);
     }

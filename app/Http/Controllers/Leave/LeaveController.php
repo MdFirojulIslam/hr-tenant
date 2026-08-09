@@ -179,7 +179,6 @@ class LeaveController extends Controller
     //     $allSubordinateIds = [];
     //     $queue = [$userId];
 
-    //     dd($queue);
 
     //     // Step 1: Fetch the hierarchy of subordinates
     //     while (!empty($queue)) {
@@ -203,7 +202,6 @@ class LeaveController extends Controller
 
     //     $currentYear = now()->year;
 
-    //     dd($allSubordinateIds);
 
     //     // Step 2: Fetch leave records for all subordinates
     //     if (!empty($allSubordinateIds)) {
