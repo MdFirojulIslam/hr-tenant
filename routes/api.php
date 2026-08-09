@@ -7,9 +7,8 @@ use Illuminate\Support\Facades\Route;
 
 // require_once __DIR__ . '/auth/auth.php';
 
-require_once __DIR__ . '/app/mobile/mobile_auth.php';
+require_once __DIR__ . '/app/auth/mobile_auth.php';
 require_once __DIR__ . '/web/auth/auth.php';
-
 
 Route::group(['middleware' => ['auth:sanctum']], function () {
 
