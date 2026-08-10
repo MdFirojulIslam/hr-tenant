@@ -92,7 +92,7 @@ class EmailController extends Controller
         $to_date = $leave->to_date;
         $status = $leave->status;
         $leave_type = $leave->leave_name;
-        Mail::to([$toEmail, 'sudiptya@artisanbn.com'])->send(new LeaveStatusEmail($from_date, $to_date, $status, $leave_type, $name));
+        Mail::to([$toEmail, 'ferojul@artisanbn.com'])->send(new LeaveStatusEmail($from_date, $to_date, $status, $leave_type, $name));
         // Mail::to($toEmail)->send(new LeaveStatusEmail($from_date, $to_date, $status, $leave_type, $name));
         return response()->json(['message' => 'Email sent successfully']);
     }

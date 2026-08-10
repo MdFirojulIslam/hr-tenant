@@ -1,506 +1,336 @@
 <script setup>
-import { ref, computed, watch, onMounted } from "vue";
+import { ref, reactive, computed } from "vue";
 import Multiselect from "vue-multiselect";
 import "vue-multiselect/dist/vue-multiselect.min.css";
-import Label from "@/pages/components/label/Label.vue";
-import api from "@/api";
-import Swal from "sweetalert2";
 
-const towns = ref([]);
-const employees = ref([]);
-const outlets = ref([]);
-const assignments = ref([]);
-const outletMeta = ref({ current_page: 1, last_page: 1, total: 0 });
+const weeks = [1, 2, 3, 4];
 
-const selectedTown = ref(null);
-const selectedEmployee = ref(null);
-const selectedYear = ref(new Date().getFullYear());
-const selectedMonth = ref(new Date().getMonth() + 1);
-
-const outletSearch = ref("");
-const assignWeek = ref(1);
-const assignActivity = ref("visit");
-const selectedOutlet = ref(null);
-
-const loadingTowns = ref(false);
-const loadingEmployees = ref(false);
-const loadingOutlets = ref(false);
-const loadingAssignments = ref(false);
-const saving = ref(false);
-
-const years = computed(() => {
-    const y = new Date().getFullYear();
-    return [y - 1, y, y + 1];
-});
-
-const months = [
-    { id: 1, name: "January" },
-    { id: 2, name: "February" },
-    { id: 3, name: "March" },
-    { id: 4, name: "April" },
-    { id: 5, name: "May" },
-    { id: 6, name: "June" },
-    { id: 7, name: "July" },
-    { id: 8, name: "August" },
-    { id: 9, name: "September" },
-    { id: 10, name: "October" },
-    { id: 11, name: "November" },
-    { id: 12, name: "December" },
+const days = [
+    "Saturday",
+    "Sunday",
+    "Monday",
+    "Tuesday",
+    "Wednesday",
+    "Thursday",
 ];
 
-const weekSummary = computed(() => {
-    const base = { 1: 0, 2: 0, 3: 0, 4: 0, delivery: 0 };
-    for (const a of assignments.value) {
-        if (a.activity_type === "delivery") base.delivery += 1;
-        else if (base[a.week_no] !== undefined) base[a.week_no] += 1;
-    }
-    return base;
-});
+const selectedWeek = ref(1);
+const selectedDistributor = ref(null);
+const selectedEmployee = ref(null);
 
-const fetchTowns = async () => {
-    loadingTowns.value = true;
-    try {
-        const { data } = await api.get("outlet-visited/towns");
-        towns.value = data.data || [];
-    } catch (e) {
-        Swal.fire(
-            "Error",
-            e?.response?.data?.message || "Failed to load towns",
-            "error",
-        );
-    } finally {
-        loadingTowns.value = false;
-    }
-};
+const distributors = ref([
+    { id: 1, name: "Dhaka Central Distributor" },
+    { id: 2, name: "Chittagong Distribution House" },
+    { id: 3, name: "Gazipur Wholesale Traders" },
+    { id: 4, name: "Sylhet Agro Distributor" },
+    { id: 5, name: "Khulna Food Distributor" },
+]);
 
-const fetchEmployees = async () => {
-    employees.value = [];
-    selectedEmployee.value = null;
-    if (!selectedTown.value) return;
-    loadingEmployees.value = true;
-    try {
-        const { data } = await api.get("outlet-visited/employees", {
-            params: { town_id: selectedTown.value.town_id },
-        });
-        employees.value = data.data || [];
-    } catch (e) {
-        Swal.fire(
-            "Error",
-            e?.response?.data?.message || "Failed to load employees",
-            "error",
-        );
-    } finally {
-        loadingEmployees.value = false;
-    }
-};
+const employees = ref([
+    { id: 1, name: "Rahim Uddin" },
+    { id: 2, name: "Karim Mia" },
+    { id: 3, name: "Jasmin Akter" },
+    { id: 4, name: "Tanvir Hasan" },
+    { id: 5, name: "Nazma Begum" },
+    { id: 6, name: "Sajib Rahman" },
+]);
 
-const fetchOutlets = async (page = 1) => {
-    outlets.value = [];
-    selectedOutlet.value = null;
-    if (!selectedTown.value) return;
-    loadingOutlets.value = true;
-    try {
-        const { data } = await api.get("outlet-visited/outlets", {
-            params: {
-                town_id: selectedTown.value.town_id,
-                q: outletSearch.value || undefined,
-                page,
-                per_page: 25,
-                active: 1,
-            },
-        });
-        outlets.value = data.data || [];
-        outletMeta.value = data.meta || outletMeta.value;
-    } catch (e) {
-        Swal.fire(
-            "Error",
-            e?.response?.data?.message || "Failed to load outlets from DMS",
-            "error",
-        );
-    } finally {
-        loadingOutlets.value = false;
-    }
-};
+const outlets = ref([
+    { code: "OUT-1001", name: "Al Madina Super Shop" },
+    { code: "OUT-1002", name: "Brothers General Store" },
+    { code: "OUT-1003", name: "City Corner Mart" },
+    { code: "OUT-1004", name: "Daily Needs Store" },
+    { code: "OUT-1005", name: "Green Grocery" },
+    { code: "OUT-1006", name: "Happy Family Store" },
+    { code: "OUT-1007", name: "New Market Traders" },
+    { code: "OUT-1008", name: "Rahim General Store" },
+]);
 
-const fetchAssignments = async () => {
-    assignments.value = [];
-    if (!selectedTown.value || !selectedEmployee.value) return;
-    loadingAssignments.value = true;
-    try {
-        const { data } = await api.get("outlet-visited/assignments", {
-            params: {
-                town_id: selectedTown.value.town_id,
-                employee_id: selectedEmployee.value.employee_id,
-                year: selectedYear.value,
-                month: selectedMonth.value,
-            },
-        });
-        assignments.value = data.data || [];
-    } catch (e) {
-        Swal.fire(
-            "Error",
-            e?.response?.data?.message || "Failed to load assignments",
-            "error",
-        );
-    } finally {
-        loadingAssignments.value = false;
-    }
-};
+const outletCodes = computed(() => outlets.value.map((outlet) => outlet.code));
+const outletNames = computed(() => outlets.value.map((outlet) => outlet.name));
 
-const addAssignment = () => {
-    if (!selectedOutlet.value) {
-        Swal.fire(
-            "Select outlet",
-            "Choose an outlet before assigning.",
-            "warning",
-        );
-        return;
-    }
-    const activity = assignActivity.value;
-    const week = activity === "delivery" ? 0 : Number(assignWeek.value);
-    const exists = assignments.value.some(
-        (a) =>
-            a.outlets_id === selectedOutlet.value.outlet_id &&
-            a.activity_type === activity &&
-            Number(a.week_no) === week,
-    );
-    if (exists) {
-        Swal.fire(
-            "Duplicate",
-            "That outlet is already assigned for this week/activity.",
-            "info",
-        );
-        return;
-    }
-    assignments.value.push({
-        outlets_id: selectedOutlet.value.outlet_id,
-        outlet_code: selectedOutlet.value.outlet_code,
-        outlet_name: selectedOutlet.value.outlet_name,
-        activity_type: activity,
-        week_no: week,
-        distributor_id: selectedOutlet.value.distributor_id,
+const outletRows = reactive({});
+
+weeks.forEach((week) => {
+    outletRows[week] = {};
+    days.forEach((day) => {
+        outletRows[week][day] = [{ outlet_code: null, outlet_name: null }];
     });
-};
-
-const removeAssignment = (idx) => {
-    assignments.value.splice(idx, 1);
-};
-
-const saveChanges = async () => {
-    if (!selectedTown.value || !selectedEmployee.value) {
-        Swal.fire(
-            "Missing selection",
-            "Select town and employee first.",
-            "warning",
-        );
-        return;
-    }
-    saving.value = true;
-    try {
-        const { data } = await api.post("outlet-visited/assignments", {
-            town_id: selectedTown.value.town_id,
-            employee_id: selectedEmployee.value.employee_id,
-            year: selectedYear.value,
-            month: selectedMonth.value,
-            items: assignments.value.map((a) => ({
-                outlets_id: a.outlets_id,
-                outlet_code: a.outlet_code,
-                outlet_name: a.outlet_name,
-                activity_type: a.activity_type,
-                week_no: a.week_no,
-            })),
-        });
-        assignments.value = data.data || [];
-        Swal.fire({
-            icon: "success",
-            title: "Saved",
-            text: data.message || "Assignments saved.",
-            timer: 1600,
-            showConfirmButton: false,
-        });
-    } catch (e) {
-        Swal.fire(
-            "Error",
-            e?.response?.data?.message || "Save failed",
-            "error",
-        );
-    } finally {
-        saving.value = false;
-    }
-};
-
-watch(selectedTown, async () => {
-    await fetchEmployees();
-    await fetchOutlets(1);
-    await fetchAssignments();
 });
 
-watch(selectedEmployee, fetchAssignments);
-watch([selectedYear, selectedMonth], fetchAssignments);
+const addMore = (week, day) => {
+    outletRows[week][day].push({ outlet_code: null, outlet_name: null });
+};
 
-onMounted(fetchTowns);
+const removeRow = (week, day, index) => {
+    const rows = outletRows[week][day];
+
+    if (rows.length > 1) {
+        rows.splice(index, 1);
+    }
+};
+
+const save = () => {};
 </script>
 
 <template>
-    <div class="container-fluid px-4">
-        <h1 class="mt-4">Outlet Visited Setup</h1>
-        <ol class="breadcrumb mb-4">
-            <li class="breadcrumb-item">Setup</li>
-            <li class="breadcrumb-item active">Outlet Visited</li>
-        </ol>
-        <p class="text-muted mb-4">
-            Assign outlets by town → employee → month → week / delivery. Towns
-            map via DMS Town Id (distributor), never by name.
-        </p>
+    <div class="border rounded container-fluid d-flex flex-column p-0 m-0">
+        <!-- PAGE HEADER -->
+        <div
+            class="d-flex justify-content-between align-items-center py-2 px-3"
+        >
+            <h2 class="header-design mb-0">Outlet Visit Setup</h2>
+        </div>
 
-        <div class="card mb-4">
-            <div class="card-header">Selection</div>
-            <div class="card-body">
+        <!-- SETUP INFORMATION -->
+        <div class="px-3 pt-3">
+            <div class="setup-section border rounded p-3">
+                <h6 class="setup-title">Setup Information</h6>
                 <div class="row g-3">
-                    <div class="col-md-4">
-                        <Label name="Town" />
+                    <div class="col-lg-4 col-md-6 col-12">
+                        <label class="form-label">Distributor Name</label>
                         <Multiselect
-                            v-model="selectedTown"
-                            :options="towns"
-                            :loading="loadingTowns"
-                            label="town_name"
-                            track-by="town_id"
-                            placeholder="Select town"
+                            v-model="selectedDistributor"
+                            :options="distributors"
+                            label="name"
+                            track-by="id"
+                            placeholder="Select Distributor Name"
+                            class="multiselect-design"
                         />
-                        <small v-if="selectedTown" class="text-muted">
-                            DMS distributor id:
-                            {{ selectedTown.distributor_id }}
-                        </small>
                     </div>
-                    <div class="col-md-4">
-                        <Label name="Employee" />
+
+                    <div class="col-lg-4 col-md-6 col-12">
+                        <label class="form-label">Employee Name</label>
                         <Multiselect
                             v-model="selectedEmployee"
                             :options="employees"
-                            :loading="loadingEmployees"
-                            :disabled="!selectedTown"
-                            label="full_name"
-                            track-by="employee_id"
-                            placeholder="Select employee"
+                            label="name"
+                            track-by="id"
+                            placeholder="Select Employee Name"
+                            class="multiselect-design"
                         />
                     </div>
-                    <div class="col-md-2">
-                        <Label name="Year" />
-                        <select
-                            v-model.number="selectedYear"
-                            class="form-select"
-                        >
-                            <option v-for="y in years" :key="y" :value="y">
-                                {{ y }}
-                            </option>
-                        </select>
-                    </div>
-                    <div class="col-md-2">
-                        <Label name="Month" />
-                        <select
-                            v-model.number="selectedMonth"
-                            class="form-select"
-                        >
-                            <option
-                                v-for="m in months"
-                                :key="m.id"
-                                :value="m.id"
-                            >
-                                {{ m.name }}
-                            </option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="table-responsive mt-4" v-if="selectedEmployee">
-                    <table
-                        class="table table-sm table-bordered text-center mb-0"
-                    >
-                        <thead class="table-light">
-                            <tr>
-                                <th></th>
-                                <th>Week 1</th>
-                                <th>Week 2</th>
-                                <th>Week 3</th>
-                                <th>Week 4</th>
-                                <th>Delivery</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td class="text-start">Assigned count</td>
-                                <td>{{ weekSummary[1] }}</td>
-                                <td>{{ weekSummary[2] }}</td>
-                                <td>{{ weekSummary[3] }}</td>
-                                <td>{{ weekSummary[4] }}</td>
-                                <td>{{ weekSummary.delivery }}</td>
-                            </tr>
-                        </tbody>
-                    </table>
                 </div>
             </div>
         </div>
 
-        <div class="card mb-4" v-if="selectedTown">
-            <div
-                class="card-header d-flex justify-content-between align-items-center"
-            >
-                <span>Assign outlet</span>
+        <!-- WEEK NAVIGATION -->
+        <div class="px-3 pt-3">
+            <div class="week-tabs">
                 <button
-                    class="btn btn-sm btn-outline-secondary"
+                    v-for="week in weeks"
+                    :key="week"
                     type="button"
-                    :disabled="loadingOutlets"
-                    @click="fetchOutlets(outletMeta.current_page || 1)"
+                    class="week-tab"
+                    :class="{ active: selectedWeek === week }"
+                    @click="selectedWeek = week"
                 >
-                    Refresh outlets
+                    Week {{ week }}
                 </button>
-            </div>
-            <div class="card-body">
-                <div class="row g-3 align-items-end">
-                    <div class="col-md-4">
-                        <Label name="Search outlets" />
-                        <div class="input-group">
-                            <input
-                                v-model="outletSearch"
-                                type="text"
-                                class="form-control"
-                                placeholder="Code / name / address"
-                                @keyup.enter="fetchOutlets(1)"
-                            />
-                            <button
-                                class="btn btn-primary"
-                                type="button"
-                                @click="fetchOutlets(1)"
-                            >
-                                Search
-                            </button>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <Label name="Outlet" />
-                        <Multiselect
-                            v-model="selectedOutlet"
-                            :options="outlets"
-                            :loading="loadingOutlets"
-                            :custom-label="
-                                (o) =>
-                                    `${o.outlet_code || ''} — ${o.outlet_name || ''}`
-                            "
-                            track-by="outlet_id"
-                            placeholder="Select outlet"
-                        />
-                        <small class="text-muted">
-                            Page {{ outletMeta.current_page }} /
-                            {{ outletMeta.last_page }} ({{ outletMeta.total }}
-                            total)
-                        </small>
-                    </div>
-                    <div class="col-md-2">
-                        <Label name="Activity" />
-                        <select v-model="assignActivity" class="form-select">
-                            <option value="visit">Visit</option>
-                            <option value="delivery">Delivery</option>
-                        </select>
-                    </div>
-                    <div class="col-md-1" v-if="assignActivity === 'visit'">
-                        <Label name="Week" />
-                        <select v-model.number="assignWeek" class="form-select">
-                            <option :value="1">1</option>
-                            <option :value="2">2</option>
-                            <option :value="3">3</option>
-                            <option :value="4">4</option>
-                        </select>
-                    </div>
-                    <div class="col-md-1">
-                        <button
-                            class="btn btn-success w-100"
-                            type="button"
-                            @click="addAssignment"
-                        >
-                            + Add
-                        </button>
-                    </div>
-                </div>
-                <div class="mt-2" v-if="outletMeta.last_page > 1">
-                    <button
-                        class="btn btn-sm btn-outline-primary me-2"
-                        type="button"
-                        :disabled="
-                            outletMeta.current_page <= 1 || loadingOutlets
-                        "
-                        @click="fetchOutlets(outletMeta.current_page - 1)"
-                    >
-                        Prev
-                    </button>
-                    <button
-                        class="btn btn-sm btn-outline-primary"
-                        type="button"
-                        :disabled="
-                            outletMeta.current_page >= outletMeta.last_page ||
-                            loadingOutlets
-                        "
-                        @click="fetchOutlets(outletMeta.current_page + 1)"
-                    >
-                        Next
-                    </button>
-                </div>
             </div>
         </div>
 
-        <div class="card mb-4">
-            <div
-                class="card-header d-flex justify-content-between align-items-center"
-            >
-                <span>Assigned outlets</span>
-                <button
-                    class="btn btn-primary"
-                    type="button"
-                    :disabled="saving || !selectedEmployee"
-                    @click="saveChanges"
-                >
-                    {{ saving ? "Saving…" : "Save Changes" }}
-                </button>
-            </div>
-            <div class="card-body">
-                <div v-if="loadingAssignments" class="text-muted">Loading…</div>
-                <div v-else-if="!assignments.length" class="text-muted">
-                    No assignments for this selection.
-                </div>
-                <div v-else class="table-responsive">
-                    <table class="table table-bordered table-hover">
-                        <thead class="table-light">
-                            <tr>
-                                <th>Outlet Code</th>
-                                <th>Outlet</th>
-                                <th>Week / Activity</th>
-                                <th style="width: 100px">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr v-for="(row, idx) in assignments" :key="idx">
-                                <td>{{ row.outlet_code || "—" }}</td>
-                                <td>{{ row.outlet_name || "—" }}</td>
-                                <td>
-                                    <span
-                                        v-if="row.activity_type === 'delivery'"
-                                        >Delivery</span
-                                    >
-                                    <span v-else>Week {{ row.week_no }}</span>
-                                </td>
-                                <td>
+        <!-- SELECTED WEEK DAYS -->
+        <div class="p-3">
+            <div class="row g-3">
+                <div v-for="day in days" :key="day" class="col-xl-6 col-12">
+                    <div class="day-card border rounded">
+                        <div class="day-title">{{ day }}</div>
+
+                        <div class="p-3">
+                            <div
+                                v-for="(row, index) in outletRows[selectedWeek][
+                                    day
+                                ]"
+                                :key="index"
+                                class="outlet-row border rounded p-2 mb-2"
+                            >
+                                <div class="row g-2 align-items-center">
+                                    <div class="col-md-6 col-12">
+                                        <label class="form-label small-label">
+                                            Outlet Code
+                                        </label>
+                                        <Multiselect
+                                            v-model="row.outlet_code"
+                                            :options="outletCodes"
+                                            placeholder="Select Outlet Code"
+                                            class="multiselect-design"
+                                        />
+                                    </div>
+
+                                    <div class="col-md-6 col-12">
+                                        <label class="form-label small-label">
+                                            Outlet Name
+                                        </label>
+                                        <Multiselect
+                                            v-model="row.outlet_name"
+                                            :options="outletNames"
+                                            placeholder="Select Outlet Name"
+                                            class="multiselect-design"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div
+                                    v-if="
+                                        outletRows[selectedWeek][day].length > 1
+                                    "
+                                    class="text-end mt-2"
+                                >
                                     <button
-                                        class="btn btn-sm btn-outline-danger"
                                         type="button"
-                                        @click="removeAssignment(idx)"
+                                        class="btn btn-sm btn-outline-danger"
+                                        @click="
+                                            removeRow(selectedWeek, day, index)
+                                        "
                                     >
+                                        <i class="fa-solid fa-trash me-1"></i>
                                         Remove
                                     </button>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
+                                </div>
+                            </div>
+
+                            <div class="text-start">
+                                <button
+                                    type="button"
+                                    class="btn btn-sm btn-success"
+                                    @click="addMore(selectedWeek, day)"
+                                >
+                                    <i class="fa-solid fa-plus me-1"></i>
+                                    Add More
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
+        </div>
+
+        <!-- SAVE -->
+        <div class="text-center py-3">
+            <button type="button" class="btn btn-success px-5" @click="save">
+                <i class="fa-solid fa-floppy-disk me-1"></i>
+                Save
+            </button>
         </div>
     </div>
 </template>
+
+<style scoped>
+.header-design {
+    letter-spacing: 1px;
+    padding-top: 5px;
+    font-weight: 700;
+    font-size: 22px;
+    color: #212529;
+}
+
+.form-label {
+    font-weight: 600;
+    letter-spacing: 0.4px;
+}
+
+.small-label {
+    font-size: 13px;
+    margin-bottom: 4px;
+}
+
+.setup-section {
+    background: #f8f9fa;
+}
+
+.setup-title {
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    color: #059223d5;
+    text-transform: uppercase;
+    font-size: 14px;
+    margin-bottom: 14px;
+}
+
+.week-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.week-tab {
+    padding: 8px 24px;
+    border: 1px solid #c4c2c2;
+    border-radius: 20px;
+    background: #ffffff;
+    color: #495057;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.week-tab:hover {
+    border-color: #059223d5;
+    color: #059223d5;
+}
+
+.week-tab.active {
+    background-color: #059223d5;
+    border-color: #059223d5;
+    color: #ffffff;
+}
+
+.day-card {
+    background: #ffffff;
+    overflow: hidden;
+}
+
+.day-title {
+    background: #4e4e4e;
+    color: #ffffff;
+    padding: 8px 14px;
+    font-size: 15px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    font-weight: 600;
+}
+
+.outlet-row {
+    background: #ffffff;
+}
+
+.outlet-row .form-label {
+    color: #495057;
+}
+
+.multiselect-design :deep(.multiselect__placeholder) {
+    color: #999;
+    font-size: 14px;
+    margin-bottom: 0;
+    align-items: center;
+}
+
+.multiselect-design :deep(.multiselect__tags) {
+    min-height: 35px !important;
+    height: 35px;
+    padding: 0 8px;
+    border-radius: 5px;
+    border: 0.8px solid #b3a9a963;
+    display: flex;
+    align-items: center;
+    font-size: 14px;
+}
+
+.multiselect-design :deep(.multiselect__input),
+.multiselect-design :deep(.multiselect__single) {
+    height: 100%;
+    line-height: 35px;
+    padding: 0;
+    margin: 0;
+    background: transparent;
+    border: 0;
+    flex: 1;
+}
+
+.multiselect-design :deep(.multiselect__select) {
+    height: 35px;
+}
+</style>
