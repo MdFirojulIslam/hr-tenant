@@ -12,3 +12,4 @@ require_once __DIR__ . '/api/payroll/salary.php';
 require_once __DIR__ . '/api/roster/roster.php';
 require_once __DIR__ . '/api/workspace/itinerary.php';
 require_once __DIR__ . '/api/workspace/note.php';
+require_once __DIR__ . '/api/dms_info/dms_info.php';

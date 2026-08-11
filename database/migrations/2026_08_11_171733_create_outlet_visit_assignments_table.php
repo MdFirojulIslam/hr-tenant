@@ -11,17 +11,19 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('outlet_visits_assignments', function (Blueprint $table) {
+        Schema::create('outlet_visit_assignments', function (Blueprint $table) {
             $table->id();
+            $table->unsignedInteger('outlet_week_schedules_id');
             $table->unsignedInteger('employee_id');
             $table->unsignedInteger('distributor_id');
             $table->string('outlet_code');
             $table->string('outlet_name');
-            $table->date('visit_date')->default(null);
+            $table->date('visit_date')->nullable()->default(null);
             $table->boolean('is_active')->default(true);
-            $table->unsignedInteger('outlet_week_schedules_id');
+            $table->dateTime('inactivated_on')->nullable()->default(null);
+            $table->unsignedInteger('inactivated_by')->nullable();
             $table->unsignedInteger('created_by');
-            $table->unsignedInteger('updated_by');
+            $table->unsignedInteger('updated_by')->nullable();
             $table->timestamps();
         });
     }
@@ -31,6 +33,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('outlet_visits_assignments');
+        Schema::dropIfExists('outlet_visit_assignments');
     }
 };

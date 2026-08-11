@@ -3,10 +3,10 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 
-class outlet_week_schedules extends Seeder
+class OutletWeekSchedule extends Seeder
 {
     /**
      * Run the database seeds.
