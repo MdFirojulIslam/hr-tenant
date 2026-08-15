@@ -55,15 +55,21 @@ class AttendenceController extends Controller
         return response()->json($attendance);
     }
 
-
     public function fetchZktAttendence()
     {
+
         Artisan::call('attendance:fetch');
         // FetchZKTecoAttendanceJob::dispatch();
         return response()->json([
             'message' => 'Attendance fetched successfully.',
             'success' => true,
         ]);
+    }
+
+    public function fetchZktUser()
+    {
+        Artisan::call('zktuser:fetch');
+        return response()->json(['message' => 'User fetched successfully.']);
     }
 
     public function prepareSummary()
@@ -208,12 +214,6 @@ class AttendenceController extends Controller
         return response()->json($response);
     }
 
-
-    public function fetchZktUser()
-    {
-        Artisan::call('zktuser:fetch');
-        return response()->json(['message' => 'User fetched successfully.']);
-    }
 
     public function getTsoLocation()
     {
@@ -460,7 +460,6 @@ class AttendenceController extends Controller
 
                 // If the batch size exceeds 1000, insert the data and reset the array
                 if (count($insertData) >= 1000) {
-
                     // DB::table('attendences')->insert($insertData);
                     DB::table('attendences')->upsert(
                         $insertData,
@@ -505,7 +504,7 @@ class AttendenceController extends Controller
 
         // Check if the date falls within any holiday period
         $isHoliday = $holidays->contains(function ($holiday) use ($date) {
-            return $date >= $holiday->from_date && $date <= $holiday->to_date;
+            return $date >= $holiday->from_date && $date <= $holiday->fo_date;
         });
 
         if ($isHoliday) {

@@ -1,11 +1,15 @@
 <script setup>
-import { ref, reactive, computed } from "vue";
+import { ref, reactive, computed, onMounted, watch } from "vue";
+import { useRoute, useRouter } from "vue-router";
 import api from "@/api";
 import Swal from "sweetalert2";
 import Label from "@/pages/components/label/Label.vue";
 import DistributorName from "@/pages/components/input_field/DistributorName.vue";
 import EmployeeName from "@/pages/components/input_field/EmployeeName.vue";
 import OutletCode from "@/pages/components/input_field/OutletCode.vue";
+
+const route = useRoute();
+const router = useRouter();
 
 const distributor_id = ref(null);
 const employee_id = ref(null);
@@ -24,6 +28,10 @@ const days = [
 const selectedWeek = ref(1);
 const selectedDistributor = ref(null);
 const selectedEmployee = ref(null);
+
+const isEditMode = ref(false);
+const isViewMode = ref(false);
+const isLoadingSetup = ref(false);
 
 const distributors = ref([
     { id: 1, name: "Dhaka Central Distributor" },
@@ -120,46 +128,40 @@ const buildPayload = () => {
     }
 
     const schedules = [];
-    const seenCodes = new Set();
-    const duplicateCodes = new Set();
 
-    weeks.forEach((week) => {
-        days.forEach((day, dayIndex) => {
+    for (const week of weeks) {
+        for (const day of days) {
             const rows = outletRows[week][day].filter(
                 (row) => row.outlet_code && row.outlet_name,
             );
 
-            if (rows.length === 0) return;
+            if (rows.length === 0) continue;
 
-            const outlets = rows.map((row) => ({
-                outlet_code: row.outlet_code,
-                outlet_name: row.outlet_name,
-            }));
-
-            outlets.forEach((outlet) => {
-                if (seenCodes.has(outlet.outlet_code)) {
-                    duplicateCodes.add(outlet.outlet_code);
+            const seenCodes = new Set();
+            for (const row of rows) {
+                const code = String(row.outlet_code).trim();
+                if (seenCodes.has(code)) {
+                    Swal.fire(
+                        "Warning",
+                        `Outlet "${code}" is already added for Week ${week} - ${day}. Every outlet must be unique within the same week and day.`,
+                        "warning",
+                    );
+                    return null;
                 }
-                seenCodes.add(outlet.outlet_code);
-            });
+                seenCodes.add(code);
+            }
 
             schedules.push({
                 outlet_week_schedules_id:
-                    (week - 1) * days.length + dayIndex + 1,
+                    (week - 1) * days.length + days.indexOf(day) + 1,
                 week_no: week,
                 day_name: day.toLowerCase(),
-                outlets,
+                outlets: rows.map((row) => ({
+                    outlet_code: row.outlet_code,
+                    outlet_name: row.outlet_name,
+                })),
             });
-        });
-    });
-
-    if (duplicateCodes.size > 0) {
-        Swal.fire(
-            "Warning",
-            `Outlet "${[...duplicateCodes].join('", "')}" has been entered more than once. Every outlet must be unique across all weeks.`,
-            "warning",
-        );
-        return null;
+        }
     }
 
     if (schedules.length === 0) {
@@ -174,16 +176,173 @@ const buildPayload = () => {
     };
 };
 
+const isOutletDuplicate = (week, day, outletCode, currentIndex) => {
+    const code = String(outletCode).trim();
+    const rows = outletRows[week][day] || [];
+    return rows.some(
+        (row, index) =>
+            index !== currentIndex &&
+            row.outlet_code &&
+            String(row.outlet_code).trim() === code,
+    );
+};
+
+const showOutletDuplicateError = (week, day, outletCode) => {
+    Swal.fire(
+        "Warning",
+        `Outlet "${outletCode}" is already added for Week ${week} - ${day}. Every outlet must be unique within the same week and day.`,
+        "warning",
+    );
+};
+
+let pendingRejectedOutlet = false;
+
+const onSelectOutlet = (week, day, index, outletCode, row) => {
+    if (!outletCode) {
+        pendingRejectedOutlet = false;
+        row.outlet_code = null;
+        row.outlet_name = null;
+        return;
+    }
+
+    if (isOutletDuplicate(week, day, outletCode, index)) {
+        pendingRejectedOutlet = true;
+        showOutletDuplicateError(week, day, outletCode);
+        return;
+    }
+
+    pendingRejectedOutlet = false;
+    row.outlet_code = outletCode;
+};
+
+const onOutletNameChange = (row, outletName) => {
+    if (pendingRejectedOutlet) {
+        pendingRejectedOutlet = false;
+        return;
+    }
+    row.outlet_name = outletName;
+};
+
+const emptyRow = () => ({
+    is_marked: false,
+    outlet_code: null,
+    outlet_name: null,
+    is_inactive: false,
+    is_visited: false,
+});
+
+const resetOutletRows = () => {
+    weeks.forEach((week) => {
+        days.forEach((day) => {
+            outletRows[week][day] = [emptyRow()];
+        });
+    });
+};
+
+const hasSetupData = (schedules) => {
+    if (!schedules) return false;
+    return weeks.some((week) =>
+        days.some(
+            (day) => (schedules[week]?.[day.toLowerCase()] || []).length > 0,
+        ),
+    );
+};
+
+const fillOutletRowsFromData = (schedules) => {
+    weeks.forEach((week) => {
+        days.forEach((day) => {
+            const saved = schedules?.[week]?.[day.toLowerCase()] || [];
+            outletRows[week][day] = saved.length
+                ? saved.map((outlet) => ({
+                      is_marked: false,
+                      outlet_code: outlet.outlet_code,
+                      outlet_name: outlet.outlet_name,
+                      is_inactive: false,
+                      is_visited: false,
+                  }))
+                : [emptyRow()];
+        });
+    });
+};
+
+let setupCheckTimer = null;
+let setupCheckSeq = 0;
+
+const checkAndLoadSetup = async () => {
+    const employeeId = employee_id.value;
+    const distributorId = distributor_id.value;
+
+    if (!employeeId || !distributorId) {
+        resetOutletRows();
+        isEditMode.value = false;
+        return;
+    }
+
+    const seq = ++setupCheckSeq;
+    isLoadingSetup.value = true;
+
+    try {
+        const res = await api.get(
+            `/outlet-visit-setup/${employeeId}/${distributorId}`,
+        );
+        if (seq !== setupCheckSeq) return;
+
+        const schedules = res.data?.data?.schedules;
+
+        if (hasSetupData(schedules)) {
+            fillOutletRowsFromData(schedules);
+            isEditMode.value = true;
+        } else {
+            resetOutletRows();
+            isEditMode.value = false;
+        }
+    } catch (err) {
+        if (seq !== setupCheckSeq) return;
+
+        resetOutletRows();
+        isEditMode.value = false;
+        const message =
+            err.response?.data?.message || "Failed to load outlet visit setup.";
+        Swal.fire("Error", message, "error");
+    } finally {
+        if (seq === setupCheckSeq) isLoadingSetup.value = false;
+    }
+};
+
+const scheduleSetupCheck = () => {
+    if (setupCheckTimer) clearTimeout(setupCheckTimer);
+    resetOutletRows();
+    isEditMode.value = false;
+    setupCheckTimer = setTimeout(checkAndLoadSetup, 250);
+};
+
+watch([distributor_id, employee_id], scheduleSetupCheck);
+
+onMounted(() => {
+    const employeeId = route.query.employee_id;
+    const distributorId = route.query.distributor_id;
+
+    if (employeeId) employee_id.value = Number(employeeId);
+    if (distributorId) distributor_id.value = Number(distributorId);
+
+    isViewMode.value = route.query.mode === "view";
+});
+
+const goBackToList = () => {
+    router.push({ name: "SetupList" });
+};
+
 const save = async () => {
     const payload = buildPayload();
     if (!payload) return;
 
+    const actionLabel = isEditMode.value ? "Update" : "Save";
     const result = await Swal.fire({
         title: "Confirmation",
-        html: "<p>Are you sure you want to save this outlet visit setup?</p>",
+        html: `<p>Are you sure you want to ${actionLabel.toLowerCase()} this outlet visit setup?</p>`,
         icon: "warning",
         showCancelButton: true,
-        confirmButtonText: "Yes, Save",
+        confirmButtonText: `Yes, ${actionLabel}`,
         cancelButtonText: "Cancel",
         confirmButtonColor: "#059223d5",
         cancelButtonColor: "#bd360dd5",
@@ -192,14 +351,23 @@ const save = async () => {
     if (!result.isConfirmed) return;
 
     try {
-        const res = await api.post("/outlet-visit-assignment", payload);
+        let res;
+        if (isEditMode.value) {
+            res = await api.put(
+                `/outlet-visit-assignment/${payload.employee_id}/${payload.distributor_id}`,
+                payload,
+            );
+        } else {
+            res = await api.post("/outlet-visit-assignment", payload);
+        }
         const message =
-            res.data?.message || "Outlet visit setup saved successfully.";
+            res.data?.message ||
+            `Outlet visit setup ${actionLabel.toLowerCase()}d successfully.`;
         Swal.fire("Success!", message, "success");
     } catch (err) {
         const message =
             err.response?.data?.message ||
-            "Failed to save outlet visit setup. Please try again.";
+            `Failed to ${actionLabel.toLowerCase()} outlet visit setup. Please try again.`;
         Swal.fire("Error", message, "error");
     }
 };
@@ -216,26 +384,54 @@ const save = async () => {
             <h2 class="header-design p-1 d-flex align-items-center gap-2">
                 <i class="fa-solid fa-store icon-design"></i>
                 Outlet Visit Setup
+                <span
+                    v-if="isViewMode"
+                    class="badge bg-secondary ms-1"
+                    style="font-size: 10px"
+                >
+                    View Mode
+                </span>
+                <span
+                    v-else-if="isEditMode"
+                    class="badge bg-success ms-1"
+                    style="font-size: 10px"
+                >
+                    Edit Mode
+                </span>
             </h2>
 
             <!-- WEEK NAVIGATION -->
-            <div class="week-tabs">
+            <div class="d-flex align-items-center gap-2">
+                <div class="week-tabs">
+                    <button
+                        v-for="week in weeks"
+                        :key="week"
+                        type="button"
+                        class="week-tab"
+                        :class="{ active: selectedWeek === week }"
+                        @click="selectedWeek = week"
+                    >
+                        Week {{ week }}
+                    </button>
+                </div>
                 <button
-                    v-for="week in weeks"
-                    :key="week"
+                    v-if="isEditMode || isViewMode"
                     type="button"
-                    class="week-tab"
-                    :class="{ active: selectedWeek === week }"
-                    @click="selectedWeek = week"
+                    class="btn btn-sm btn-outline-secondary"
+                    @click="goBackToList"
                 >
-                    Week {{ week }}
+                    <i class="fa-solid fa-arrow-left me-1"></i>
+                    Back
                 </button>
             </div>
         </div>
 
         <!-- SETUP INFORMATION -->
         <div class="px-2 mt-4">
-            <div class="setup-section p-1">
+            <div
+                class="setup-section p-1"
+                :class="{ 'readonly-block': isViewMode }"
+            >
                 <div class="d-flex gap-4">
                     <div>
                         <Label label="Distributor Name*" />
@@ -263,6 +459,7 @@ const save = async () => {
                         >
                             <span>{{ day }}</span>
                             <button
+                                v-if="!isViewMode"
                                 type="button"
                                 class="btn btn-xs btn-success add-btn-icon"
                                 title="Add Row"
@@ -319,21 +516,45 @@ const save = async () => {
                                                     v-model="row.is_marked"
                                                     class="form-check-input custom-checkbox"
                                                     type="checkbox"
+                                                    :disabled="isViewMode"
                                                 />
                                             </td>
 
                                             <!-- OUTLET CODE -->
                                             <td>
                                                 <OutletCode
-                                                    v-model:outlet_code="
+                                                    v-if="!isViewMode"
+                                                    :outlet_code="
                                                         row.outlet_code
                                                     "
-                                                    v-model:outlet_name="
+                                                    :outlet_name="
                                                         row.outlet_name
                                                     "
                                                     :distributor_id="
                                                         distributor_id
                                                     "
+                                                    @update:outlet_code="
+                                                        onSelectOutlet(
+                                                            selectedWeek,
+                                                            day,
+                                                            index,
+                                                            $event,
+                                                            row,
+                                                        )
+                                                    "
+                                                    @update:outlet_name="
+                                                        onOutletNameChange(
+                                                            row,
+                                                            $event,
+                                                        )
+                                                    "
+                                                />
+                                                <input
+                                                    v-else
+                                                    :value="row.outlet_code"
+                                                    type="text"
+                                                    class="form-control"
+                                                    readonly
                                                 />
                                             </td>
 
@@ -353,6 +574,7 @@ const save = async () => {
                                                     v-model="row.is_visited"
                                                     class="form-check-input custom-checkbox"
                                                     type="checkbox"
+                                                    :disabled="isViewMode"
                                                 />
                                             </td>
 
@@ -360,6 +582,7 @@ const save = async () => {
                                             <td class="text-center">
                                                 <button
                                                     v-if="
+                                                        !isViewMode &&
                                                         outletRows[
                                                             selectedWeek
                                                         ][day].length > 1
@@ -393,12 +616,22 @@ const save = async () => {
         <!-- SAVE -->
         <div class="text-center py-2">
             <button
+                v-if="isViewMode"
+                type="button"
+                class="btn btn-sm btn-secondary px-4"
+                @click="goBackToList"
+            >
+                <i class="fa-solid fa-arrow-left me-1"></i>
+                Back to List
+            </button>
+            <button
+                v-else
                 type="button"
                 class="btn btn-sm btn-success px-4"
                 @click="save"
             >
                 <i class="fa-solid fa-floppy-disk me-1"></i>
-                Save
+                {{ isEditMode ? "Update" : "Save" }}
             </button>
         </div>
 
@@ -459,6 +692,11 @@ const save = async () => {
     letter-spacing: 0.2px;
     font-size: 11px;
     margin-bottom: 2px;
+}
+
+.readonly-block {
+    pointer-events: none;
+    opacity: 0.7;
 }
 
 .week-tabs {

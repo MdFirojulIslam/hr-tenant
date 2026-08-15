@@ -635,6 +635,41 @@ const routes = [
             pageId: 69,
         },
     },
+    {
+        path: "/workstation/task-board",
+        name: "TaskBoard",
+        component: () => import("./pages/workstation/taskBoard.vue"),
+        meta: {
+            requireAuth: true,
+            pageId: 72,
+        },
+    },
+    {
+        path: "/setup/event-setup",
+        name: "EventSetup",
+        component: () => import("./pages/setup/event/eventSetup.vue"),
+        meta: {
+            requireAuth: true,
+            pageId: 74,
+        },
+    },
+    {
+        path: "/outlet-visit/setup-list",
+        name: "SetupList",
+        component: () => import("./pages/outletVisit/setupList.vue"),
+        meta: {
+            requireAuth: true,
+            pageId: 76,
+        },
+    },
+    {
+        path: "/outlet-visit/single-week-setup",
+        name: "SingleWeekSetup",
+        component: () => import("./pages/outletVisit/singleWeekSetup.vue"),
+        meta: {
+            requireAuth: true,
+        },
+    },
 ];
 
 const router = createRouter({
@@ -643,14 +678,16 @@ const router = createRouter({
 });
 
 router.beforeEach((to, from, next) => {
-    const userPermissions = store.getters.getPermissions || [];
+    const userPermissions = (store.getters.getPermissions || []).map((id) =>
+        Number(id),
+    );
     const token = store.getters.getToken;
 
     if (to.path === "/" && token === 0) {
         return next();
     }
 
-    if (to.meta.pageId && !userPermissions.includes(to.meta.pageId)) {
+    if (to.meta.pageId && !userPermissions.includes(Number(to.meta.pageId))) {
         return next("/");
     }
 

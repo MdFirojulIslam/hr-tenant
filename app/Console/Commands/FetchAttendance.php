@@ -22,6 +22,7 @@ class FetchAttendance extends Command
 
     public function handle()
     {
+        $this->info('FetchAttendance command started.');
         $zkt_info = zkt_machine::where('Status', 1)->get();
 
         if ($zkt_info->isEmpty()) {
@@ -31,8 +32,8 @@ class FetchAttendance extends Command
 
         foreach ($zkt_info as $info) {
             $this->info("Processing machine: IP {$info->IP}, Port {$info->port}");
-
             $zk = new ZKTeco($info->IP, $info->port);
+
             if ($zk->connect()) {
                 $attendanceData = $zk->getAttendance();
 

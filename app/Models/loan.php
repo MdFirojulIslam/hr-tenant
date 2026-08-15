@@ -9,8 +9,6 @@ class loan extends Model
 {
     use HasFactory;
 
-    protected $table = 'loans';
-
     protected $fillable = [
         'employee_id',
         'principal_amounts',

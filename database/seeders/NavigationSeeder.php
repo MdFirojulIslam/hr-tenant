@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\navigation;
+use App\Models\user_has_page;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
@@ -77,12 +78,58 @@ class NavigationSeeder extends Seeder
             ['id' => '65', 'name' => 'Incentive Setup', 'url' => '/incentive/incentive-setup', 'icon' => 'NULL', 'page' => 'IncentiveSetup', 'path' => './pages/attendance/incentiveSetup.vue', 'parent_id' => '64', 'active' => '1'],
             ['id' => '66', 'name' => 'Daily Order Target', 'url' => '/workstation/daily-order-target', 'icon' => 'fa-solid fa-bullseye', 'page' => 'DailyOrderTarget', 'path' => 'NULL', 'parent_id' => '34', 'active' => '1'],
             ['id' => '67', 'name' => 'Market Intelligence', 'url' => '/workstation/market-intelligence', 'icon' => 'fa-solid fa-chart-line', 'page' => 'MarketIntelligence', 'path' => 'NULL', 'parent_id' => '34', 'active' => '1'],
-            ['id' => '68', 'name' => 'Outlet Visit', 'url' => '/outlet-visit', 'icon' => 'fa-solid fa-store', 'page' => 'OutletVisit', 'path' => 'NULL', 'parent_id' => '0', 'active' => '1'],
+            // 68 = parent group (web nav folder). Flutter page permission is child 70.
+            ['id' => '68', 'name' => 'Outlet Visit', 'url' => '/outlet-visit', 'icon' => 'fa-solid fa-store', 'page' => 'NULL', 'path' => 'NULL', 'parent_id' => '0', 'active' => '1'],
             ['id' => '69', 'name' => 'Outlet Visit Setup', 'url' => '/outlet-visit/setup', 'icon' => 'NULL', 'page' => 'OutletVisitSetup', 'path' => './pages/outletVisit/outletVisitSetup.vue', 'parent_id' => '68', 'active' => '1'],
+            ['id' => '70', 'name' => 'Outlet Visit', 'url' => '/workstation/outlet-visit', 'icon' => 'NULL', 'page' => 'OutletVisit', 'path' => 'NULL', 'parent_id' => '68', 'active' => '1'],
+            ['id' => '71', 'name' => 'MoM', 'url' => '/workstation/mom', 'icon' => 'fa-solid fa-clipboard-list', 'page' => 'MinutesOfMeeting', 'path' => 'NULL', 'parent_id' => '34', 'active' => '1'],
+            ['id' => '72', 'name' => 'Task Board', 'url' => '/workstation/task-board', 'icon' => 'fa-solid fa-list-check', 'page' => 'TaskBoard', 'path' => './pages/workstation/taskBoard.vue', 'parent_id' => '34', 'active' => '1'],
+            ['id' => '73', 'name' => 'Task Board', 'url' => '/workstation/task-board-mobile', 'icon' => 'NULL', 'page' => 'TaskBoardMobile', 'path' => 'NULL', 'parent_id' => '34', 'active' => '1'],
+            ['id' => '74', 'name' => 'Event Setup', 'url' => '/setup/event-setup', 'icon' => 'NULL', 'page' => 'EventSetup', 'path' => './pages/setup/event/eventSetup.vue', 'parent_id' => '6', 'active' => '1'],
+            ['id' => '75', 'name' => 'Events', 'url' => '/workstation/events', 'icon' => 'NULL', 'page' => 'Events', 'path' => 'NULL', 'parent_id' => '34', 'active' => '1'],
+            ['id' => '76', 'name' => 'Setup List', 'url' => '/outlet-visit/setup-list', 'icon' => 'NULL', 'page' => 'SetupList', 'path' => './pages/outletVisit/setupList.vue', 'parent_id' => '68', 'active' => '1'],
+
         ];
 
         foreach ($navigations as $item) {
-            navigation::create($item);
+            navigation::updateOrCreate(
+                ['id' => $item['id']],
+                $item
+            );
+        }
+
+        $this->grantPagesToParentHolders([
+            72 => 34, // Task Board (website) — Workstation
+            73 => 34, // Task Board (mobile) — Workstation
+            74 => 6,  // Event Setup (website) — Setup
+            75 => 34, // Events (mobile) — Workstation
+        ]);
+    }
+
+    /**
+     * Sidebar / mobile modules only appear if the page ID is in user_has_pages.
+     * New children are granted to anyone who already has the parent menu.
+     */
+    private function grantPagesToParentHolders(array $pageToParent): void
+    {
+        foreach (user_has_page::query()->get() as $row) {
+            $ids = is_array($row->Page_Id)
+                ? $row->Page_Id
+                : (json_decode((string) $row->Page_Id, true) ?: []);
+            $ids = array_values(array_unique(array_map('intval', $ids)));
+
+            $changed = false;
+            foreach ($pageToParent as $pageId => $parentId) {
+                if (in_array((int) $parentId, $ids, true) && !in_array((int) $pageId, $ids, true)) {
+                    $ids[] = (int) $pageId;
+                    $changed = true;
+                }
+            }
+
+            if ($changed) {
+                $row->Page_Id = json_encode($ids);
+                $row->save();
+            }
         }
     }
 }

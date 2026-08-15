@@ -700,12 +700,25 @@ class LeaveController extends Controller
                 ], 404);
             }
 
+            $previous = (string) $existLeaveID->status;
             $existLeaveID->update([
                 'status' => $status,
                 'updated_by' => $user_id
             ]);
 
             DB::commit();
+
+            if (strcasecmp((string) $status, 'Approved') === 0
+                && strcasecmp($previous, 'Approved') !== 0) {
+                try {
+                    \App\Support\MobileNotificationDispatcher::notifyLeaveApproved(
+                        (int) ($existLeaveID->employee_id ?? $existLeaveID->EID),
+                        (int) $existLeaveID->id
+                    );
+                } catch (\Throwable $e) {
+                    report($e);
+                }
+            }
 
             return response()->json([
                 'success' => true,
@@ -739,12 +752,25 @@ class LeaveController extends Controller
                 ], 404);
             }
 
+            $previous = (string) $existLeaveID->status;
             $existLeaveID->update([
                 'status' => $status,
                 'updated_by' => $user_id
             ]);
 
             DB::commit();
+
+            if (strcasecmp((string) $status, 'Approved') === 0
+                && strcasecmp($previous, 'Approved') !== 0) {
+                try {
+                    \App\Support\MobileNotificationDispatcher::notifyLeaveApproved(
+                        (int) ($existLeaveID->employee_id ?? $existLeaveID->EID),
+                        (int) $existLeaveID->id
+                    );
+                } catch (\Throwable $e) {
+                    report($e);
+                }
+            }
 
             return response()->json([
                 'success' => true,

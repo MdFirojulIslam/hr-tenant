@@ -3,7 +3,6 @@
 use App\Http\Controllers\Report\CertificateController;
 use App\Http\Controllers\Report\ReportController;
 use Illuminate\Support\Facades\Artisan;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/link-storage', function () {
@@ -36,7 +35,6 @@ Route::get('/certificate-of-income/{id}', [CertificateController::class, 'getCer
 
 
 //Leave
-// Route::get('/leave-report/{id}', [ReportController::class, 'leaveReport']);
 Route::get('/leave-report/{id}', [ReportController::class, 'leaveReport']);
 Route::get('/app-attendance-report/{id}', [ReportController::class, 'appAttendanceReport']);
 Route::get('/attendance-report/{id}', [ReportController::class, 'attendanceReport']);
@@ -45,16 +43,16 @@ Route::get('/holiday-report', [ReportController::class, 'holidayReport']);
 //Expense report
 Route::get('/expense-report', [ReportController::class, "getExpenseReport"]);
 
+// Must stay ABOVE the /{any} SPA catch-all so it is reachable.
+Route::get('/clear-caches', function () {
+    Artisan::call('route:clear');
+    Artisan::call('config:clear');
+    Artisan::call('cache:clear');
+    Artisan::call('view:clear');
 
+    return 'Caches cleared (route, config, cache, view).';
+});
 
 Route::get('/{any}', function () {
     return view('welcome');
-})->where('any', '.*');
-
-
-Route::get('/clear-caches', function () {
-    //VERY DANGEROUS, DO NOT USE IN PRODUCTION
-    Artisan::call('route:clear');
-
-    return 'Caches cleared.';
-});
+})->where('any','.*');

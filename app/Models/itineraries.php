@@ -29,6 +29,6 @@ class itineraries extends Model
     }
     public function itinerariesUpdates()
     {
-        return $this->belongsTo(itineraries_updates::class, 'itineraries_id');
+        return $this->belongsTo(itineraries_update::class, 'itineraries_id');
     }
 }

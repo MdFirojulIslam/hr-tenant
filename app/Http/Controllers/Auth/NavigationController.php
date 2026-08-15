@@ -50,20 +50,57 @@ class NavigationController extends Controller
 
         $decodedPermissions = [];
         foreach ($permissions as $permission) {
-            $decodedPermissions = array_merge($decodedPermissions, json_decode($permission, true));
+            $decoded = is_array($permission) ? $permission : json_decode($permission, true);
+            if (is_array($decoded)) {
+                $decodedPermissions = array_merge($decodedPermissions, $decoded);
+            }
         }
+        $decodedPermissions = array_values(array_unique(array_map('intval', $decodedPermissions)));
+
+        $mobileOnlyIds = config('mobile.mobile_only_navigation_ids', []);
 
         $navItems = navigation::get()->toArray();
-        $filteredNavItems = array_filter($navItems, function ($item) use ($decodedPermissions) {
-            return in_array($item['id'], $decodedPermissions);
+        $filteredNavItems = array_filter($navItems, function ($item) use ($decodedPermissions, $mobileOnlyIds, $navItems) {
+            if (!in_array((int) $item['id'], $decodedPermissions, true)) {
+                return false;
+            }
+
+            // Hide mobile-only modules from website navigation.
+            if (in_array((int) $item['id'], $mobileOnlyIds, true)) {
+                return false;
+            }
+
+            // Leaf items with no Vue path stay hidden. Parent/folder menus
+            // (Security, Setup, Attendance, …) intentionally have path NULL —
+            // keep those so children can nest in the sidebar tree.
+            $path = $item['path'] ?? null;
+            $hasNoPath = $path === null || $path === '' || strtoupper((string) $path) === 'NULL';
+            if ($hasNoPath) {
+                $isParentFolder = false;
+                foreach ($navItems as $candidate) {
+                    if ((int) $candidate['parent_id'] === (int) $item['id']) {
+                        $isParentFolder = true;
+                        break;
+                    }
+                }
+                if (!$isParentFolder) {
+                    return false;
+                }
+            }
+
+            return true;
         });
 
         $navTree = $this->buildTree($filteredNavItems);
 
 
-        $dashboard = in_array(1, $decodedPermissions);
+        $dashboard = in_array(1, $decodedPermissions, true);
 
-        return response()->json(['dashboard' => $dashboard, 'tree' => $navTree]);
+        return response()->json([
+            'dashboard' => $dashboard,
+            'tree' => $navTree,
+            'permissions' => $decodedPermissions,
+        ]);
     }
 
 

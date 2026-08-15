@@ -24,6 +24,26 @@ class Kernel extends ConsoleKernel
     protected function schedule(Schedule $schedule): void
     {
         $schedule->job(new CommonJob())->everyMinute();
+
+        $schedule->command('mobile:dispatch-notifications check_in')
+            ->dailyAt('09:50')
+            ->timezone('Asia/Dhaka');
+
+        $schedule->command('mobile:dispatch-notifications check_out')
+            ->dailyAt('18:30')
+            ->timezone('Asia/Dhaka');
+
+        $schedule->command('mobile:dispatch-notifications expense')
+            ->dailyAt('22:00')
+            ->timezone('Asia/Dhaka');
+
+        $schedule->command('mobile:dispatch-notifications outlet')
+            ->hourly()
+            ->timezone('Asia/Dhaka');
+
+        $schedule->command('mobile:dispatch-notifications events')
+            ->hourly()
+            ->timezone('Asia/Dhaka');
     }
 
     /**

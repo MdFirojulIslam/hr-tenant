@@ -68,20 +68,30 @@ class AppAttendanceController extends Controller
 
     private function getLocationName($latitude, $longitude)
     {
+        $fallback = round((float) $latitude, 5) . ', ' . round((float) $longitude, 5);
         $apiKey = env('OPEN_CAGE_API_KEY');
-        $url = "https://api.opencagedata.com/geocode/v1/json?q={$latitude}%2C{$longitude}&key={$apiKey}";
+
+        if (empty($apiKey)) {
+            return $fallback;
+        }
 
         try {
-            $response = Http::get($url);
-            
-            if ($response->successful() && isset($response['results'][0]['formatted'])) {
-                return $response['results'][0]['formatted'];
-            }
+            $response = Http::timeout(8)->get('https://api.opencagedata.com/geocode/v1/json', [
+                'q' => "{$latitude},{$longitude}",
+                'key' => $apiKey,
+            ]);
 
-            return $response;
+            if ($response->successful()) {
+                $formatted = data_get($response->json(), 'results.0.formatted');
+                if (is_string($formatted) && $formatted !== '') {
+                    return $formatted;
+                }
+            }
         } catch (\Exception $e) {
-            return 'Error fetching location';
+            return $fallback;
         }
+
+        return $fallback;
     }
 
 

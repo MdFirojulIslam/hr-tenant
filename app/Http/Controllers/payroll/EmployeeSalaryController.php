@@ -776,6 +776,7 @@ class EmployeeSalaryController extends Controller
             )
             ->get();
 
+        // Calculate totals
         $net_total = $salaries->sum(fn($s) => (float) $s->final_payments);
         // Calculate totals
         $bankTotal = $salaries
@@ -796,6 +797,46 @@ class EmployeeSalaryController extends Controller
         ]);
     }
 
+
+
+
+    // public function SalaryDisbursementBankPDF(Request $request)
+    // {
+    //     $year = $request->year;
+    //     $month = $request->month;
+
+    //     // Convert month number to month name
+    //     $monthName = date('F', mktime(0, 0, 0, $month, 10)); // e.g., 1 => January
+
+    //     $salaries = DB::table('salary_sheets')
+    //         ->join('employees', 'employees.id', '=', 'salary_sheets.employee_id')
+    //         ->join('officials', 'officials.EID', '=', 'salary_sheets.employee_id')
+    //         ->join('departments', 'departments.id', '=', 'officials.Department_Id')
+    //         ->where('salary_sheets.payment_method', 'bank')
+    //         ->whereNotNull('salary_sheets.disbursement_status')
+    //         ->whereYear('salary_sheets.salary_date', $year)
+    //         ->whereMonth('salary_sheets.salary_date', $month)
+    //         ->select(
+    //             'employees.Employee_Id as employee_id',
+    //             'employees.Full_Name as full_name',
+    //             'salary_sheets.bank_account_no',
+    //             'salary_sheets.final_payments'
+    //         )->orderBy('departments.id')->get();
+    //     $grandTotal = $salaries->sum('net_pay');
+
+    //     $pdf = Pdf::loadView('pdf.salary-disbursement-bank-pdf', [
+    //         'data' => $salaries,
+    //         'year' => $year,
+    //         'month' => $month,
+    //         'monthName' => $monthName, // pass it to view
+    //         'grandTotal' => $grandTotal
+    //     ]);
+
+    //     $pdf->setPaper('A4', 'portrait');
+
+    //     return $pdf->download("Salary_Disbursement_{$monthName}_{$year}.pdf");
+    // }
+    // add this at top
 
     public function SalaryDisbursementBankPDF(Request $request)
     {
@@ -885,8 +926,6 @@ class EmployeeSalaryController extends Controller
 
     public function SalaryDisbursementBankXLSX(Request $request)
     {
-
-
         $year = $request->year;
         $month = $request->month;
 
@@ -1264,9 +1303,7 @@ class EmployeeSalaryController extends Controller
         $employee_id = $request->query('employee_id');
         $query = $request->query('query');
 
-
         $salaryDate = Carbon::createFromDate($year, $month, 1)->format('Y-m-d');
-
 
         // Subquery: total completed bonuses per employee for the given month
         $bonusSubquery = DB::table('bonus_sheets')
@@ -1280,13 +1317,11 @@ class EmployeeSalaryController extends Controller
             )
             ->groupBy('bonus_sheets.employee_id');
 
-
         $salaryQuery = DB::table('salary_sheets')
             ->join('employees', 'employees.id', '=', 'salary_sheets.employee_id')
             ->join('officials', 'officials.EID', '=', 'salary_sheets.employee_id')
             ->join('departments', 'departments.id', '=', 'officials.Department_Id')
             ->join('designations', 'designations.id', '=', 'officials.Designation_Id')
-
 
             // Salary disbursement (LEFT JOIN to check completed salaries)
             ->leftJoin('salary_disbursements as sd', function ($join) {
@@ -1294,19 +1329,15 @@ class EmployeeSalaryController extends Controller
                     ->where('sd.status', 'COMPLETED');
             })
 
-
             // Join the aggregated bonuses
             ->leftJoinSub($bonusSubquery, 'bonus_summary', function ($join) {
                 $join->on('bonus_summary.employee_id', '=', 'salary_sheets.employee_id');
             })
 
 
-
-
             // Salary month filter
             ->whereYear('salary_sheets.salary_date', $year)
             ->whereMonth('salary_sheets.salary_date', $month)
-
 
             // Select desired fields
             ->select(
@@ -1316,21 +1347,8 @@ class EmployeeSalaryController extends Controller
                 'departments.Name as departmentName',
                 'designations.Name as designationName',
                 'salary_sheets.*',
-
-
-                DB::raw('
-                   salary_sheets.total_deduction +
-                   salary_sheets.monthly_loan_repayments AS net_total_deduction
-               '),
-
-
-                DB::raw('
-                   salary_sheets.total_payment +
-                   COALESCE(bonus_summary.total_bonus, 0) AS net_total_earning
-               '),
-                DB::raw('COALESCE(bonus_summary.total_bonus,0) as bonus_amounts')
+                'bonus_summary.total_bonus as bonus_amounts'
             );
-
 
         // Filter by employee
         if ($employee_id) {
@@ -1339,12 +1357,10 @@ class EmployeeSalaryController extends Controller
             $salaryQuery->where('employees.id', $id);
         }
 
-
         // Filter by department
         if ($department_id) {
             $salaryQuery->where('departments.id', $department_id);
         }
-
 
         // Optional search query
         if ($query) {
@@ -1354,25 +1370,17 @@ class EmployeeSalaryController extends Controller
             });
         }
 
-
         // Fetch the results
         $salaries = $salaryQuery->get()->map(function ($item) {
-
 
             $item->salary_status = ucwords(strtolower($item->salary_status));
             $item->payment_method = ucwords(strtolower($item->payment_method));
 
-
             return $item;
         });
 
-
-
         return response()->json($salaries);
     }
-
-
-
 
     public function departmentList($id)
     {
@@ -1515,12 +1523,9 @@ class EmployeeSalaryController extends Controller
         $year  = $request->year;
         $month = $request->month;
 
-
         $monthName = date('F', mktime(0, 0, 0, $month, 10));
 
-
         $salaryDate = Carbon::createFromDate($year, $month, 1)->format('Y-m-d');
-
 
         $bonusSubquery = DB::table('bonus_sheets')
             ->join('bonus_disbursements as bd', 'bd.bonus_id', '=', 'bonus_sheets.bonus_id')
@@ -1533,13 +1538,11 @@ class EmployeeSalaryController extends Controller
             )
             ->groupBy('bonus_sheets.employee_id');
 
-
         $payslip = DB::table('salary_sheets')
             ->join('employees', 'employees.id', '=', 'salary_sheets.employee_id')
             ->join('officials', 'officials.EID', '=', 'salary_sheets.employee_id')
             ->join('departments', 'departments.id', '=', 'officials.Department_Id')
             ->join('designations', 'designations.id', '=', 'officials.Designation_Id')
-
 
             // Salary Disbursement check
             ->leftJoin('salary_disbursements as sd', function ($join) {
@@ -1547,17 +1550,14 @@ class EmployeeSalaryController extends Controller
                     ->where('sd.status', 'COMPLETED');
             })
 
-
             // Bonus Join
             ->leftJoinSub($bonusSubquery, 'bonus_summary', function ($join) {
                 $join->on('bonus_summary.employee_id', '=', 'salary_sheets.employee_id');
             })
 
-
             ->where('salary_sheets.employee_id', $id)
             ->whereYear('salary_sheets.salary_date', $year)
             ->whereMonth('salary_sheets.salary_date', $month)
-
 
             ->select(
                 'employees.id',
@@ -1566,38 +1566,15 @@ class EmployeeSalaryController extends Controller
                 'departments.Name as departmentName',
                 'designations.Name as designationName',
                 'salary_sheets.*',
-
-
-                DB::raw('
-                   salary_sheets.total_deduction +
-                   salary_sheets.monthly_loan_repayments AS net_total_deduction
-               '),
-
-
-                DB::raw('
-                   salary_sheets.total_payment +
-                   COALESCE(bonus_summary.total_bonus, 0) AS net_total_earning
-               '),
                 DB::raw('COALESCE(bonus_summary.total_bonus,0) as bonus_amounts')
-                // 'employees.id',
-                // 'employees.Employee_Id',
-                // 'employees.Full_Name',
-                // 'departments.Name as departmentName',
-                // 'designations.Name as designationName',
-                // 'salary_sheets.*',
-                // DB::raw('COALESCE(bonus_summary.total_bonus,0) as bonus_amounts')
             )
 
-
             ->first();
-
 
         if ($payslip) {
             $payslip->salary_status = ucwords(strtolower($payslip->salary_status));
             $payslip->payment_method = ucwords(strtolower($payslip->payment_method));
         }
-
-
 
 
         return view('payroll.payslip-print', [
@@ -1606,9 +1583,6 @@ class EmployeeSalaryController extends Controller
             'monthName' => $monthName
         ]);
     }
-
-
-
 
     public function downloadSalaryAdjustmentReport(Request $request)
     {

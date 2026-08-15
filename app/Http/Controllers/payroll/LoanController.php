@@ -457,71 +457,25 @@ class LoanController extends Controller
         return response()->json($result);
     }
 
-    // public function updateRepayment(Request $request, $id)
-    // {
+    public function updateRepayment(Request $request, $id)
+    {
+        $repayment = loan_repayment::find($id);
 
-    //     $repayment = loan_repayment::find($id);
+        if (!$repayment) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Repayment not found'
+            ]);
+        }
 
-    //     if (!$repayment) {
-    //         return response()->json([
-    //             'success' => false,
-    //             'message' => 'Repayment not found'
-    //         ]);
-    //     }
+        $repayment->update([
+            'installment_amounts' => $request->installment_amount,
+            'paid_on_dates' => $request->installment_date
+        ]);
 
-    //     $repayment->update([
-    //         'installment_amounts' => $request->installment_amount,
-    //         'paid_on_dates' => $request->installment_date
-    //     ]);
-
-    //     return response()->json([
-    //         'success' => true,
-    //         'message' => 'Repayment updated successfully'
-    //     ]);
-    // }
-    // public function updateRepayment(Request $request)
-    // {
-    //     $request->validate([
-    //         '*.employee_id' => 'required|integer',
-    //         '*.installment_date' => 'required|date',
-    //         '*.installment_amount' => 'required|numeric|min:1',
-    //     ]);
-
-    //     try {
-    //         DB::beginTransaction();
-
-    //         foreach ($request->all() as $row) {
-
-    //             // 🔍 Find repayment by employee_id
-    //             $repayment = loan_repayment::where('employee_id', $row['employee_id'])->first();
-
-    //             if (!$repayment) {
-    //                 // Optional: skip or throw error
-    //                 continue;
-    //             }
-
-    //             // ✅ Update fields
-    //             $repayment->update([
-    //                 'installment_amounts' => $row['installment_amount'],
-    //                 'paid_on_dates' => $row['installment_date'],
-    //                 'status' => 'Paid', // যদি status field থাকে
-    //             ]);
-    //         }
-
-    //         DB::commit();
-
-    //         return response()->json([
-    //             'success' => true,
-    //             'message' => 'Repayment updated successfully'
-    //         ]);
-    //     } catch (\Exception $e) {
-    //         DB::rollBack();
-
-    //         return response()->json([
-    //             'success' => false,
-    //             'message' => $e->getMessage()
-    //         ], 500);
-    //     }
-    // }
-
+        return response()->json([
+            'success' => true,
+            'message' => 'Repayment updated successfully'
+        ]);
+    }
 }
