@@ -105,3 +105,10 @@ Route::get('/department', [DepartmentController::class, 'index']);
 Route::get('/designation', [DesignationController::class, 'index']);
 Route::get('/designation/{id}', [DesignationController::class, 'show']);
 Route::get('/dashboard-count', [DashboardController::class, 'index']);
+
+
+//Documentation Api In below
+Route::get('/get-documentation-info', [EmployeeInformationController::class, 'getDocumentationInfo']);
+Route::get('/get-documentation-info/{emp_id}/edit', [EmployeeInformationController::class, 'editDocumentationInfo']);
+Route::post('/get-documentation-info', [EmployeeInformationController::class, 'insertDocumentationInfo']);
+Route::put('/get-documentation-info/{emp_id}', [EmployeeInformationController::class, 'updateDocumentationInfo']);

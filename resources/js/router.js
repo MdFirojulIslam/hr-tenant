@@ -88,6 +88,15 @@ const routes = [
                 },
             },
             {
+                path: "/setup/employee/documentation/:id?",
+                name: "Documentation",
+                component: () =>
+                    import("./pages/setup/employee/documentationInfo.vue"),
+                meta: {
+                    requireAuth: true,
+                },
+            },
+            {
                 path: "/setup/employee/professional/:id?",
                 name: "Professional",
                 component: () =>

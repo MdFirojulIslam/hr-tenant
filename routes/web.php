@@ -5,6 +5,9 @@ use App\Http\Controllers\Report\ReportController;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Route;
 
+
+
+
 Route::get('/link-storage', function () {
     $targetFolder = $_SERVER['DOCUMENT_ROOT'] . '/storage/app/public';
     $linkFolder = $_SERVER['DOCUMENT_ROOT'] . '/public/storage';
@@ -55,4 +58,4 @@ Route::get('/clear-caches', function () {
 
 Route::get('/{any}', function () {
     return view('welcome');
-})->where('any','.*');
+})->where('any', '.*');

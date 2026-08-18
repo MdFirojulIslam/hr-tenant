@@ -29,7 +29,11 @@ const empEdit = ref([]);
                 <router-link
                     class="nav-link"
                     active-class="active"
-                    :to="empId ? { name: 'Personal', params: { id: empId } } : { name: 'Personal' }"
+                    :to="
+                        empId
+                            ? { name: 'Personal', params: { id: empId } }
+                            : { name: 'Personal' }
+                    "
                     >Personal Information</router-link
                 >
             </li>
@@ -37,7 +41,11 @@ const empEdit = ref([]);
                 <router-link
                     class="nav-link"
                     active-class="active"
-                    :to="empId ? { name: 'Professional', params: { id: empId } } : { name: 'Professional' }"
+                    :to="
+                        empId
+                            ? { name: 'Professional', params: { id: empId } }
+                            : { name: 'Professional' }
+                    "
                     >Professional Information</router-link
                 >
             </li>
@@ -45,8 +53,24 @@ const empEdit = ref([]);
                 <router-link
                     class="nav-link"
                     active-class="active"
-                    :to="empId ? { name: 'Official', params: { id: empId } } : { name: 'Official' }"
+                    :to="
+                        empId
+                            ? { name: 'Official', params: { id: empId } }
+                            : { name: 'Official' }
+                    "
                     >Official Information</router-link
+                >
+            </li>
+            <li class="nav-item">
+                <router-link
+                    class="nav-link"
+                    active-class="active"
+                    :to="
+                        empId
+                            ? { name: 'Documentation', params: { id: empId } }
+                            : { name: 'Documentation' }
+                    "
+                    >Documentation</router-link
                 >
             </li>
         </ul>

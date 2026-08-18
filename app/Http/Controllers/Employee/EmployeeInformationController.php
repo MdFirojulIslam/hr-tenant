@@ -27,6 +27,8 @@ use App\Models\town_belong;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
+use App\Models\EmpInfoDocumentation;
+use Illuminate\Http\Request;
 
 class EmployeeInformationController extends Controller
 {
@@ -391,5 +393,222 @@ class EmployeeInformationController extends Controller
         }
 
         return $subordinates;
+    }
+
+    private function calculateCompletedPercent(array $data): string
+    {
+        $total = 18;
+        $completed = 0;
+
+        $fields = [
+            'job_circular',
+            'interview_evalation',
+            'appointment_letter',
+            'updated_resume',
+            'nid_passport',
+            'academic_cert',
+            'post_graduate_cert',
+            'prev_cmp_exp_letter',
+            'prev_cmp_release_letter',
+            'prev_cmp_salary_cert',
+            'recent_passport_pic',
+            'two_emegency_info',
+            'nid_verified',
+            'job_description',
+            'joining_letter',
+            'kye_form',
+            'emp_declation_letter',
+            'pa_pp_address',
+        ];
+
+        foreach ($fields as $field) {
+            $value = $data[$field] ?? null;
+            if ($value === 'Yes' || $value === 'Not Applicable') {
+                $completed++;
+            }
+        }
+
+        return round(($completed / $total) * 100, 2);
+    }
+
+    public function getDocumentationInfo(Request $request)
+    {
+        $employeeId = $request->query('employee_id');
+
+        if (!$employeeId) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Employee ID is required.',
+            ], 400);
+        }
+
+        $documentation = EmpInfoDocumentation::where('employee_id', $employeeId)->first();
+
+        if (!$documentation) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Empty',
+            ]);
+        }
+
+        return response()->json($documentation);
+    }
+
+    public function editDocumentationInfo(Request $request)
+    {
+        $employeeId = $request->query('employee_id');
+
+        if (!$employeeId) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Employee ID is required.',
+            ], 400);
+        }
+
+        $documentation = EmpInfoDocumentation::where('employee_id', $employeeId)->first();
+
+        if (!$documentation) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Empty',
+            ]);
+        }
+
+        return response()->json($documentation);
+    }
+
+    public function insertDocumentationInfo(Request $request)
+    {
+        $validated = $request->validate([
+            'employee_id' => 'required|integer',
+            'job_circular' => 'nullable|in:Not Applicable,Yes,No',
+            'interview_evalation' => 'nullable|in:Not Applicable,Yes,No',
+            'appointment_letter' => 'nullable|in:Yes,No',
+            'updated_resume' => 'nullable|in:Yes,No',
+            'nid_passport' => 'nullable|in:Yes,No',
+            'academic_cert' => 'nullable|in:Yes,No',
+            'post_graduate_cert' => 'nullable|in:Yes,No',
+            'prev_cmp_exp_letter' => 'nullable|in:Yes,No',
+            'prev_cmp_release_letter' => 'nullable|in:Yes,No',
+            'prev_cmp_salary_cert' => 'nullable|in:Yes,No',
+            'recent_passport_pic' => 'nullable|in:Yes,No',
+            'two_emegency_info' => 'nullable|in:Yes,No',
+            'nid_verified' => 'nullable|in:Yes,No',
+            'job_description' => 'nullable|in:Yes,No',
+            'joining_letter' => 'nullable|in:Yes,No',
+            'kye_form' => 'nullable|in:Yes,No',
+            'emp_declation_letter' => 'nullable|in:Yes,No',
+            'pa_pp_address' => 'nullable|in:Yes,No',
+        ]);
+
+        $existing = EmpInfoDocumentation::where('employee_id', $request->input('employee_id'))->first();
+
+        if ($existing) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Documentation record already exists for this employee. Please update instead.',
+            ], 409);
+        }
+
+        $userId = Auth::user()->EID;
+
+        $documentationData = $request->only([
+            'employee_id',
+            'job_circular',
+            'interview_evalation',
+            'appointment_letter',
+            'updated_resume',
+            'nid_passport',
+            'academic_cert',
+            'post_graduate_cert',
+            'prev_cmp_exp_letter',
+            'prev_cmp_release_letter',
+            'prev_cmp_salary_cert',
+            'recent_passport_pic',
+            'two_emegency_info',
+            'nid_verified',
+            'job_description',
+            'joining_letter',
+            'kye_form',
+            'emp_declation_letter',
+            'pa_pp_address',
+        ]);
+
+        $documentationData['created_by'] = $userId;
+        $documentationData['updated_by'] = $userId;
+        $documentationData['completed_percent'] = $this->calculateCompletedPercent($documentationData);
+
+        EmpInfoDocumentation::create($documentationData);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Successfully inserted',
+        ]);
+    }
+
+    public function updateDocumentationInfo(Request $request, $emp_id)
+    {
+        $validated = $request->validate([
+            'job_circular' => 'nullable|in:Not Applicable,Yes,No',
+            'interview_evalation' => 'nullable|in:Not Applicable,Yes,No',
+            'appointment_letter' => 'nullable|in:Yes,No',
+            'updated_resume' => 'nullable|in:Yes,No',
+            'nid_passport' => 'nullable|in:Yes,No',
+            'academic_cert' => 'nullable|in:Yes,No',
+            'post_graduate_cert' => 'nullable|in:Yes,No',
+            'prev_cmp_exp_letter' => 'nullable|in:Yes,No',
+            'prev_cmp_release_letter' => 'nullable|in:Yes,No',
+            'prev_cmp_salary_cert' => 'nullable|in:Yes,No',
+            'recent_passport_pic' => 'nullable|in:Yes,No',
+            'two_emegency_info' => 'nullable|in:Yes,No',
+            'nid_verified' => 'nullable|in:Yes,No',
+            'job_description' => 'nullable|in:Yes,No',
+            'joining_letter' => 'nullable|in:Yes,No',
+            'kye_form' => 'nullable|in:Yes,No',
+            'emp_declation_letter' => 'nullable|in:Yes,No',
+            'pa_pp_address' => 'nullable|in:Yes,No',
+        ]);
+
+        $documentation = EmpInfoDocumentation::where('employee_id', $emp_id)->first();
+
+        if (!$documentation) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Documentation record not found.',
+            ], 404);
+        }
+
+        $userId = Auth::user()->EID;
+
+        $documentationData = $request->only([
+            'job_circular',
+            'interview_evalation',
+            'appointment_letter',
+            'updated_resume',
+            'nid_passport',
+            'academic_cert',
+            'post_graduate_cert',
+            'prev_cmp_exp_letter',
+            'prev_cmp_release_letter',
+            'prev_cmp_salary_cert',
+            'recent_passport_pic',
+            'two_emegency_info',
+            'nid_verified',
+            'job_description',
+            'joining_letter',
+            'kye_form',
+            'emp_declation_letter',
+            'pa_pp_address',
+        ]);
+
+        $documentationData['updated_by'] = $userId;
+        $documentationData['completed_percent'] = $this->calculateCompletedPercent($documentationData);
+
+        $documentation->update($documentationData);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Successfully updated',
+        ]);
     }
 }
