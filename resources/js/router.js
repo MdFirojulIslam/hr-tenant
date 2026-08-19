@@ -679,6 +679,15 @@ const routes = [
             requireAuth: true,
         },
     },
+    {
+        path: "/outlet-visit/outlet-visit-report",
+        name: "OutletVisitReport",
+        component: () => import("./pages/outletVisit/outletVisitReport.vue"),
+        meta: {
+            requireAuth: true,
+            pageId: 77,
+        },
+    },
 ];
 
 const router = createRouter({

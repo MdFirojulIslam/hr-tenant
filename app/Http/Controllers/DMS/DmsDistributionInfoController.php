@@ -7,6 +7,7 @@ use App\Models\Distributor;
 use App\Models\employee;
 use App\Models\OutletVisitAssignment;
 use App\Models\OutletWeekSchedule;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -520,6 +521,228 @@ class DmsDistributionInfoController extends Controller
         return response()->json([
             'success' => true,
             'message' => count($rows) . ' outlet visit assignment(s) saved successfully.',
+        ]);
+    }
+
+    public function outletVisitReport(Request $request)
+    {
+        $validated = $request->validate([
+            'year'          => 'required|integer|min:2020|max:2100',
+            'month'         => 'required|integer|min:1|max:12',
+            'date'          => 'nullable|date_format:Y-m-d',
+            'employee_id'   => 'nullable|integer',
+            'department_id' => 'nullable|integer',
+            'download'      => 'nullable|string',
+        ]);
+
+        $year      = (int) $validated['year'];
+        $month     = (int) $validated['month'];
+        $isDownload = isset($validated['download']) && $validated['download'] === 'csv';
+
+        $startDate = Carbon::create($year, $month, 1)->startOfMonth();
+        $endDate   = $startDate->copy()->endOfMonth();
+
+        $filterDate = null;
+        if (!empty($validated['date'])) {
+            $parsed = Carbon::parse($validated['date']);
+            if ($parsed->gte($startDate) && $parsed->lte($endDate)) {
+                $filterDate = $parsed->format('Y-m-d');
+            }
+        }
+
+        $weekSchedules = OutletWeekSchedule::all();
+        $scheduleLookup = [];
+        foreach ($weekSchedules as $ws) {
+            $key = strtolower($ws->day_name) . '_' . $ws->week_no;
+            $scheduleLookup[$key] = (int) $ws->id;
+        }
+
+        $dateScheduleMap = [];
+        $occurrenceCounts = [];
+        $daysInMonth = $startDate->daysInMonth;
+
+        for ($d = 1; $d <= $daysInMonth; $d++) {
+            $date    = Carbon::create($year, $month, $d);
+            $dayName = strtolower($date->englishDayOfWeek);
+
+            if (!isset($occurrenceCounts[$dayName])) {
+                $occurrenceCounts[$dayName] = 0;
+            }
+            $occurrenceCounts[$dayName]++;
+            $weekNo = $occurrenceCounts[$dayName];
+
+            $key = $dayName . '_' . $weekNo;
+            if (isset($scheduleLookup[$key])) {
+                $dateKey = $date->format('Y-m-d');
+                if (!isset($dateScheduleMap[$dateKey])) {
+                    $dateScheduleMap[$dateKey] = [];
+                }
+                $dateScheduleMap[$dateKey][] = $scheduleLookup[$key];
+            }
+        }
+
+        $allScheduleIds = collect($dateScheduleMap)->flatten()->unique()->values()->all();
+
+        $report      = [];
+        $allEmployees = [];
+        $allDepartments = [];
+
+        if (!empty($allScheduleIds)) {
+            $assignments = DB::table('outlet_visit_assignments as ova')
+                ->join('outlet_week_schedules as ows', 'ows.id', '=', 'ova.outlet_week_schedules_id')
+                ->join('employees as e', 'e.id', '=', 'ova.employee_id')
+                ->leftJoin('officials as off', 'off.EID', '=', 'ova.employee_id')
+                ->leftJoin('departments as d', 'd.id', '=', 'off.Department_Id')
+                ->leftJoin('designations as des', 'des.id', '=', 'off.Designation_Id')
+                ->leftJoin('distributors as dist', 'dist.distributor_id', '=', 'ova.distributor_id')
+                ->whereIn('ova.outlet_week_schedules_id', $allScheduleIds)
+                ->where('ova.is_active', true)
+                ->select(
+                    'ova.id as assignment_id',
+                    'ova.outlet_week_schedules_id',
+                    'ova.employee_id',
+                    'ova.distributor_id',
+                    'ova.outlet_code',
+                    'ova.outlet_name',
+                    'e.Full_Name as employee_name',
+                    'd.id as department_id',
+                    'd.Name as department_name',
+                    'des.Name as designation_name',
+                    'dist.distributor_name'
+                )
+                ->get();
+
+            $allEmployees = $assignments->unique('employee_id')
+                ->map(fn ($a) => ['id' => (int) $a->employee_id, 'name' => $a->employee_name ?? '-'])
+                ->values()->sortBy('name')->values()->all();
+
+            $allDepartments = $assignments->filter(fn ($a) => !empty($a->department_id))
+                ->unique('department_id')
+                ->map(fn ($a) => ['id' => (int) $a->department_id, 'name' => $a->department_name ?? '-'])
+                ->values()->sortBy('name')->values()->all();
+
+            $assignmentIds = $assignments->pluck('assignment_id')->all();
+            $visits = collect();
+
+            if (!empty($assignmentIds)) {
+                $visits = DB::table('outlet_visited_visits')
+                    ->whereIn('assignment_id', $assignmentIds)
+                    ->where('scheduled_date', '>=', $startDate->format('Y-m-d'))
+                    ->where('scheduled_date', '<=', $endDate->format('Y-m-d'))
+                    ->get();
+            }
+
+            foreach ($assignments as $a) {
+                $scheduleId = (int) $a->outlet_week_schedules_id;
+
+                foreach ($dateScheduleMap as $dateStr => $scheduleIds) {
+                    if (!in_array($scheduleId, $scheduleIds)) {
+                        continue;
+                    }
+
+                    if (!$isDownload) {
+                        if ($filterDate && $dateStr !== $filterDate) {
+                            continue;
+                        }
+                        if (!empty($validated['employee_id']) && (int) $a->employee_id !== (int) $validated['employee_id']) {
+                            continue;
+                        }
+                        if (!empty($validated['department_id']) && $a->department_id && (int) $a->department_id !== (int) $validated['department_id']) {
+                            continue;
+                        }
+                    }
+
+                    $visit = $visits->first(function ($v) use ($a, $dateStr) {
+                        return (int) $v->assignment_id === (int) $a->assignment_id
+                            && $v->scheduled_date === $dateStr;
+                    });
+
+                    $date = Carbon::parse($dateStr);
+
+                    $report[] = [
+                        'date'                     => $date->format('j-M-y'),
+                        'date_raw'                 => $dateStr,
+                        'day'                      => $date->format('l'),
+                        'employee_name'            => $a->employee_name ?? '-',
+                        'designation'              => $a->designation_name ?? '-',
+                        'department'               => $a->department_name ?? '-',
+                        'department_id'            => $a->department_id ? (int) $a->department_id : null,
+                        'employee_id'              => (int) $a->employee_id,
+                        'distributor_name'         => $a->distributor_name ?? '-',
+                        'scheduled_outlet_visit'   => trim(($a->outlet_name ?? '') . ' / ' . ($a->outlet_code ?? '')),
+                        'check_in'                 => ($visit && $visit->check_in_at) ? Carbon::parse($visit->check_in_at)->format('h:i A') : '-',
+                        'check_out'                => ($visit && $visit->check_out_at) ? Carbon::parse($visit->check_out_at)->format('h:i A') : '-',
+                        'check_in_location'        => ($visit && $visit->check_in_location_name) ? $visit->check_in_location_name : '-',
+                        'check_out_location'       => ($visit && $visit->check_out_location_name) ? $visit->check_out_location_name : '-',
+                        'picture'                  => ($visit && $visit->image_path) ? $visit->image_path : '-',
+                        'status'                   => $visit ? 'Visited' : 'Not Visited',
+                    ];
+                }
+            }
+
+            usort($report, function ($a, $b) {
+                $c = strcmp($a['date_raw'], $b['date_raw']);
+                if ($c !== 0) return $c;
+                return strcmp($a['employee_name'], $b['employee_name']);
+            });
+        }
+
+        if ($isDownload) {
+            return $this->buildCsvDownload($report, $year, $month);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'report'      => $report,
+                'employees'   => $allEmployees,
+                'departments' => $allDepartments,
+            ],
+        ]);
+    }
+
+    private function buildCsvDownload(array $report, int $year, int $month)
+    {
+        $headers = [
+            'Date', 'Day', 'Employee Name', 'Designation', 'Department',
+            'Distributor Name', 'Scheduled Outlet Visit', 'Check In', 'Check Out',
+            'Check In Location', 'Check Out Location', 'Picture', 'Status',
+        ];
+
+        $callback = function () use ($report, $headers) {
+            $handle = fopen('php://output', 'w');
+            fprintf($handle, chr(0xEF) . chr(0xBB) . chr(0xBF));
+            fputcsv($handle, $headers);
+
+            foreach ($report as $row) {
+                fputcsv($handle, [
+                    $row['date'],
+                    $row['day'],
+                    $row['employee_name'],
+                    $row['designation'],
+                    $row['department'],
+                    $row['distributor_name'],
+                    $row['scheduled_outlet_visit'],
+                    $row['check_in'],
+                    $row['check_out'],
+                    $row['check_in_location'],
+                    $row['check_out_location'],
+                    $row['picture'],
+                    $row['status'],
+                ]);
+            }
+
+            fclose($handle);
+        };
+
+        $filename = 'outlet_visit_report_' . $year . '_' . str_pad((string) $month, 2, '0', STR_PAD_LEFT) . '.csv';
+
+        return response()->stream($callback, 200, [
+            'Content-Type'        => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Cache-Control'       => 'no-cache, no-store, must-revalidate',
+            'Pragma'              => 'no-cache',
+            'Expires'             => '0',
         ]);
     }
 }

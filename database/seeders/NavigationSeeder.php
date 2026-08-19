@@ -88,6 +88,7 @@ class NavigationSeeder extends Seeder
             ['id' => '74', 'name' => 'Event Setup', 'url' => '/setup/event-setup', 'icon' => 'NULL', 'page' => 'EventSetup', 'path' => './pages/setup/event/eventSetup.vue', 'parent_id' => '6', 'active' => '1'],
             ['id' => '75', 'name' => 'Events', 'url' => '/workstation/events', 'icon' => 'NULL', 'page' => 'Events', 'path' => 'NULL', 'parent_id' => '34', 'active' => '1'],
             ['id' => '76', 'name' => 'Setup List', 'url' => '/outlet-visit/setup-list', 'icon' => 'NULL', 'page' => 'SetupList', 'path' => './pages/outletVisit/setupList.vue', 'parent_id' => '68', 'active' => '1'],
+            ['id' => '77', 'name' => 'Outlet Visit Report', 'url' => '/outlet-visit/outlet-visit-report', 'icon' => 'NULL', 'page' => 'OutletVisitReport', 'path' => './pages/outletVisit/outletVisitReport.vue', 'parent_id' => '68', 'active' => '1'],
 
         ];
 

@@ -13,3 +13,6 @@ Route::get('/outlet-visit-setup/{employee_id}/{distributor_id}', [DmsDistributio
 Route::put('/outlet-visit-assignment/{employee_id}/{distributor_id}', [DmsDistributionInfoController::class, 'outletVisitSetupUpdate']);
 Route::get('/outlet-visit-single-week/{employee_id}/{distributor_id}/{week_no}/{day_name}', [DmsDistributionInfoController::class, 'outletVisitSingleWeekDetails']);
 Route::post('/outlet-visit-single-week-assignment', [DmsDistributionInfoController::class, 'outletVisitSingleWeekSetup']);
+
+
+Route::get('/outlet-visit-report', [DmsDistributionInfoController::class, 'outletVisitReport']);
