@@ -2,15 +2,17 @@
 import { ref, onMounted, computed } from "vue";
 import api from "@/api";
 import Swal from "sweetalert2";
+import Multiselect from "vue-multiselect";
+import "vue-multiselect/dist/vue-multiselect.min.css";
 
 const error = ref(null);
 const loading = ref(false);
 const submitting = ref(false);
 const subordinates = ref([]);
+const selectedEmployee = ref(null);
 const tasks = ref([]);
 
 const form = ref({
-    eid: "",
     task_name: "",
     description: "",
     task_assigned_at: "",
@@ -23,6 +25,13 @@ const filters = ref({
     from: "",
     to: "",
 });
+
+const employeeLabel = (emp) => {
+    if (!emp) return "";
+    return emp.Employee_Id
+        ? `${emp.Full_Name} (${emp.Employee_Id})`
+        : emp.Full_Name;
+};
 
 const formatDateTime = (value) => {
     if (!value) return "—";
@@ -49,17 +58,49 @@ const defaultAssignedAt = () => {
 };
 
 const resetForm = () => {
+    selectedEmployee.value = null;
     form.value = {
-        eid: "",
         task_name: "",
         description: "",
         task_assigned_at: defaultAssignedAt(),
     };
 };
 
+const normalizeEmployees = (payload) => {
+    const rows = Array.isArray(payload?.data)
+        ? payload.data
+        : Array.isArray(payload)
+          ? payload
+          : [];
+
+    return rows
+        .map((row) => ({
+            id: row.id ?? row.employee_id,
+            Full_Name:
+                row.Full_Name ?? row.employee_name ?? row.full_name ?? "",
+            Employee_Id: row.Employee_Id ?? row.employee_code ?? "",
+        }))
+        .filter((row) => row.id);
+};
+
 const loadSubordinates = async () => {
-    const res = await api.get("/task-board/subordinates");
-    subordinates.value = res.data.data || [];
+    try {
+        const res = await api.get("/task-board/subordinates");
+        subordinates.value = normalizeEmployees(res.data);
+        if (subordinates.value.length > 0) {
+            return;
+        }
+    } catch (err) {
+        error.value = err.response?.data?.message || err.message;
+    }
+
+    // Fallback: same supervisor employee list used by Monthly Attendance.
+    try {
+        const fallback = await api.get("/emp-attendence");
+        subordinates.value = normalizeEmployees(fallback.data);
+    } catch (err) {
+        error.value = err.response?.data?.message || err.message;
+    }
 };
 
 const loadTasks = async () => {
@@ -79,11 +120,8 @@ const loadTasks = async () => {
 };
 
 const submit = async () => {
-    if (
-        !form.value.eid ||
-        !form.value.task_name ||
-        !form.value.task_assigned_at
-    ) {
+    const eid = selectedEmployee.value?.id;
+    if (!eid || !form.value.task_name || !form.value.task_assigned_at) {
         Swal.fire(
             "Warning",
             "Employee, task name, and assigned at are required.",
@@ -91,11 +129,7 @@ const submit = async () => {
         );
         return;
     }
-    if (
-        !subordinates.value.some(
-            (emp) => String(emp.id) === String(form.value.eid),
-        )
-    ) {
+    if (!subordinates.value.some((emp) => String(emp.id) === String(eid))) {
         Swal.fire(
             "Warning",
             "You may only assign tasks to employees under your supervision.",
@@ -107,7 +141,7 @@ const submit = async () => {
     submitting.value = true;
     try {
         const payload = {
-            eid: form.value.eid,
+            eid,
             task_name: form.value.task_name,
             description: form.value.description,
             task_assigned_at:
@@ -175,29 +209,17 @@ onMounted(async () => {
                             <div class="row g-3">
                                 <div class="col-md-4">
                                     <label class="form-label">Employee</label>
-                                    <select
-                                        class="form-control"
-                                        v-model="form.eid"
+                                    <Multiselect
+                                        v-model="selectedEmployee"
+                                        :options="subordinates"
+                                        :custom-label="employeeLabel"
+                                        track-by="id"
+                                        :searchable="true"
+                                        :allow-empty="true"
+                                        :show-labels="false"
                                         :disabled="subordinates.length === 0"
-                                    >
-                                        <option value="">
-                                            {{
-                                                subordinates.length === 0
-                                                    ? "No subordinates available"
-                                                    : "Select employee"
-                                            }}
-                                        </option>
-                                        <option
-                                            v-for="emp in subordinates"
-                                            :key="emp.id"
-                                            :value="emp.id"
-                                        >
-                                            {{ emp.Full_Name }}
-                                            <span v-if="emp.Employee_Id">
-                                                ({{ emp.Employee_Id }})
-                                            </span>
-                                        </option>
-                                    </select>
+                                        placeholder="Select employee"
+                                    />
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label">Task Name</label>
@@ -268,7 +290,7 @@ onMounted(async () => {
                                         :key="'f-' + emp.id"
                                         :value="emp.id"
                                     >
-                                        {{ emp.Full_Name }}
+                                        {{ employeeLabel(emp) }}
                                     </option>
                                 </select>
                             </div>
@@ -392,3 +414,13 @@ onMounted(async () => {
         </div>
     </div>
 </template>
+
+<style scoped>
+:deep(.multiselect) {
+    min-height: 38px;
+}
+:deep(.multiselect__tags) {
+    min-height: 38px;
+    padding-top: 8px;
+}
+</style>

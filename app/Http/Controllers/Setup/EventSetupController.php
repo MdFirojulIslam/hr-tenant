@@ -24,11 +24,17 @@ class EventSetupController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => $rows->map(fn (EventSetup $row) => $this->formatRow($row, $departments)),
+            'data' => $rows->map(fn(EventSetup $row) => $this->formatRow($row, $departments)),
             'departments' => $departments,
             'event_types' => EventSetup::TYPES,
         ]);
     }
+
+
+
+
+
+
 
     public function store(Request $request)
     {
@@ -73,6 +79,16 @@ class EventSetupController extends Controller
             'data' => $this->formatRow($row->load(['creator:id,Full_Name', 'updater:id,Full_Name'])),
         ]);
     }
+
+
+
+
+
+
+
+
+
+
 
     public function update(Request $request, $id)
     {
@@ -182,7 +198,7 @@ class EventSetupController extends Controller
         }
 
         $ids = array_values(array_unique(array_map('intval', $raw)));
-        $ids = array_values(array_filter($ids, fn ($id) => $id > 0));
+        $ids = array_values(array_filter($ids, fn($id) => $id > 0));
 
         return $ids === [] ? null : $ids;
     }

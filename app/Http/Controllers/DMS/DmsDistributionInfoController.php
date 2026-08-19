@@ -5,6 +5,7 @@ namespace App\Http\Controllers\DMS;
 use App\Http\Controllers\Controller;
 use App\Models\Distributor;
 use App\Models\employee;
+use App\Models\OutletVisitAssignment;
 use App\Models\OutletWeekSchedule;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -15,6 +16,8 @@ class DmsDistributionInfoController extends Controller
 {
     public function getDistributorInfo(Request $request)
     {
+
+
         $response = Http::withHeaders([
             'X-Mobile-App-Key' => config('services.dms.mobile_app_key'),
             'Accept' => 'application/json',
