@@ -97,6 +97,36 @@ onMounted(() => {
     width: 100%;
 }
 
+.multiselect-input {
+    width: 400px !important;
+}
+
+:deep(.multiselect__tags) {
+    min-height: 33px !important;
+    height: 33px !important;
+    padding: 5px 40px 0 8px !important;
+}
+
+:deep(.multiselect__single) {
+    margin-bottom: 0 !important;
+    line-height: 22px !important;
+}
+
+:deep(.multiselect__input) {
+    margin-bottom: 0 !important;
+    padding: 0 !important;
+}
+
+:deep(.multiselect__content-wrapper) {
+    max-height: 300px !important;
+}
+
+:deep(.multiselect__placeholder) {
+    color: #000000 !important;
+    font-size: 14px;
+    padding-top: 0px;
+}
+
 .clear-btn {
     position: absolute;
     right: 10px;

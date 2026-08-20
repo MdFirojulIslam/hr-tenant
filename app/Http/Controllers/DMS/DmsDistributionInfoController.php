@@ -12,6 +12,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
 
 class DmsDistributionInfoController extends Controller
 {
@@ -613,12 +614,12 @@ class DmsDistributionInfoController extends Controller
                 ->get();
 
             $allEmployees = $assignments->unique('employee_id')
-                ->map(fn ($a) => ['id' => (int) $a->employee_id, 'name' => $a->employee_name ?? '-'])
+                ->map(fn($a) => ['id' => (int) $a->employee_id, 'name' => $a->employee_name ?? '-'])
                 ->values()->sortBy('name')->values()->all();
 
-            $allDepartments = $assignments->filter(fn ($a) => !empty($a->department_id))
+            $allDepartments = $assignments->filter(fn($a) => !empty($a->department_id))
                 ->unique('department_id')
-                ->map(fn ($a) => ['id' => (int) $a->department_id, 'name' => $a->department_name ?? '-'])
+                ->map(fn($a) => ['id' => (int) $a->department_id, 'name' => $a->department_name ?? '-'])
                 ->values()->sortBy('name')->values()->all();
 
             $assignmentIds = $assignments->pluck('assignment_id')->all();
@@ -673,8 +674,9 @@ class DmsDistributionInfoController extends Controller
                         'check_in'                 => ($visit && $visit->check_in_at) ? Carbon::parse($visit->check_in_at)->format('h:i A') : '-',
                         'check_out'                => ($visit && $visit->check_out_at) ? Carbon::parse($visit->check_out_at)->format('h:i A') : '-',
                         'check_in_location'        => ($visit && $visit->check_in_location_name) ? $visit->check_in_location_name : '-',
+                        'remarks'        => ($visit && $visit->remarks) ? $visit->remarks : '-',
                         'check_out_location'       => ($visit && $visit->check_out_location_name) ? $visit->check_out_location_name : '-',
-                        'picture'                  => ($visit && $visit->image_path) ? $visit->image_path : '-',
+                        'picture'                  => ($visit && $visit->image_path) ? url(Storage::disk('public')->url($visit->image_path)) : null,
                         'status'                   => $visit ? 'Visited' : 'Not Visited',
                     ];
                 }
@@ -704,9 +706,19 @@ class DmsDistributionInfoController extends Controller
     private function buildCsvDownload(array $report, int $year, int $month)
     {
         $headers = [
-            'Date', 'Day', 'Employee Name', 'Designation', 'Department',
-            'Distributor Name', 'Scheduled Outlet Visit', 'Check In', 'Check Out',
-            'Check In Location', 'Check Out Location', 'Picture', 'Status',
+            'Date',
+            'Day',
+            'Employee Name',
+            'Designation',
+            'Department',
+            'Distributor Name',
+            'Scheduled Outlet Visit',
+            'Check In',
+            'Check Out',
+            'Check In Location',
+            'Check Out Location',
+            'Picture',
+            'Status',
         ];
 
         $callback = function () use ($report, $headers) {

@@ -76,8 +76,33 @@ onBeforeUnmount(() => {
 }
 
 .multiselect-input {
-    /* flex: 1; */
-    width: 100%;
+    width: 360px !important;
+}
+
+:deep(.multiselect__tags) {
+    min-height: 33px !important;
+    height: 33px !important;
+    padding: 5px 40px 0 8px !important;
+}
+
+:deep(.multiselect__single) {
+    margin-bottom: 0 !important;
+    line-height: 22px !important;
+}
+
+:deep(.multiselect__input) {
+    margin-bottom: 0 !important;
+    padding: 0 !important;
+}
+
+:deep(.multiselect__content-wrapper) {
+    max-height: 300px !important;
+}
+
+:deep(.multiselect__placeholder) {
+    color: #000000 !important;
+    font-size: 14px;
+    padding-top: 0px;
 }
 
 .clear-btn {
@@ -89,6 +114,8 @@ onBeforeUnmount(() => {
     border-radius: 4px;
     font-size: 14px;
     color: #ffffff;
+    height: 25px;
+    top: 3px;
 }
 
 .clear-btn:hover {

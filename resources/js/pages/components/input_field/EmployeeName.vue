@@ -30,6 +30,10 @@ const employee_proxy_info = computed({
     },
 });
 
+const clearSelection = () => {
+    employee_proxy_info.value = null;
+};
+
 // const distributor_proxy_info = computed({
 //     get: () => {
 //         return (
@@ -69,6 +73,14 @@ onBeforeUnmount(() => {
             placeholder="Employee Name"
             class="multiselect-employee-name"
         />
+        <button
+            v-if="employee_proxy_info"
+            @click="clearSelection"
+            type="button"
+            class="clear-btn"
+        >
+            ✕
+        </button>
     </div>
 </template>
 
@@ -82,33 +94,45 @@ onBeforeUnmount(() => {
 
 .multiselect-employee-name {
     /* flex: 1; */
-    width: 300px;
+    width: 290px;
 }
 
-.multiselect-employee-name :deep(.multiselect__select) {
-    width: 30px;
-    height: 30px;
-    right: 1px;
-    top: 1px;
-    padding: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+:deep(.multiselect__tags) {
+    min-height: 33px !important;
+    height: 33px !important;
+    padding: 5px 40px 0 8px !important;
 }
 
-/* ৩. Placeholder Text */
-.multiselect-employee-name :deep(.multiselect__placeholder) {
-    color: #6c757d;
-    font-size: 12px;
-    margin-bottom: 0;
-    padding-top: 2px;
+:deep(.multiselect__single) {
+    margin-bottom: 0 !important;
+    line-height: 22px !important;
 }
-.multiselect-employee-name :deep(.multiselect__tags) {
-    min-height: 35px !important;
-    padding: 4px 30px 0 10px;
-    border-radius: 6px;
-    background: #ffffff;
-    font-size: 12px;
+
+:deep(.multiselect__input) {
+    margin-bottom: 0 !important;
+    padding: 0 !important;
+}
+
+:deep(.multiselect__content-wrapper) {
+    max-height: 300px !important;
+}
+:deep(.multiselect__placeholder) {
+    color: #000000 !important;
+    font-size: 14px;
+    padding-top: 0px;
+}
+
+.clear-btn {
+    position: absolute;
+    right: 10px;
+    background: #949894;
+    padding: 3px;
+    cursor: pointer;
+    border-radius: 4px;
+    font-size: 14px;
+    color: #ffffff;
+    height: 25px;
+    top: 3px;
 }
 
 .clear-btn:hover {
