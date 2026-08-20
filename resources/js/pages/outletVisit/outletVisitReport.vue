@@ -108,47 +108,100 @@ const enrichedReport = computed(() => {
     });
 });
 
-const outletCodeOptions = computed(() => {
-    const seen = new Map();
-    enrichedReport.value.forEach((row) => {
-        if (
-            row.outlet_code &&
-            row.outlet_code !== "-" &&
-            !seen.has(row.outlet_code)
-        ) {
-            seen.set(row.outlet_code, { code: row.outlet_code });
-        }
-    });
-    return Array.from(seen.values());
+const getId = (value) => {
+    if (
+        value === null ||
+        value === undefined ||
+        value === "" ||
+        value === "-"
+    ) {
+        return null;
+    }
+
+    if (typeof value === "object") {
+        return (
+            value.id ??
+            value.employee_id ??
+            value.employeeID ??
+            value.value ??
+            null
+        );
+    }
+
+    return value;
+};
+
+watch(selectedDepartmentId, (newDepartmentId, oldDepartmentId) => {
+    const newId = getId(newDepartmentId);
+    const oldId = getId(oldDepartmentId);
+
+    if (newId !== oldId) {
+        selectedEmployeeId.value = null;
+    }
 });
 
 const filteredReport = computed(() => {
-    let data = enrichedReport.value;
+    const selectedDateValue = selectedDate.value;
+    const departmentId = getId(selectedDepartmentId.value);
+    const employeeId = getId(selectedEmployeeId.value);
 
-    if (selectedDate.value) {
-        data = data.filter((r) => r.date_raw === selectedDate.value);
+    let data = [...enrichedReport.value];
+
+    // Step 1: Exact Date Filter
+    if (selectedDateValue) {
+        data = data.filter((row) => {
+            return (
+                String(row.date_raw).trim() === String(selectedDateValue).trim()
+            );
+        });
     }
-    if (selectedEmployeeId.value != null) {
-        data = data.filter(
-            (r) => Number(r.employee_id) === Number(selectedEmployeeId.value),
-        );
+
+    // Step 2: Selected Department Filter
+    if (departmentId !== null) {
+        data = data.filter((row) => {
+            return Number(row.department_id) === Number(departmentId);
+        });
     }
-    if (selectedDepartmentId.value != null) {
-        data = data.filter(
-            (r) =>
-                Number(r.department_id) === Number(selectedDepartmentId.value),
-        );
+
+    // Step 3: Selected Employee Filter
+    // এটি আগের Date + Department filtered data-এর উপর apply হবে
+    if (employeeId !== null) {
+        data = data.filter((row) => {
+            return Number(row.employee_id) === Number(employeeId);
+        });
     }
-    if (selectedOutletCode.value && selectedOutletCode.value.code) {
-        data = data.filter(
-            (r) => r.outlet_code === selectedOutletCode.value.code,
-        );
+
+    // Step 4: Outlet Filter
+    if (selectedOutletCode.value?.code) {
+        data = data.filter((row) => {
+            return (
+                String(row.outlet_code).trim() ===
+                String(selectedOutletCode.value.code).trim()
+            );
+        });
     }
+
+    // Step 5: Status Filter
     if (selectedStatus.value) {
-        data = data.filter((r) => r.status === selectedStatus.value);
+        data = data.filter((row) => {
+            return (
+                String(row.status).trim() ===
+                String(selectedStatus.value).trim()
+            );
+        });
     }
 
     return data;
+});
+
+const visitedCount = computed(() => {
+    return filteredReport.value.filter((row) => row.status === "Visited")
+        .length;
+});
+
+const notVisitedCount = computed(() => {
+    return filteredReport.value.filter((row) => row.status === "Not Visited")
+        .length;
 });
 
 let fetchSeq = 0;
@@ -198,16 +251,6 @@ watch([selectedYear, selectedMonth], () => {
 
 onMounted(() => {
     fetchReport();
-});
-
-const visitedCount = computed(() => {
-    return filteredReport.value.filter((row) => row.status === "Visited")
-        .length;
-});
-
-const notVisitedCount = computed(() => {
-    return filteredReport.value.filter((row) => row.status === "Not Visited")
-        .length;
 });
 
 const downloadReport = async () => {
@@ -355,7 +398,7 @@ const downloadReport = async () => {
                             /> -->
                             <BaseDeptEmp
                                 v-model:employeeID="selectedEmployeeId"
-                                :deptID="selectedDepartmentId"
+                                :deptID="getId(selectedDepartmentId)"
                                 :isEdit="false"
                             />
                         </div>
@@ -372,7 +415,7 @@ const downloadReport = async () => {
                                 <option value="Not Visited">Not Visited</option>
                             </select>
                         </div>
-                        <div class="report-summaries">
+                        <div v-if="!selectedStatus" class="report-summaries">
                             <div
                                 class="summary-box d-flex align-items-center justify-content-between h-38 px-3"
                             >
@@ -383,27 +426,31 @@ const downloadReport = async () => {
                                         <span class="summary-label"
                                             >Total Assign</span
                                         >
-                                        <span class="summary-value ms-2">{{
-                                            filteredReport.length
-                                        }}</span>
+                                        <span class="summary-value ms-2">
+                                            {{ filteredReport.length }}
+                                        </span>
                                     </div>
+
                                     <div class="vr"></div>
+
                                     <div>
                                         <span class="summary-label"
                                             >Visited</span
                                         >
-                                        <span class="summary-value ms-2">{{
-                                            visitedCount
-                                        }}</span>
+                                        <span class="summary-value ms-2">
+                                            {{ visitedCount }}
+                                        </span>
                                     </div>
+
                                     <div class="vr"></div>
+
                                     <div>
                                         <span class="summary-label"
                                             >Not Visited</span
                                         >
-                                        <span class="summary-value ms-2">{{
-                                            notVisitedCount
-                                        }}</span>
+                                        <span class="summary-value ms-2">
+                                            {{ notVisitedCount }}
+                                        </span>
                                     </div>
                                 </div>
                             </div>
@@ -769,14 +816,12 @@ const downloadReport = async () => {
     color: #fff;
 }
 
-.report-summaries {
-    height: 33px;
-}
 .summary-box {
     background: #f1f3f5;
     border: 0.8px solid rgb(196, 194, 194);
     border-radius: 5px;
 }
+
 .summary-label {
     font-size: 0.78rem;
     color: #868e96;
@@ -784,6 +829,7 @@ const downloadReport = async () => {
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
+
 .summary-value {
     font-size: 0.95rem;
     font-weight: 700;
