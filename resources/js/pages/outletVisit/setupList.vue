@@ -1,13 +1,6 @@
 <script>
 import axios from "axios";
 import api from "@/api";
-import { useStore } from "vuex";
-import BaseDept from "@/pages/components/input_field/BaseDept.vue";
-import BaseDeptEmp from "@/pages/components/input_field/BaseDeptEmp.vue";
-
-const store = useStore();
-const user = store.getters.getUser;
-const userID = user ? user.id : null;
 
 const baseAdapter = axios.getAdapter(api.defaults.adapter);
 const outletCodeInflight = new Map();
@@ -48,16 +41,20 @@ installOutletCodeDedupe();
 </script>
 
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, computed, watch, onMounted } from "vue";
 import { useRouter } from "vue-router";
 import api from "@/api";
 import Swal from "sweetalert2";
 import { getDmsOutletCode } from "@/pages/services/apiServices";
+import SelectField from "@/pages/components/input_field/SelectField.vue";
 
 const router = useRouter();
 
 const setups = ref([]);
 const loading = ref(false);
+
+const selectedDepartment = ref("");
+const selectedEmployeeId = ref("");
 
 const loadSetups = async () => {
     loading.value = true;
@@ -74,6 +71,87 @@ const loadSetups = async () => {
 };
 
 onMounted(loadSetups);
+
+const departmentOptions = computed(() => {
+    const seen = new Set();
+    const options = [{ name: "All Departments", value: "" }];
+
+    setups.value.forEach((row) => {
+        if (!row.department_name) return;
+        if (seen.has(row.department_name)) return;
+        seen.add(row.department_name);
+        options.push({
+            name: row.department_name,
+            value: row.department_name,
+        });
+    });
+
+    return options;
+});
+
+const employeeOptions = computed(() => {
+    const seen = new Set();
+    const options = [{ name: "All Employees", value: "" }];
+
+    setups.value.forEach((row) => {
+        if (
+            selectedDepartment.value &&
+            row.department_name !== selectedDepartment.value
+        ) {
+            return;
+        }
+        if (
+            row.employee_id === null ||
+            row.employee_id === undefined ||
+            row.employee_id === ""
+        ) {
+            return;
+        }
+        const key = String(row.employee_id);
+        if (seen.has(key)) return;
+        seen.add(key);
+        options.push({
+            name: row.employee_name,
+            value: row.employee_id,
+        });
+    });
+
+    return options;
+});
+
+watch(selectedDepartment, () => {
+    if (!selectedEmployeeId.value) return;
+    const stillValid = employeeOptions.value.some(
+        (option) => Number(option.value) === Number(selectedEmployeeId.value),
+    );
+    if (!stillValid) {
+        selectedEmployeeId.value = "";
+    }
+});
+
+const filteredSetups = computed(() => {
+    return setups.value.filter((row) => {
+        const departmentMatch =
+            !selectedDepartment.value ||
+            row.department_name === selectedDepartment.value;
+
+        const employeeMatch =
+            !selectedEmployeeId.value ||
+            Number(row.employee_id) === Number(selectedEmployeeId.value);
+
+        return departmentMatch && employeeMatch;
+    });
+});
+
+const hasActiveFilters = computed(
+    () =>
+        Boolean(selectedDepartment.value) || Boolean(selectedEmployeeId.value),
+);
+
+const resetFilters = () => {
+    selectedDepartment.value = "";
+    selectedEmployeeId.value = "";
+};
 
 const goToSingleWeekSetup = () => {
     router.push({ name: "SingleWeekSetup" });
@@ -122,23 +200,35 @@ const editSetup = (row) => {
                 Single Week Setup
             </button>
         </div>
-        <div>
-            <div class="">
-                <BaseDept
-                    v-model:departmentID="selectedDepartmentId"
-                    :userID="userID"
+
+        <!-- FILTERS -->
+        <div
+            class="d-flex align-items-end gap-3 flex-wrap mb-3 p-2 filter-section"
+        >
+            <div>
+                <SelectField
+                    v-model="selectedDepartment"
+                    :items="departmentOptions"
+                    placeholder="All Departments"
+                    className="form-select filter-select"
                 />
             </div>
-            <div class="">
-                <!-- <EmployeeName
-                                v-model:employee_id="selectedEmployeeId"
-                            /> -->
-                <BaseDeptEmp
-                    v-model:employeeID="selectedEmployeeId"
-                    :deptID="getId(selectedDepartmentId)"
-                    :isEdit="false"
+            <div>
+                <SelectField
+                    v-model="selectedEmployeeId"
+                    :items="employeeOptions"
+                    placeholder="All Employees"
+                    className="form-select filter-select"
                 />
             </div>
+            <button
+                type="button"
+                class="btn btn-sm btn-outline-secondary px-3 btn-reset"
+                :disabled="!hasActiveFilters"
+                @click="resetFilters"
+            >
+                <i class="fa-solid fa-rotate-left me-1"></i>
+            </button>
         </div>
 
         <!-- TABLE -->
@@ -159,7 +249,7 @@ const editSetup = (row) => {
                 </thead>
                 <tbody>
                     <tr
-                        v-for="row in setups"
+                        v-for="row in filteredSetups"
                         :key="row.distributor_id + '_' + row.employee_id"
                     >
                         <td>{{ row.employee_name }}</td>
@@ -196,14 +286,24 @@ const editSetup = (row) => {
                         </td>
                     </tr>
 
-                    <tr v-if="!loading && setups.length === 0">
-                        <td colspan="5" class="text-center py-3">
-                            No outlet visit setup found.
+                    <tr v-if="loading">
+                        <td colspan="7" class="text-center py-3">Loading...</td>
+                    </tr>
+
+                    <tr
+                        v-else-if="
+                            filteredSetups.length === 0 && setups.length > 0
+                        "
+                    >
+                        <td colspan="7" class="text-center py-3">
+                            No setup found for the selected filters.
                         </td>
                     </tr>
 
-                    <tr v-if="loading">
-                        <td colspan="5" class="text-center py-3">Loading...</td>
+                    <tr v-else-if="filteredSetups.length === 0">
+                        <td colspan="7" class="text-center py-3">
+                            No outlet visit setup found.
+                        </td>
                     </tr>
                 </tbody>
             </table>
@@ -223,6 +323,23 @@ const editSetup = (row) => {
 .icon-design {
     color: #059223d5;
     font-size: 16px;
+}
+
+.filter-section {
+    background-color: #f8f9fa;
+}
+
+.filter-label {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: #495057;
+    margin-bottom: 4px;
+}
+
+.filter-select {
+    width: 220px;
+    font-size: 14px;
 }
 
 .table thead th {
