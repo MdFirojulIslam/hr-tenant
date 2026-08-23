@@ -24,9 +24,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 
-    <!-- vue date picket -->
-    <script src="https://unpkg.com/vue@latest"></script>
-    <script src="https://unpkg.com/@vuepic/vue-datepicker@latest"></script>
+    <!-- vue date picker (loaded via Vite bundle; removed dead CDN ESM script that threw console errors) -->
     <link rel="stylesheet" href="https://unpkg.com/@vuepic/vue-datepicker@latest/dist/main.css">
 
 </head>

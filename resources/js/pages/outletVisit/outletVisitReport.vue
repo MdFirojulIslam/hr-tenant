@@ -528,7 +528,12 @@ const downloadReport = async () => {
                             </tr>
                         </template>
                         <template v-else>
-                            <tr v-for="(row, idx) in filteredReport" :key="idx">
+                            <tr
+                                v-for="(row, idx) in filteredReport"
+                                :key="
+                                    `${row.date_raw}-${row.employee_id}-${row.outlet_code}-${row.distributor_name}`
+                                "
+                            >
                                 <td class="text-center text-muted fw-semibold">
                                     {{ idx + 1 }}
                                 </td>
