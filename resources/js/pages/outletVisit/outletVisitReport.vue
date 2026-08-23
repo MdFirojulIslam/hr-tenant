@@ -1,5 +1,12 @@
 <script setup>
-import { ref, computed, onMounted, watch } from "vue";
+import {
+    ref,
+    computed,
+    onMounted,
+    onBeforeUnmount,
+    watch,
+    nextTick,
+} from "vue";
 import { useStore } from "vuex";
 import api from "@/api";
 import Swal from "sweetalert2";
@@ -28,6 +35,112 @@ const openImagePreview = (image) => {
 const closeImagePreview = () => {
     previewImage.value = null;
 };
+
+const isValidCoordinate = (value) => {
+    const num = Number(value);
+    return (
+        value !== null &&
+        value !== undefined &&
+        value !== "" &&
+        Number.isFinite(num) &&
+        num !== 0
+    );
+};
+
+const hasValidCoords = (row) =>
+    isValidCoordinate(row.check_in_latitude) &&
+    isValidCoordinate(row.check_in_longitude);
+
+const mapModalVisible = ref(false);
+const selectedVisitLocation = ref(null);
+let mapInstance = null;
+let mapMarker = null;
+let mapResizeTimer = null;
+
+// The modal container is re-created by v-if on every open, so any previous
+// map instance must be fully torn down before a new one is created.
+const destroyVisitMap = () => {
+    if (mapResizeTimer) {
+        clearTimeout(mapResizeTimer);
+        mapResizeTimer = null;
+    }
+    if (mapMarker) {
+        mapMarker.setMap(null);
+        mapMarker = null;
+    }
+    if (mapInstance) {
+        google.maps.event.clearInstanceListeners(mapInstance);
+        mapInstance = null;
+    }
+};
+
+const renderVisitMap = () => {
+    const container = document.getElementById("check-in-map");
+    if (!container || !selectedVisitLocation.value) return;
+
+    if (typeof google === "undefined" || !google.maps) {
+        Swal.fire(
+            "Error",
+            "Map service is not available right now.",
+            "error"
+        );
+        return;
+    }
+
+    destroyVisitMap();
+
+    const position = {
+        lat: selectedVisitLocation.value.latitude,
+        lng: selectedVisitLocation.value.longitude,
+    };
+
+    mapInstance = new google.maps.Map(container, {
+        center: position,
+        zoom: 16,
+        mapTypeControl: false,
+        streetViewControl: false,
+    });
+
+    mapMarker = new google.maps.Marker({
+        position: position,
+        map: mapInstance,
+        title: selectedVisitLocation.value.name || "Check-in Location",
+    });
+
+    // Recalculate size once the modal is visible so tiles/layout render
+    // correctly (Google Maps equivalent of Leaflet's invalidateSize()).
+    mapResizeTimer = setTimeout(() => {
+        mapResizeTimer = null;
+        if (!mapInstance) return;
+        google.maps.event.trigger(mapInstance, "resize");
+        mapInstance.setCenter(position);
+    }, 100);
+};
+
+const openCheckInMap = async (row) => {
+    if (!hasValidCoords(row)) return;
+
+    selectedVisitLocation.value = {
+        latitude: Number(row.check_in_latitude),
+        longitude: Number(row.check_in_longitude),
+        name:
+            row.check_in_location && row.check_in_location !== "-"
+                ? row.check_in_location
+                : "N/A",
+    };
+    mapModalVisible.value = true;
+    await nextTick();
+    renderVisitMap();
+};
+
+const closeCheckInMap = () => {
+    mapModalVisible.value = false;
+    destroyVisitMap();
+};
+
+onBeforeUnmount(() => {
+    destroyVisitMap();
+});
 
 const now = new Date();
 const selectedYear = ref(now.getFullYear());
@@ -260,6 +373,9 @@ const downloadReport = async () => {
             params: {
                 year: selectedYear.value,
                 month: selectedMonth.value,
+                date: selectedDate.value || null,
+                department_id: getId(selectedDepartmentId.value),
+                employee_id: getId(selectedEmployeeId.value),
                 download: "csv",
             },
             responseType: "blob",
@@ -320,7 +436,6 @@ const downloadReport = async () => {
                                 <select
                                     class="form-select year-select"
                                     v-model="selectedYear"
-                                    @change="changeDate"
                                 >
                                     <option
                                         v-for="y in yearOptions"
@@ -337,7 +452,6 @@ const downloadReport = async () => {
                                 <select
                                     class="form-select month-select"
                                     v-model="selectedMonth"
-                                    @change="changeDate"
                                 >
                                     <option
                                         v-for="(m, idx) in monthNames"
@@ -559,20 +673,36 @@ const downloadReport = async () => {
                                     {{ row.remarks }}
                                 </td>
                                 <td>
-                                    <span
-                                        class="fw-semibold text-dark"
-                                        style="max-width: 180px"
-                                        :title="row.check_in_location"
+                                    <div
+                                        class="d-flex align-items-center gap-1"
                                     >
-                                        <i
-                                            class="fa-solid fa-location-dot text-danger me-1 small"
-                                            v-if="
-                                                row.check_in_location &&
-                                                row.check_in_location !== '-'
-                                            "
-                                        ></i>
-                                        {{ row.check_in_location || "-" }}
-                                    </span>
+                                        <span
+                                            class="fw-semibold text-dark"
+                                            style="max-width: 180px"
+                                            :title="row.check_in_location"
+                                        >
+                                            <i
+                                                class="fa-solid fa-location-dot text-danger me-1 small"
+                                                v-if="
+                                                    row.check_in_location &&
+                                                    row.check_in_location !==
+                                                        '-'
+                                                "
+                                            ></i>
+                                            {{ row.check_in_location || "-" }}
+                                        </span>
+                                        <button
+                                            v-if="hasValidCoords(row)"
+                                            type="button"
+                                            class="btn-map-view"
+                                            title="View on Map"
+                                            @click="openCheckInMap(row)"
+                                        >
+                                            <i
+                                                class="fa-solid fa-map-location-dot"
+                                            ></i>
+                                        </button>
+                                    </div>
                                 </td>
                                 <td>
                                     <span class="fw-semibold text-dark">
@@ -638,6 +768,70 @@ const downloadReport = async () => {
                         class="image-preview-img"
                         @error="previewImage = DUMMY_IMAGE"
                     />
+                </div>
+            </div>
+        </teleport>
+        <!-- Check-in Location Map Modal -->
+        <teleport to="body">
+            <div
+                v-if="mapModalVisible"
+                class="image-preview-overlay"
+                @click.self="closeCheckInMap"
+            >
+                <div class="map-modal-card">
+                    <div class="map-modal-header">
+                        <h6 class="mb-0 fw-bold text-dark">
+                            <i
+                                class="fa-solid fa-location-dot text-danger me-2"
+                            ></i>
+                            Check-in Location
+                        </h6>
+                        <button
+                            type="button"
+                            class="map-modal-close"
+                            title="Close"
+                            @click="closeCheckInMap"
+                        >
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </div>
+                    <div
+                        v-if="selectedVisitLocation"
+                        id="check-in-map"
+                        class="map-modal-canvas"
+                    ></div>
+                    <div
+                        v-if="selectedVisitLocation"
+                        class="map-modal-details"
+                    >
+                        <span>
+                            Latitude:
+                            <strong>{{
+                                selectedVisitLocation.latitude.toFixed(7)
+                            }}</strong>
+                        </span>
+                        <span class="ms-3">
+                            Longitude:
+                            <strong>{{
+                                selectedVisitLocation.longitude.toFixed(7)
+                            }}</strong>
+                        </span>
+                        <span class="ms-3">
+                            Location:
+                            <strong>{{
+                                selectedVisitLocation.name
+                            }}</strong>
+                        </span>
+                    </div>
+                    <div class="map-modal-footer">
+                        <button
+                            type="button"
+                            class="btn btn-sm btn-secondary px-3"
+                            @click="closeCheckInMap"
+                        >
+                            Close
+                        </button>
+                    </div>
                 </div>
             </div>
         </teleport>
@@ -768,6 +962,88 @@ const downloadReport = async () => {
 
 .report-thumb--dummy {
     opacity: 0.55;
+}
+
+.btn-map-view {
+    border: 1px solid #0d6efd;
+    background-color: #eff5ff;
+    color: #0d6efd;
+    border-radius: 5px;
+    font-size: 0.7rem;
+    width: 22px;
+    height: 22px;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    flex-shrink: 0;
+    transition:
+        background-color 0.15s ease,
+        color 0.15s ease,
+        box-shadow 0.15s ease;
+}
+
+.btn-map-view:hover {
+    background-color: #0d6efd;
+    color: #fff;
+    box-shadow: 0 2px 4px rgba(13, 110, 253, 0.3);
+}
+
+.map-modal-card {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    width: min(640px, 92vw);
+    overflow: hidden;
+}
+
+.map-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid #eaecf0;
+}
+
+.map-modal-close {
+    border: none;
+    background: transparent;
+    color: #333;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition:
+        background-color 0.15s ease,
+        color 0.15s ease;
+}
+
+.map-modal-close:hover {
+    background-color: #ef4444;
+    color: #fff;
+}
+
+.map-modal-canvas {
+    height: 340px;
+    width: 100%;
+}
+
+.map-modal-details {
+    padding: 0.65rem 1rem;
+    font-size: 0.82rem;
+    color: #212529;
+    border-top: 1px solid #eaecf0;
+}
+
+.map-modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    padding: 0.65rem 1rem;
+    border-top: 1px solid #eaecf0;
 }
 
 .image-preview-overlay {

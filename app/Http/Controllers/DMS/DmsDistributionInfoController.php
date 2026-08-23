@@ -194,11 +194,16 @@ class DmsDistributionInfoController extends Controller
     public function outletVisitSetupList(Request $request)
     {
         $rows = DB::table('outlet_visit_assignments as ova')
+            ->join('distributors', 'distributors.distributor_id', '=', 'ova.distributor_id')
             ->join('outlet_week_schedules as ows', 'ows.id', '=', 'ova.outlet_week_schedules_id')
             ->join('employees as e', 'e.id', '=', 'ova.employee_id')
+            ->join('officials', 'officials.EID', '=', 'ova.employee_id')
+            ->join('departments', 'departments.id', '=', 'officials.Department_Id')
             ->where('ova.is_active', true)
             ->select(
                 'ova.distributor_id',
+                'distributors.distributor_name',
+                'departments.Name as department_name',
                 'ova.employee_id',
                 'e.Full_Name as employee_name',
                 'ows.week_no',
@@ -215,26 +220,41 @@ class DmsDistributionInfoController extends Controller
                 $groups[$key] = [
                     'distributor_id' => (int) $row->distributor_id,
                     'employee_id' => (int) $row->employee_id,
+                    'department_name' => $row->department_name,
+                    'distributor_name' => $row->distributor_name,
                     'employee_name' => $row->employee_name,
                     'weeks' => [],
                     'outlets' => [],
+                    'total_outlets' => 0,
                 ];
             }
 
             $groups[$key]['weeks'][(int) $row->week_no] = true;
+
+            // Unique outlet count
             $groups[$key]['outlets'][(string) $row->outlet_code] = true;
+
+            // Total outlet count
+            $groups[$key]['total_outlets']++;
         }
 
         $data = array_map(function ($group) {
             return [
                 'distributor_id' => $group['distributor_id'],
                 'employee_id' => $group['employee_id'],
+                'department_name' => $group['department_name'],
+                'distributor_name' => $group['distributor_name'],
                 'employee_name' => $group['employee_name'],
                 'completed_weeks' => count($group['weeks']),
                 'total_weeks' => 4,
                 'unique_outlet_count' => count($group['outlets']),
+                'total_outlet_count' => $group['total_outlets'],
             ];
         }, array_values($groups));
+
+        usort($data, function ($a, $b) {
+            return $a['employee_id'] <=> $b['employee_id'];
+        });
 
         return response()->json([
             'success' => true,
@@ -641,16 +661,18 @@ class DmsDistributionInfoController extends Controller
                         continue;
                     }
 
-                    if (!$isDownload) {
-                        if ($filterDate && $dateStr !== $filterDate) {
+                    if ($filterDate && $dateStr !== $filterDate) {
+                        continue;
+                    }
+
+                    if (!empty($validated['department_id'])) {
+                        if (!$a->department_id || (int) $a->department_id !== (int) $validated['department_id']) {
                             continue;
                         }
-                        if (!empty($validated['employee_id']) && (int) $a->employee_id !== (int) $validated['employee_id']) {
-                            continue;
-                        }
-                        if (!empty($validated['department_id']) && $a->department_id && (int) $a->department_id !== (int) $validated['department_id']) {
-                            continue;
-                        }
+                    }
+
+                    if (!empty($validated['employee_id']) && (int) $a->employee_id !== (int) $validated['employee_id']) {
+                        continue;
                     }
 
                     $visit = $visits->first(function ($v) use ($a, $dateStr) {
@@ -674,6 +696,8 @@ class DmsDistributionInfoController extends Controller
                         'check_in'                 => ($visit && $visit->check_in_at) ? Carbon::parse($visit->check_in_at)->format('h:i A') : '-',
                         'check_out'                => ($visit && $visit->check_out_at) ? Carbon::parse($visit->check_out_at)->format('h:i A') : '-',
                         'check_in_location'        => ($visit && $visit->check_in_location_name) ? $visit->check_in_location_name : '-',
+                        'check_in_latitude'        => ($visit && $visit->check_in_latitude !== null) ? (float) $visit->check_in_latitude : null,
+                        'check_in_longitude'       => ($visit && $visit->check_in_longitude !== null) ? (float) $visit->check_in_longitude : null,
                         'remarks'        => ($visit && $visit->remarks) ? $visit->remarks : '-',
                         'check_out_location'       => ($visit && $visit->check_out_location_name) ? $visit->check_out_location_name : '-',
                         'picture'                  => ($visit && $visit->image_path) ? url(Storage::disk('public')->url($visit->image_path)) : null,

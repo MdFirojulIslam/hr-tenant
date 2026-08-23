@@ -1,6 +1,13 @@
 <script>
 import axios from "axios";
 import api from "@/api";
+import { useStore } from "vuex";
+import BaseDept from "@/pages/components/input_field/BaseDept.vue";
+import BaseDeptEmp from "@/pages/components/input_field/BaseDeptEmp.vue";
+
+const store = useStore();
+const user = store.getters.getUser;
+const userID = user ? user.id : null;
 
 const baseAdapter = axios.getAdapter(api.defaults.adapter);
 const outletCodeInflight = new Map();
@@ -115,6 +122,24 @@ const editSetup = (row) => {
                 Single Week Setup
             </button>
         </div>
+        <div>
+            <div class="">
+                <BaseDept
+                    v-model:departmentID="selectedDepartmentId"
+                    :userID="userID"
+                />
+            </div>
+            <div class="">
+                <!-- <EmployeeName
+                                v-model:employee_id="selectedEmployeeId"
+                            /> -->
+                <BaseDeptEmp
+                    v-model:employeeID="selectedEmployeeId"
+                    :deptID="getId(selectedDepartmentId)"
+                    :isEdit="false"
+                />
+            </div>
+        </div>
 
         <!-- TABLE -->
         <div class="table-responsive shadow-sm table-wrapper">
@@ -123,10 +148,12 @@ const editSetup = (row) => {
             >
                 <thead class="table-light">
                     <tr>
-                        <th class="text-center">Distributor ID</th>
                         <th>Employee Name</th>
-                        <th class="text-center">Completed Weeks</th>
+                        <th>Department Name</th>
+                        <th class="text-center">Distributor Name</th>
+                        <th class="text-center">Completed Setup</th>
                         <th class="text-center">Unique Outlet Setup</th>
+                        <th class="text-center">Total Outlet</th>
                         <th class="text-center">Actions</th>
                     </tr>
                 </thead>
@@ -135,13 +162,17 @@ const editSetup = (row) => {
                         v-for="row in setups"
                         :key="row.distributor_id + '_' + row.employee_id"
                     >
-                        <td class="text-center">{{ row.distributor_id }}</td>
                         <td>{{ row.employee_name }}</td>
+                        <td>{{ row.department_name }}</td>
+                        <td class="text-center">{{ row.distributor_name }}</td>
                         <td class="text-center">
                             {{ row.completed_weeks }} / {{ row.total_weeks }}
                         </td>
                         <td class="text-center">
                             {{ row.unique_outlet_count }}
+                        </td>
+                        <td class="text-center">
+                            {{ row.total_outlet_count }}
                         </td>
                         <td class="text-center">
                             <button
