@@ -31,7 +31,7 @@ defineProps({
 
 <style scoped>
 .input-field {
-    width: 150px;
+    width: 120px;
     font-size: 14px;
     letter-spacing: 1px;
     border: 0.8px solid rgb(196, 194, 194);

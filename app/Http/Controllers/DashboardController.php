@@ -16,6 +16,7 @@ use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use App\Models\attendence;
+use App\Models\EmpInfoDocumentation;
 use App\Models\holiday;
 use Illuminate\Support\Facades\App;
 use DateTime;
@@ -733,6 +734,21 @@ class DashboardController extends Controller
 
         $avgWorkHours = $totalPresent > 0 ? ($totalAppHours + $totalMachineHours) / $totalPresent : 0;
 
+        $empInfoDocumentation = EmpInfoDocumentation::select(
+            'employee_id',
+            'completed_percent'
+        )->get();
+
+        $totalEmployeeDocumentation = $empInfoDocumentation->pluck('employee_id')->unique()->count();
+
+        $averagePercentageOfDocumentation = round(
+            $empInfoDocumentation
+                ->pluck('completed_percent')
+                ->filter(fn($percentage) => is_numeric($percentage))
+                ->avg() ?? 0,
+            2
+        );
+
 
         $result = [
             'active_employee' => $activeEmployee,
@@ -754,7 +770,9 @@ class DashboardController extends Controller
             'total_expense' => $totalExpense,
             'gulshan_office_total_employee' => $gulshanTotalOfficeEmployee,
             'warehouse_total_employee' => $warehouseTotalEmployee,
-            'field_force_total_employee' => $fieldforceTotalEmployee
+            'field_force_total_employee' => $fieldforceTotalEmployee,
+            'totalEmployeeDocumentation' => $totalEmployeeDocumentation,
+            'averagePercentageOfDocumentation' => $averagePercentageOfDocumentation
         ];
 
 

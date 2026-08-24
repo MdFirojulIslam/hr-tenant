@@ -1,6 +1,7 @@
 <script setup>
 import { ref, reactive, computed, onMounted, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
+import { useStore } from "vuex";
 import api from "@/api";
 import Swal from "sweetalert2";
 import Label from "@/pages/components/label/Label.vue";
@@ -10,6 +11,8 @@ import OutletCode from "@/pages/components/input_field/OutletCode.vue";
 
 const route = useRoute();
 const router = useRouter();
+const store = useStore();
+const role_id = store.getters.getRoleId;
 
 const distributor_id = ref(null);
 const employee_id = ref(null);
@@ -32,6 +35,11 @@ const selectedEmployee = ref(null);
 const isEditMode = ref(false);
 const isViewMode = ref(false);
 const isLoadingSetup = ref(false);
+
+/* SINGLE OUTLET DELETE STATE (EDIT MODE ONLY) */
+const canDeleteOutlet = ref(false);
+const deleting = ref(false);
+const loadedSchedules = ref(null);
 
 const distributors = ref([
     { id: 1, name: "Dhaka Central Distributor" },
@@ -114,6 +122,173 @@ const confirmRemoveRow = () => {
 const closeDeleteModal = () => {
     showDeleteModal.value = false;
     pendingDeleteTarget.value = { week: null, day: null, index: null };
+};
+
+/* SINGLE OUTLET DELETE (EDIT MODE ONLY) */
+const escapeHtml = (value) =>
+    String(value ?? "").replace(
+        /[&<>"']/g,
+        (char) =>
+            ({
+                "&": "&amp;",
+                "<": "&lt;",
+                ">": "&gt;",
+                '"': "&quot;",
+                "'": "&#039;",
+            })[char],
+    );
+
+const findMarkedOutlets = () => {
+    const marked = [];
+    weeks.forEach((week) => {
+        days.forEach((day) => {
+            (outletRows[week][day] || []).forEach((row) => {
+                if (row.is_marked && row.outlet_code && row.outlet_name) {
+                    marked.push({
+                        week,
+                        day,
+                        row,
+                        outlet_code: String(row.outlet_code).trim(),
+                    });
+                }
+            });
+        });
+    });
+    return marked;
+};
+
+const hasExistingAssignment = (week, dayName, outletCode) => {
+    const savedOutlets = loadedSchedules.value?.[week]?.[dayName] || [];
+    return savedOutlets.some(
+        (outlet) => String(outlet.outlet_code).trim() === outletCode,
+    );
+};
+
+const deleteSelectedOutlet = async () => {
+    if (!canDeleteOutlet.value || isViewMode.value || role_id != 1) return;
+
+    if (!distributor_id.value || !employee_id.value) {
+        Swal.fire(
+            "Warning",
+            "Please select both a distributor and an employee first.",
+            "warning",
+        );
+        return;
+    }
+
+    const markedOutlets = findMarkedOutlets();
+
+    if (markedOutlets.length === 0) {
+        Swal.fire(
+            "Warning",
+            "Please select an outlet first by ticking its checkbox.",
+            "warning",
+        );
+        return;
+    }
+
+    if (markedOutlets.length > 1) {
+        Swal.fire(
+            "Warning",
+            "Only one outlet can be deleted at a time. Please select exactly one outlet.",
+            "warning",
+        );
+        return;
+    }
+
+    const target = markedOutlets[0];
+    const dayName = target.day.toLowerCase();
+
+    if (!target.week || !target.day || !target.outlet_code) {
+        Swal.fire(
+            "Error",
+            "Invalid outlet selection. Week, day and outlet code are required to delete an assignment.",
+            "error",
+        );
+        return;
+    }
+
+    if (
+        !loadedSchedules.value ||
+        !hasExistingAssignment(target.week, dayName, target.outlet_code)
+    ) {
+        Swal.fire(
+            "Error",
+            `Outlet "${target.outlet_code}" does not have an existing assignment for this employee in Week ${target.week} - ${target.day}. Nothing was deleted.`,
+            "error",
+        );
+        return;
+    }
+
+    const result = await Swal.fire({
+        title: "Are you sure?",
+        html: `<p style="margin-bottom:8px">You are about to delete the selected outlet assignment.</p>
+            <p style="text-align:left;margin-bottom:8px">
+                <strong>Week:</strong> ${escapeHtml(target.week)}<br>
+                <strong>Day:</strong> ${escapeHtml(target.day)}<br>
+                <strong>Outlet Code:</strong> ${escapeHtml(target.outlet_code)}
+            </p>
+            <p style="margin-bottom:0">This action cannot be undone.</p>`,
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonText: "Yes, Delete",
+        cancelButtonText: "Cancel",
+        confirmButtonColor: "#bd360dd5",
+        cancelButtonColor: "#6c757d",
+    });
+
+    if (!result.isConfirmed) return;
+
+    deleting.value = true;
+
+    try {
+        const res = await api.delete(
+            `/outlet-visit-assignment/${employee_id.value}/${distributor_id.value}`,
+            {
+                data: {
+                    week_number: target.week,
+                    day_name: dayName,
+                    outlet_code: target.outlet_code,
+                    distributor_id: distributor_id.value,
+                    employee_id: employee_id.value,
+                },
+            },
+        );
+
+        // Remove only the deleted outlet from the current UI/state.
+        const rows = outletRows[target.week][target.day];
+        const rowIndex = rows.indexOf(target.row);
+        if (rowIndex !== -1) {
+            if (rows.length > 1) {
+                rows.splice(rowIndex, 1);
+            } else {
+                rows.splice(rowIndex, 1, emptyRow());
+            }
+        }
+
+        // Keep the cached assignment snapshot in sync.
+        const cached = loadedSchedules.value?.[target.week]?.[dayName];
+        if (cached) {
+            loadedSchedules.value[target.week][dayName] = cached.filter(
+                (outlet) =>
+                    String(outlet.outlet_code).trim() !== target.outlet_code,
+            );
+        }
+
+        Swal.fire(
+            "Deleted Successfully!",
+            res.data?.message ||
+                "The selected outlet assignment has been deleted.",
+            "success",
+        );
+    } catch (err) {
+        const message =
+            err.response?.data?.message ||
+            "Failed to delete the selected outlet assignment. Please try again.";
+        Swal.fire("Error", message, "error");
+    } finally {
+        deleting.value = false;
+    }
 };
 
 const buildPayload = () => {
@@ -290,15 +465,18 @@ const checkAndLoadSetup = async () => {
         const schedules = res.data?.data?.schedules;
 
         if (hasSetupData(schedules)) {
+            loadedSchedules.value = schedules;
             fillOutletRowsFromData(schedules);
             isEditMode.value = true;
         } else {
+            loadedSchedules.value = null;
             resetOutletRows();
             isEditMode.value = false;
         }
     } catch (err) {
         if (seq !== setupCheckSeq) return;
 
+        loadedSchedules.value = null;
         resetOutletRows();
         isEditMode.value = false;
         const message =
@@ -311,6 +489,7 @@ const checkAndLoadSetup = async () => {
 
 const scheduleSetupCheck = () => {
     if (setupCheckTimer) clearTimeout(setupCheckTimer);
+    loadedSchedules.value = null;
     resetOutletRows();
     isEditMode.value = false;
     setupCheckTimer = setTimeout(checkAndLoadSetup, 250);
@@ -326,6 +505,7 @@ onMounted(() => {
     if (distributorId) distributor_id.value = Number(distributorId);
 
     isViewMode.value = route.query.mode === "view";
+    canDeleteOutlet.value = route.query.mode === "edit" && !isViewMode.value;
 });
 
 const goBackToList = () => {
@@ -613,7 +793,7 @@ const save = async () => {
             </div>
         </div>
 
-        <!-- SAVE -->
+        <!-- SAVE / DELETE -->
         <div class="text-center py-2">
             <button
                 v-if="isViewMode"
@@ -624,15 +804,27 @@ const save = async () => {
                 <i class="fa-solid fa-arrow-left me-1"></i>
                 Back to List
             </button>
-            <button
-                v-else
-                type="button"
-                class="btn btn-sm btn-success px-4"
-                @click="save"
-            >
-                <i class="fa-solid fa-floppy-disk me-1"></i>
-                {{ isEditMode ? "Update" : "Save" }}
-            </button>
+            <template v-else>
+                <button
+                    type="button"
+                    class="btn btn-sm btn-success px-4"
+                    @click="save"
+                >
+                    <i class="fa-solid fa-floppy-disk me-1"></i>
+                    {{ isEditMode ? "Update" : "Save" }}
+                </button>
+                <button
+                    v-if="canDeleteOutlet && role_id == 1"
+                    type="button"
+                    class="btn btn-sm btn-outline-danger px-3 ms-2"
+                    :disabled="deleting"
+                    title="Delete the selected (marked) outlet assignment"
+                    @click="deleteSelectedOutlet"
+                >
+                    <i class="fa-solid fa-trash me-1"></i>
+                    Delete Selected Outlet
+                </button>
+            </template>
         </div>
 
         <!-- CENTERED DELETE CONFIRMATION POP-UP MODAL -->

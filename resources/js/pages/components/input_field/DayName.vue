@@ -26,7 +26,7 @@ defineProps({
     font-size: 14px;
     font-weight: 500;
     height: 33px;
-    width: 100px;
+    width: 70px;
     border-radius: 5px;
 }
 </style>

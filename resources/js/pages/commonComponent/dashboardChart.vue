@@ -1,5 +1,5 @@
 <template>
-    <div class="row">
+    <!-- <div class="row">
         <div class="col-xl-12">
             <div class="card mb-4">
                 <div class="card-header">
@@ -11,19 +11,24 @@
                 </div>
             </div>
         </div>
-    </div>
+    </div> -->
     <div class="row">
-        <div class="col-xl-6">
+        <!-- <div class="col-xl-6">
             <div class="card mb-4">
                 <div class="card-header">
                     <i class="fas fa-chart-pie me-1"></i>
                     Division Wise Employee
                 </div>
                 <div class="card-body">
-                    <ApexCharts type="donut" height="213" :options="pieChartOptions" :series="pieSeries"></ApexCharts>
+                    <ApexCharts
+                        type="donut"
+                        height="213"
+                        :options="pieChartOptions"
+                        :series="pieSeries"
+                    ></ApexCharts>
                 </div>
             </div>
-        </div>
+        </div> -->
         <div class="col-xl-6">
             <div class="card mb-4">
                 <div class="card-header">
@@ -31,12 +36,15 @@
                     Employee Turnover Rate
                 </div>
                 <div class="card-body">
-                    <ApexCharts type="bar" height="200" :options="barChartOptions" :series="barSeries"></ApexCharts>
+                    <ApexCharts
+                        type="bar"
+                        height="200"
+                        :options="barChartOptions"
+                        :series="barSeries"
+                    ></ApexCharts>
                 </div>
             </div>
         </div>
-    </div>
-    <div class="row">
         <div class="col-xl-6">
             <div class="card mb-4">
                 <div class="card-header">
@@ -44,25 +52,37 @@
                     Month Wise TA/DA
                 </div>
                 <div class="card-body">
-                    <ApexCharts type="area" height="200" :options="expenseChartOptions" :series="expenseSeries">
-                    </ApexCharts>
-                </div>
-            </div>
-        </div>
-        <div class="col-xl-6">
-            <div class="card mb-4">
-                <div class="card-header">
-                    <i class="fas fa-chart-bar me-1"></i>
-                    Department Wise Leave
-                </div>
-                <div class="card-body">
-                    <ApexCharts type="area" height="200" :options="areaLeaveChartOptions" :series="areaLeaveSeries">
+                    <ApexCharts
+                        type="area"
+                        height="200"
+                        :options="expenseChartOptions"
+                        :series="expenseSeries"
+                    >
                     </ApexCharts>
                 </div>
             </div>
         </div>
     </div>
     <div class="row">
+        <!-- <div class="col-xl-6">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <i class="fas fa-chart-bar me-1"></i>
+                    Department Wise Leave
+                </div>
+                <div class="card-body">
+                    <ApexCharts
+                        type="area"
+                        height="200"
+                        :options="areaLeaveChartOptions"
+                        :series="areaLeaveSeries"
+                    >
+                    </ApexCharts>
+                </div>
+            </div>
+        </div> -->
+    </div>
+    <!-- <div class="row">
         <div class="col-xl-12">
             <div class="card mb-4">
                 <div class="card-header">
@@ -70,12 +90,17 @@
                     Monthly Attendace Overview
                 </div>
                 <div class="card-body">
-                    <ApexCharts type="area" height="200" :options="attendanceChartOptions" :series="attendanceSeries">
+                    <ApexCharts
+                        type="area"
+                        height="200"
+                        :options="attendanceChartOptions"
+                        :series="attendanceSeries"
+                    >
                     </ApexCharts>
                 </div>
             </div>
         </div>
-    </div>
+    </div> -->
 </template>
 
 <script setup>
@@ -101,8 +126,8 @@ const barChartOptions = ref({});
 const pieSeries = ref([]);
 const pieChartOptions = ref({});
 
-const attendanceSeries = ref([])
-const attendanceChartOptions = ref({})
+const attendanceSeries = ref([]);
+const attendanceChartOptions = ref({});
 
 watch(
     () => props.dashData,
@@ -111,32 +136,32 @@ watch(
 
         const departmentNames = newData.dept_wise_Emp.map((dept) => dept.Name);
         const employeeCounts = newData.dept_wise_Emp.map(
-            (dept) => dept.employee_count
+            (dept) => dept.employee_count,
         );
 
         const deptNames = newData.dept_wise_leave.map(
-            (dept) => dept.department_name
+            (dept) => dept.department_name,
         );
         const leaveCounts = newData.dept_wise_leave.map(
-            (dept) => dept.leave_count
+            (dept) => dept.leave_count,
         );
         const divisionCounts = newData.division_wise_Emp.map(
-            (div) => div.employee_count
+            (div) => div.employee_count,
         );
         const divisionNames = newData.division_wise_Emp.map(
-            (div) => div.Division
+            (div) => div.Division,
         );
         const turnover_rate = newData.turnover_data.map(
-            (item) => item.turnover_rate
+            (item) => item.turnover_rate,
         );
         const turnover_year = newData.turnover_data.map((item) => item.year);
         const expense_months = newData.expense_date.map((item) => item.month);
         const expense_data = newData.expense_date.map(
-            (item) => item.total_expense
+            (item) => item.total_expense,
         );
 
         const colors = employeeCounts.map(
-            () => "#" + Math.floor(Math.random() * 16777215).toString(16)
+            () => "#" + Math.floor(Math.random() * 16777215).toString(16),
         );
 
         // Set Area Chart
@@ -205,9 +230,10 @@ watch(
             },
         };
 
-
         if (newData.attendace_data) {
-            const attendanceMonths = Object.values(newData.attendace_data.months);
+            const attendanceMonths = Object.values(
+                newData.attendace_data.months,
+            );
 
             const presentData = Object.values(newData.attendace_data.present);
             const absentData = Object.values(newData.attendace_data.absent);
@@ -230,11 +256,11 @@ watch(
 
             attendanceChartOptions.value = {
                 chart: {
-                    type: 'line',
+                    type: "line",
                     height: 350,
                 },
                 stroke: {
-                    curve: 'smooth',
+                    curve: "smooth",
                     width: 2,
                 },
                 markers: {
@@ -245,7 +271,7 @@ watch(
                 },
                 colors: ["#28a745", "#dc3545", "#ffc107"], // green, red, yellow
                 legend: {
-                    position: 'top',
+                    position: "top",
                 },
                 tooltip: {
                     shared: true,
@@ -253,8 +279,7 @@ watch(
                 },
             };
         }
-
     },
-    { immediate: true } // Run on initial mount as well
+    { immediate: true }, // Run on initial mount as well
 );
 </script>

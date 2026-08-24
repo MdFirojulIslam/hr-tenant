@@ -363,6 +363,32 @@ onMounted(() => {
                         </div>
                     </div>
                 </div>
+                <div class="metric-card">
+                    <div class="metric-header">
+                        <span class="metric-title">Documentation</span>
+                        <i class="fa-solid fa-plane-departure metric-icon"></i>
+                    </div>
+                    <div class="metric-body">
+                        <div class="stat-row">
+                            <span class="stat-label">Employee</span>
+                            <span class="stat-value text-success">
+                                {{
+                                    activeAttendanceData.totalEmployeeDocumentation ||
+                                    0
+                                }}
+                            </span>
+                        </div>
+                        <div class="stat-row mt-2">
+                            <span class="stat-label">collect</span>
+                            <span class="stat-value text-warning">
+                                {{
+                                    activeAttendanceData.averagePercentageOfDocumentation ||
+                                    0
+                                }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
             </section>
 
             <!-- Secondary Analytics / Charts Section -->

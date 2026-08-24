@@ -421,6 +421,78 @@ class DmsDistributionInfoController extends Controller
         ]);
     }
 
+    public function outletVisitSingleOutletDelete(Request $request, $employee_id, $distributor_id)
+    {
+        $validated = $request->validate([
+            'week_number' => 'required|integer',
+            'day_name' => 'required|string',
+            'outlet_code' => 'required|string',
+        ]);
+
+        if (!employee::where('id', (int) $employee_id)->exists()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Employee not found.',
+            ], 404);
+        }
+
+        if (!Distributor::where('distributor_id', (int) $distributor_id)->exists()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Distributor not found.',
+            ], 404);
+        }
+
+        $scheduleRecord = OutletWeekSchedule::where('week_no', (int) $validated['week_number'])
+            ->whereRaw('LOWER(day_name) = ?', [strtolower($validated['day_name'])])
+            ->first();
+
+        if (!$scheduleRecord) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Invalid week/day schedule provided.',
+            ], 422);
+        }
+
+        $outletCode = trim((string) $validated['outlet_code']);
+        $deletedBy = Auth::user()->EID;
+
+        try {
+            $deleted = DB::transaction(function () use ($employee_id, $distributor_id, $scheduleRecord, $outletCode, $deletedBy) {
+                return DB::table('outlet_visit_assignments')
+                    ->where('employee_id', (int) $employee_id)
+                    ->where('distributor_id', (int) $distributor_id)
+                    ->where('outlet_week_schedules_id', $scheduleRecord->id)
+                    ->where('outlet_code', $outletCode)
+                    ->where('is_active', true)
+                    ->update([
+                        'is_active' => false,
+                        'inactivated_on' => now(),
+                        'inactivated_by' => $deletedBy,
+                        'updated_by' => $deletedBy,
+                        'updated_at' => now(),
+                    ]);
+            });
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to delete the selected outlet assignment. Please try again.',
+            ], 500);
+        }
+
+        if ($deleted === 0) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No matching outlet assignment found for this employee, distributor, week and day. Nothing was deleted.',
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'The selected outlet assignment has been deleted.',
+        ]);
+    }
+
     public function outletVisitSingleWeekDetails(Request $request, $employee_id, $distributor_id, $week_no, $day_name)
     {
         $scheduleRecord = OutletWeekSchedule::where('week_no', (int) $week_no)

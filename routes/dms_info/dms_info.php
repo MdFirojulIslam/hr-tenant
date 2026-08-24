@@ -11,6 +11,7 @@ Route::post('/outlet-visit-assignment', [DmsDistributionInfoController::class, '
 Route::get('/outlet-visit-setup-list', [DmsDistributionInfoController::class, 'outletVisitSetupList']);
 Route::get('/outlet-visit-setup/{employee_id}/{distributor_id}', [DmsDistributionInfoController::class, 'outletVisitSetupDetails']);
 Route::put('/outlet-visit-assignment/{employee_id}/{distributor_id}', [DmsDistributionInfoController::class, 'outletVisitSetupUpdate']);
+Route::delete('/outlet-visit-assignment/{employee_id}/{distributor_id}', [DmsDistributionInfoController::class, 'outletVisitSingleOutletDelete']);
 Route::get('/outlet-visit-single-week/{employee_id}/{distributor_id}/{week_no}/{day_name}', [DmsDistributionInfoController::class, 'outletVisitSingleWeekDetails']);
 Route::post('/outlet-visit-single-week-assignment', [DmsDistributionInfoController::class, 'outletVisitSingleWeekSetup']);
 
