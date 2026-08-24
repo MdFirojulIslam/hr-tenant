@@ -10,12 +10,11 @@ import {
 import { useStore } from "vuex";
 import api from "@/api";
 import Swal from "sweetalert2";
-import EmployeeName from "@/pages/components/input_field/EmployeeName.vue";
 import BaseDept from "@/pages/components/input_field/BaseDept.vue";
+import SelectField from "@/pages/components/input_field/SelectField.vue";
 import BaseDeptEmp from "@/pages/components/input_field/BaseDeptEmp.vue";
 import DateField from "@/pages/components/input_field/DateField.vue";
 import DayName from "@/pages/components/input_field/DayName.vue";
-import SelectField from "@/pages/components/input_field/SelectField.vue";
 
 const store = useStore();
 const user = store.getters.getUser;
@@ -79,11 +78,7 @@ const renderVisitMap = () => {
     if (!container || !selectedVisitLocation.value) return;
 
     if (typeof google === "undefined" || !google.maps) {
-        Swal.fire(
-            "Error",
-            "Map service is not available right now.",
-            "error"
-        );
+        Swal.fire("Error", "Map service is not available right now.", "error");
         return;
     }
 
@@ -518,7 +513,7 @@ const downloadReport = async () => {
                         </div>
                         <div class="">
                             <select
-                                class="form-select"
+                                class="form-select status-select"
                                 v-model="selectedStatus"
                             >
                                 <option value="-" disabled>
@@ -528,44 +523,54 @@ const downloadReport = async () => {
                                 <option value="Visited">Visited</option>
                                 <option value="Not Visited">Not Visited</option>
                             </select>
+                            <!-- <SelectField
+                                v-model="selectedStatus"
+                                :items="[
+                                    { name: 'All Status', value: '' },
+                                    { name: 'Visited', value: 'Visited' },
+                                    {
+                                        name: 'Not Visited',
+                                        value: 'Not Visited',
+                                    },
+                                ]"
+                            /> -->
                         </div>
-                        <div v-if="!selectedStatus" class="report-summaries">
-                            <div
-                                class="summary-box d-flex align-items-center justify-content-between h-38 px-3"
-                            >
-                                <div
-                                    class="d-flex align-items-center gap-4 p-2"
-                                >
-                                    <div>
-                                        <span class="summary-label"
-                                            >Total Assign</span
-                                        >
-                                        <span class="summary-value ms-2">
-                                            {{ filteredReport.length }}
-                                        </span>
-                                    </div>
+                    </div>
+                    <div
+                        v-if="!selectedStatus"
+                        class="report-summaries col-md-4"
+                    >
+                        <div
+                            class="summary-box d-flex align-items-center justify-content-between h-38 px-3"
+                        >
+                            <div class="d-flex align-items-center gap-4 p-2">
+                                <div>
+                                    <span class="summary-label"
+                                        >Total Assign</span
+                                    >
+                                    <span class="summary-value ms-2">
+                                        {{ filteredReport.length }}
+                                    </span>
+                                </div>
 
-                                    <div class="vr"></div>
+                                <div class="vr"></div>
 
-                                    <div>
-                                        <span class="summary-label"
-                                            >Visited</span
-                                        >
-                                        <span class="summary-value ms-2">
-                                            {{ visitedCount }}
-                                        </span>
-                                    </div>
+                                <div>
+                                    <span class="summary-label">Visited</span>
+                                    <span class="summary-value ms-2">
+                                        {{ visitedCount }}
+                                    </span>
+                                </div>
 
-                                    <div class="vr"></div>
+                                <div class="vr"></div>
 
-                                    <div>
-                                        <span class="summary-label"
-                                            >Not Visited</span
-                                        >
-                                        <span class="summary-value ms-2">
-                                            {{ notVisitedCount }}
-                                        </span>
-                                    </div>
+                                <div>
+                                    <span class="summary-label"
+                                        >Not Visited</span
+                                    >
+                                    <span class="summary-value ms-2">
+                                        {{ notVisitedCount }}
+                                    </span>
                                 </div>
                             </div>
                         </div>
@@ -585,13 +590,13 @@ const downloadReport = async () => {
                             <th
                                 scope="col"
                                 class="text-center"
-                                style="width: 60px"
+                                style="width: 3%"
                             >
                                 #
                             </th>
-                            <th scope="col">Employee Name</th>
-                            <th scope="col">Department Name</th>
-                            <th scope="col">Outlet Code</th>
+                            <th class="text-nowrap" scope="col">Name</th>
+                            <th scope="col">Department</th>
+                            <th scope="col">Code</th>
                             <th scope="col">Outlet Name</th>
                             <th scope="col">Remarks</th>
                             <th scope="col">Check in Location</th>
@@ -644,32 +649,21 @@ const downloadReport = async () => {
                         <template v-else>
                             <tr
                                 v-for="(row, idx) in filteredReport"
-                                :key="
-                                    `${row.date_raw}-${row.employee_id}-${row.outlet_code}-${row.distributor_name}`
-                                "
+                                :key="`${row.date_raw}-${row.employee_id}-${row.outlet_code}-${row.distributor_name}`"
                             >
                                 <td class="text-center text-muted fw-semibold">
                                     {{ idx + 1 }}
                                 </td>
-                                <td>
-                                    <div class="fw-semibold text-dark">
-                                        {{ row.employee_name || "-" }}
-                                    </div>
+                                <td class="text-nowrap">
+                                    {{ row.employee_name || "-" }}
                                 </td>
+                                <td>{{ row.department || "-" }}</td>
+
+                                <td>{{ row.outlet_code }}</td>
                                 <td>
-                                    <span class="fw-semibold text-dark">{{
-                                        row.department || "-"
-                                    }}</span>
-                                </td>
-                                <td>
-                                    <span class="fw-semibold text-dark">{{
-                                        row.outlet_code
-                                    }}</span>
-                                </td>
-                                <td class="fw-semibold text-dark">
                                     {{ row.outlet_name }}
                                 </td>
-                                <td class="fw-semibold text-dark">
+                                <td>
                                     {{ row.remarks }}
                                 </td>
                                 <td>
@@ -704,12 +698,12 @@ const downloadReport = async () => {
                                         </button>
                                     </div>
                                 </td>
-                                <td>
+                                <td class="text-nowrap">
                                     <span class="fw-semibold text-dark">
                                         {{ row.check_in || "-" }}
                                     </span>
                                 </td>
-                                <td>
+                                <td class="text-nowrap">
                                     <span class="fw-semibold text-dark">
                                         {{ row.check_out || "-" }}
                                     </span>
@@ -800,10 +794,7 @@ const downloadReport = async () => {
                         id="check-in-map"
                         class="map-modal-canvas"
                     ></div>
-                    <div
-                        v-if="selectedVisitLocation"
-                        class="map-modal-details"
-                    >
+                    <div v-if="selectedVisitLocation" class="map-modal-details">
                         <span>
                             Latitude:
                             <strong>{{
@@ -818,9 +809,7 @@ const downloadReport = async () => {
                         </span>
                         <span class="ms-3">
                             Location:
-                            <strong>{{
-                                selectedVisitLocation.name
-                            }}</strong>
+                            <strong>{{ selectedVisitLocation.name }}</strong>
                         </span>
                     </div>
                     <div class="map-modal-footer">
@@ -1115,5 +1104,18 @@ const downloadReport = async () => {
     font-size: 0.95rem;
     font-weight: 700;
     color: #212529;
+}
+
+.status-select {
+    width: 100px;
+    font-size: 14px;
+    border: 0.8px solid rgb(196, 194, 194);
+    padding: 5px;
+    border-radius: 5px;
+
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: none !important;
 }
 </style>

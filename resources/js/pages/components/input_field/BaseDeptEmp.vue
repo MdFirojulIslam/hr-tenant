@@ -71,7 +71,7 @@ onMounted(() => {
             :show-labels="false"
             :clear-on-select="false"
             :allow-empty="true"
-            placeholder="Custom Employee Name"
+            placeholder="Employee Name"
         />
         <button
             v-if="proxyEmployeeID"
@@ -136,6 +136,8 @@ onMounted(() => {
     border-radius: 4px;
     font-size: 14px;
     color: #ffffff;
+    height: 25px;
+    top: 3px;
 }
 
 .clear-btn:hover {

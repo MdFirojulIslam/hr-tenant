@@ -734,20 +734,40 @@ class DashboardController extends Controller
 
         $avgWorkHours = $totalPresent > 0 ? ($totalAppHours + $totalMachineHours) / $totalPresent : 0;
 
+        // $empInfoDocumentation = EmpInfoDocumentation::select(
+        //     'employee_id',
+        //     'completed_percent'
+        // )->get();
+
+        // $totalEmployeeDocumentation = $empInfoDocumentation->pluck('employee_id')->unique()->count();
+
+        // $averagePercentageOfDocumentation = round(
+        //     $empInfoDocumentation
+        //         ->pluck('completed_percent')
+        //         ->filter(fn($percentage) => is_numeric($percentage))
+        //         ->avg() ?? 0,
+        //     2
+        // );
+
+
         $empInfoDocumentation = EmpInfoDocumentation::select(
             'employee_id',
             'completed_percent'
         )->get();
 
-        $totalEmployeeDocumentation = $empInfoDocumentation->pluck('employee_id')->unique()->count();
+        $totalEmployeeDocumentation = $empInfoDocumentation
+            ->pluck('employee_id')
+            ->unique()
+            ->count();
 
-        $averagePercentageOfDocumentation = round(
-            $empInfoDocumentation
-                ->pluck('completed_percent')
-                ->filter(fn($percentage) => is_numeric($percentage))
-                ->avg() ?? 0,
-            2
-        );
+        $totalCompletedPercentage = $empInfoDocumentation
+            ->pluck('completed_percent')
+            ->filter(fn($percentage) => is_numeric($percentage))
+            ->sum();
+
+        $averagePercentageOfDocumentation = $active_employees > 0
+            ? round($totalCompletedPercentage / $active_employees, 2)
+            : 0;
 
 
         $result = [

@@ -175,7 +175,6 @@ const editSetup = (row) => {
         query: {
             employee_id: row.employee_id,
             distributor_id: row.distributor_id,
-            mode: "edit",
         },
     });
 };

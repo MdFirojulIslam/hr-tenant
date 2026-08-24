@@ -365,13 +365,24 @@ onMounted(() => {
                 </div>
                 <div class="metric-card">
                     <div class="metric-header">
-                        <span class="metric-title">Documentation</span>
-                        <i class="fa-solid fa-plane-departure metric-icon"></i>
+                        <span class="metric-title">
+                            <i
+                                class="fa-solid fa-file-shield metric-icon me-2"
+                            ></i>
+                            Document Compliance
+                        </span>
                     </div>
                     <div class="metric-body">
                         <div class="stat-row">
-                            <span class="stat-label">Employee</span>
+                            <span class="stat-label">
+                                <i
+                                    class="fa-solid fa-user-check text-muted me-1"
+                                ></i>
+                                Compliant Employees
+                            </span>
                             <span class="stat-value text-success">
+                                {{ activeAttendanceData.active_employee || 0 }}
+                                /
                                 {{
                                     activeAttendanceData.totalEmployeeDocumentation ||
                                     0
@@ -379,12 +390,17 @@ onMounted(() => {
                             </span>
                         </div>
                         <div class="stat-row mt-2">
-                            <span class="stat-label">collect</span>
+                            <span class="stat-label">
+                                <i
+                                    class="fa-solid fa-chart-line text-muted me-1"
+                                ></i>
+                                Completion Rate
+                            </span>
                             <span class="stat-value text-warning">
                                 {{
                                     activeAttendanceData.averagePercentageOfDocumentation ||
                                     0
-                                }}
+                                }}%
                             </span>
                         </div>
                     </div>
