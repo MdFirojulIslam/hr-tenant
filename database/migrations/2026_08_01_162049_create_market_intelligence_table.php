@@ -13,23 +13,38 @@ return new class extends Migration
     {
         Schema::create('market_intelligence', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('employee_id');
+
+            $table->foreignId('employee_id')
+                ->constrained('employees')
+                ->cascadeOnDelete();
+
             $table->unsignedBigInteger('brand_id');
+
             $table->string('product_name');
             $table->string('size')->nullable();
+
             $table->string('outlet_name');
+            $table->string('outlet_location', 500)->nullable();
+
             $table->string('location');
             $table->string('location_coordinate')->nullable();
+
             $table->string('division');
             $table->string('district');
-            $table->decimal('tp', 14, 2)->default(0);
-            $table->decimal('mrp', 14, 2)->default(0);
+
+            $table->string('country_of_origin', 120)->nullable();
+
+            $table->decimal('tp', 14, 2)->default(0.00);
+            $table->decimal('mrp', 14, 2)->default(0.00);
+
             $table->string('product_image')->nullable();
+
             $table->unsignedBigInteger('created_by')->nullable();
             $table->unsignedBigInteger('updated_by')->nullable();
+
             $table->timestamps();
 
-            $table->foreign('employee_id')->references('id')->on('employees')->onDelete('cascade');
+            // Indexes
             $table->index(['employee_id', 'created_at']);
             $table->index('brand_id');
         });

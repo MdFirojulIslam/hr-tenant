@@ -89,6 +89,9 @@ class NavigationSeeder extends Seeder
             ['id' => '75', 'name' => 'Events', 'url' => '/workstation/events', 'icon' => 'NULL', 'page' => 'Events', 'path' => 'NULL', 'parent_id' => '34', 'active' => '1'],
             ['id' => '76', 'name' => 'Setup List', 'url' => '/outlet-visit/setup-list', 'icon' => 'NULL', 'page' => 'SetupList', 'path' => './pages/outletVisit/setupList.vue', 'parent_id' => '68', 'active' => '1'],
             ['id' => '77', 'name' => 'Outlet Visit Report', 'url' => '/outlet-visit/outlet-visit-report', 'icon' => 'NULL', 'page' => 'OutletVisitReport', 'path' => './pages/outletVisit/outletVisitReport.vue', 'parent_id' => '68', 'active' => '1'],
+            ['id' => '78', 'name' => 'Market Intelligence Report', 'url' => '/outlet-visit/market-intelligence-report', 'icon' => 'NULL', 'page' => 'MarketIntelligenceReport', 'path' => './pages/outletVisit/marketIntelligenceReport.vue', 'parent_id' => '68', 'active' => '1'],
+            ['id' => '79', 'name' => 'Meeting Minutes Report', 'url' => '/outlet-visit/meeting-minutes-report', 'icon' => 'NULL', 'page' => 'MeetingMinutesReport', 'path' => './pages/outletVisit/meetingMinutesReport.vue', 'parent_id' => '68', 'active' => '1'],
+            ['id' => '80', 'name' => 'Random Outlet Visit Report', 'url' => '/outlet-visit/random-outlet-visit-report', 'icon' => 'NULL', 'page' => 'RandomOutletVisitReport', 'path' => './pages/outletVisit/randomOutletVisitReport.vue', 'parent_id' => '68', 'active' => '1'],
 
         ];
 

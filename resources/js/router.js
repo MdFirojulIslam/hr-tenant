@@ -688,6 +688,35 @@ const routes = [
             pageId: 77,
         },
     },
+    {
+        path: "/outlet-visit/market-intelligence-report",
+        name: "MarketIntelligenceReport",
+        component: () =>
+            import("./pages/outletVisit/marketIntelligenceReport.vue"),
+        meta: {
+            requireAuth: true,
+            pageId: 78,
+        },
+    },
+    {
+        path: "/outlet-visit/meeting-minutes-report",
+        name: "MeetingMinutesReport",
+        component: () => import("./pages/outletVisit/meetingMinutesReport.vue"),
+        meta: {
+            requireAuth: true,
+            pageId: 79,
+        },
+    },
+    {
+        path: "/outlet-visit/random-outlet-visit-report",
+        name: "RandomOutletVisitReport",
+        component: () =>
+            import("./pages/outletVisit/randomOutletVisitReport.vue"),
+        meta: {
+            requireAuth: true,
+            pageId: 80,
+        },
+    },
 ];
 
 const router = createRouter({
