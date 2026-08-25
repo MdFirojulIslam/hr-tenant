@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\DMS;
 
 use App\Http\Controllers\Controller;
+use App\Models\Brand;
 use App\Models\Distributor;
 use App\Models\employee;
 use App\Models\OutletVisitAssignment;
@@ -844,6 +845,612 @@ class DmsDistributionInfoController extends Controller
         };
 
         $filename = 'outlet_visit_report_' . $year . '_' . str_pad((string) $month, 2, '0', STR_PAD_LEFT) . '.csv';
+
+        return response()->stream($callback, 200, [
+            'Content-Type'        => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Cache-Control'       => 'no-cache, no-store, must-revalidate',
+            'Pragma'              => 'no-cache',
+            'Expires'             => '0',
+        ]);
+    }
+
+    public function marketIntelligenceBrands()
+    {
+        try {
+            $brands = Brand::query()
+                ->orderBy('name')
+                ->get(['id', 'name']);
+
+            return response()->json([
+                'success' => true,
+                'data' => $brands,
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unable to load brands. Check artisan_admin database connection.',
+            ], 500);
+        }
+    }
+
+    public function marketIntelligenceReport(Request $request)
+    {
+        $validated = $request->validate([
+            'department_id' => 'nullable|integer',
+            'employee_id'   => 'nullable|integer',
+            'brand_id'      => 'nullable|integer',
+            'size'          => 'nullable|string',
+            'download'      => 'nullable|string',
+        ]);
+
+        $isDownload = isset($validated['download']) && $validated['download'] === 'csv';
+
+        $query = DB::table('market_intelligence as mi')
+            ->join('employees as e', 'e.id', '=', 'mi.employee_id')
+            ->leftJoin('officials as off', 'off.EID', '=', 'mi.employee_id')
+            ->leftJoin('departments as d', 'd.id', '=', 'off.Department_Id')
+            ->select(
+                'mi.id',
+                'mi.employee_id',
+                'mi.brand_id',
+                'mi.product_name',
+                'mi.size',
+                'mi.outlet_name',
+                'mi.outlet_location',
+                'mi.location',
+                'mi.location_coordinate',
+                'mi.division',
+                'mi.district',
+                'mi.country_of_origin',
+                'mi.tp',
+                'mi.mrp',
+                'mi.product_image',
+                'mi.created_at',
+                'e.Full_Name as employee_name',
+                'd.Name as department_name',
+                'd.id as department_id'
+            );
+
+        if (!empty($validated['department_id'])) {
+            $query->where('d.id', (int) $validated['department_id']);
+        }
+
+        if (!empty($validated['employee_id'])) {
+            $query->where('mi.employee_id', (int) $validated['employee_id']);
+        }
+
+        if (!empty($validated['brand_id'])) {
+            $query->where('mi.brand_id', (int) $validated['brand_id']);
+        }
+
+        if (!empty($validated['size'])) {
+            $query->where('mi.size', $validated['size']);
+        }
+
+        $query->orderByDesc('mi.created_at')->orderByDesc('mi.id');
+
+        $rows = $query->get();
+
+        $brandIds = $rows->pluck('brand_id')->unique()->values()->all();
+        $brandNames = [];
+        try {
+            if (!empty($brandIds)) {
+                $brandNames = Brand::query()
+                    ->whereIn('id', $brandIds)
+                    ->pluck('name', 'id')
+                    ->all();
+            }
+        } catch (\Throwable $e) {
+            $brandNames = [];
+        }
+
+        $report = $rows->map(function ($row) use ($brandNames) {
+            $imageUrl = null;
+            if ($row->product_image) {
+                $imageUrl = asset('storage/' . ltrim($row->product_image, '/'));
+            }
+
+            return [
+                'id'                  => (int) $row->id,
+                'employee_id'         => (int) $row->employee_id,
+                'employee_name'       => $row->employee_name ?? '-',
+                'department_name'     => $row->department_name ?? '-',
+                'department_id'       => $row->department_id ? (int) $row->department_id : null,
+                'brand_id'            => (int) $row->brand_id,
+                'brand_name'          => $brandNames[$row->brand_id] ?? '-',
+                'product_name'        => $row->product_name ?? '-',
+                'size'                => $row->size ?? '-',
+                'outlet_name'         => $row->outlet_name ?? '-',
+                'outlet_location'     => $row->outlet_location ?? '-',
+                'location'            => $row->location ?? '-',
+                'location_coordinate' => $row->location_coordinate ?? null,
+                'division'            => $row->division ?? '-',
+                'district'            => $row->district ?? '-',
+                'country_of_origin'   => $row->country_of_origin ?? '-',
+                'tp'                  => $row->tp !== null ? (float) $row->tp : 0,
+                'mrp'                 => $row->mrp !== null ? (float) $row->mrp : 0,
+                'product_image'       => $row->product_image ?? null,
+                'product_image_url'   => $imageUrl,
+            ];
+        })->values()->all();
+
+        if ($isDownload) {
+            return $this->buildMiCsvDownload($report);
+        }
+
+        $allDepartments = $rows->filter(fn($r) => !empty($r->department_id))
+            ->map(fn($r) => ['id' => (int) $r->department_id, 'name' => $r->department_name ?? '-'])
+            ->unique('id')
+            ->values()
+            ->sortBy('name')
+            ->values()
+            ->all();
+
+        $allEmployees = $rows->map(fn($r) => ['id' => (int) $r->employee_id, 'name' => $r->employee_name ?? '-'])
+            ->unique('id')
+            ->values()
+            ->sortBy('name')
+            ->values()
+            ->all();
+
+        $allSizes = $rows->pluck('size')
+            ->filter(fn($s) => !empty($s))
+            ->unique()
+            ->sort()
+            ->values()
+            ->all();
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'report'      => $report,
+                'employees'   => $allEmployees,
+                'departments' => $allDepartments,
+                'sizes'       => $allSizes,
+            ],
+        ]);
+    }
+
+    private function buildMiCsvDownload(array $report)
+    {
+        $headers = [
+            'Serial',
+            'Employee',
+            'Brand',
+            'Product Name',
+            'Size',
+            'Outlet Name',
+            'Outlet Location',
+            'Division',
+            'District',
+            'Country of Origin',
+            'TP',
+            'MRP',
+        ];
+
+        $callback = function () use ($report, $headers) {
+            $handle = fopen('php://output', 'w');
+            fprintf($handle, chr(0xEF) . chr(0xBB) . chr(0xBF));
+            fputcsv($handle, $headers);
+
+            foreach ($report as $idx => $row) {
+                fputcsv($handle, [
+                    $idx + 1,
+                    $row['employee_name'],
+                    $row['brand_name'],
+                    $row['product_name'],
+                    $row['size'],
+                    $row['outlet_name'],
+                    $row['outlet_location'],
+                    $row['division'],
+                    $row['district'],
+                    $row['country_of_origin'],
+                    $row['tp'],
+                    $row['mrp'],
+                ]);
+            }
+
+            fclose($handle);
+        };
+
+        $filename = 'market_intelligence_report_' . date('Y_m_d') . '.csv';
+
+        return response()->stream($callback, 200, [
+            'Content-Type'        => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Cache-Control'       => 'no-cache, no-store, must-revalidate',
+            'Pragma'              => 'no-cache',
+            'Expires'             => '0',
+        ]);
+    }
+
+    public function meetingMinutesTowns()
+    {
+        try {
+            $towns = DB::table('towns')
+                ->select('towns.id as town_id', 'towns.Name as town_name')
+                ->orderBy('towns.Name')
+                ->get();
+
+            return response()->json([
+                'success' => true,
+                'data' => $towns,
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unable to load towns.',
+            ], 500);
+        }
+    }
+
+    public function meetingMinutesReport(Request $request)
+    {
+        $validated = $request->validate([
+            'department_id' => 'nullable|integer',
+            'employee_id'   => 'nullable|integer',
+            'town_id'       => 'nullable|integer',
+            'date'          => 'nullable|date_format:Y-m-d',
+            'download'      => 'nullable|string',
+        ]);
+
+        $isDownload = isset($validated['download']) && $validated['download'] === 'csv';
+
+        $query = DB::table('minutes_of_meetings as mom')
+            ->join('employees as e', 'e.id', '=', 'mom.eid')
+            ->leftJoin('officials as off', 'off.EID', '=', 'mom.eid')
+            ->leftJoin('departments as d', 'd.id', '=', 'off.Department_Id')
+            ->leftJoin('towns as t', 't.id', '=', 'mom.town')
+            ->select(
+                'mom.id',
+                'mom.eid',
+                'mom.str_time',
+                'mom.end_time',
+                'mom.town',
+                'mom.date',
+                'mom.meeting_with',
+                'mom.mom',
+                'mom.file',
+                'mom.created_at',
+                'e.Full_Name as employee_name',
+                'd.Name as department_name',
+                'd.id as department_id',
+                't.Name as town_name'
+            );
+
+        if (!empty($validated['department_id'])) {
+            $query->where('d.id', (int) $validated['department_id']);
+        }
+
+        if (!empty($validated['employee_id'])) {
+            $query->where('mom.eid', (int) $validated['employee_id']);
+        }
+
+        if (!empty($validated['town_id'])) {
+            $query->where('mom.town', (int) $validated['town_id']);
+        }
+
+        if (!empty($validated['date'])) {
+            $query->whereDate('mom.date', $validated['date']);
+        }
+
+        $query->orderByDesc('mom.date')->orderByDesc('mom.id');
+
+        $rows = $query->get();
+
+        $report = $rows->map(function ($row) {
+            $fileUrl = null;
+            if ($row->file) {
+                $fileUrl = asset('storage/' . ltrim($row->file, '/'));
+            }
+
+            return [
+                'id'                => (int) $row->id,
+                'eid'               => (int) $row->eid,
+                'employee_name'     => $row->employee_name ?? '-',
+                'department_name'   => $row->department_name ?? '-',
+                'department_id'     => $row->department_id ? (int) $row->department_id : null,
+                'date'              => $row->date ? Carbon::parse($row->date)->format('d-M-Y') : '-',
+                'date_raw'          => $row->date ? Carbon::parse($row->date)->format('Y-m-d') : null,
+                'town_id'           => (int) $row->town,
+                'town_name'         => $row->town_name ?? '-',
+                'str_time'          => $this->formatMomTime($row->str_time),
+                'end_time'          => $this->formatMomTime($row->end_time),
+                'meeting_with'      => $row->meeting_with ?? '-',
+                'mom'               => $row->mom ?? '-',
+                'file'              => $row->file ?? null,
+                'file_url'          => $fileUrl,
+                'created_at'        => $row->created_at ? Carbon::parse($row->created_at)->format('d-M-Y h:i A') : '-',
+            ];
+        })->values()->all();
+
+        if ($isDownload) {
+            return $this->buildMmCsvDownload($report);
+        }
+
+        $allDepartments = $rows->filter(fn($r) => !empty($r->department_id))
+            ->map(fn($r) => ['id' => (int) $r->department_id, 'name' => $r->department_name ?? '-'])
+            ->unique('id')
+            ->values()
+            ->sortBy('name')
+            ->values()
+            ->all();
+
+        $allEmployees = $rows->map(fn($r) => ['id' => (int) $r->eid, 'name' => $r->employee_name ?? '-'])
+            ->unique('id')
+            ->values()
+            ->sortBy('name')
+            ->values()
+            ->all();
+
+        $allTowns = $rows->filter(fn($r) => !empty($r->town_id))
+            ->map(fn($r) => ['id' => (int) $r->town_id, 'name' => $r->town_name ?? '-'])
+            ->unique('id')
+            ->values()
+            ->sortBy('name')
+            ->values()
+            ->all();
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'report'      => $report,
+                'employees'   => $allEmployees,
+                'departments' => $allDepartments,
+                'towns'       => $allTowns,
+            ],
+        ]);
+    }
+
+    private function formatMomTime($time): ?string
+    {
+        if ($time === null || $time === '') {
+            return null;
+        }
+        $s = (string) $time;
+        if (preg_match('/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/', $s, $m)) {
+            $h = (int) $m[1];
+            $min = (int) $m[2];
+            $period = $h >= 12 ? 'PM' : 'AM';
+            $h12 = $h % 12;
+            if ($h12 === 0) {
+                $h12 = 12;
+            }
+            return sprintf('%d:%02d %s', $h12, $min, $period);
+        }
+        return $s;
+    }
+
+    private function buildMmCsvDownload(array $report)
+    {
+        $headers = [
+            'Serial',
+            'Date',
+            'Employee',
+            'Department',
+            'Town',
+            'Start Time',
+            'End Time',
+            'Meeting With',
+            'Minutes of Meeting',
+            'Attached File',
+            'Created At',
+        ];
+
+        $callback = function () use ($report, $headers) {
+            $handle = fopen('php://output', 'w');
+            fprintf($handle, chr(0xEF) . chr(0xBB) . chr(0xBF));
+            fputcsv($handle, $headers);
+
+            foreach ($report as $idx => $row) {
+                fputcsv($handle, [
+                    $idx + 1,
+                    $row['date'],
+                    $row['employee_name'],
+                    $row['department_name'],
+                    $row['town_name'],
+                    $row['str_time'] ?? '-',
+                    $row['end_time'] ?? '-',
+                    $row['meeting_with'],
+                    $row['mom'],
+                    $row['file_url'] ?? '-',
+                    $row['created_at'],
+                ]);
+            }
+
+            fclose($handle);
+        };
+
+        $filename = 'meeting_minutes_report_' . date('Y_m_d') . '.csv';
+
+        return response()->stream($callback, 200, [
+            'Content-Type'        => 'text/csv; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+            'Cache-Control'       => 'no-cache, no-store, must-revalidate',
+            'Pragma'              => 'no-cache',
+            'Expires'             => '0',
+        ]);
+    }
+
+    public function randomOutletVisitTowns()
+    {
+        try {
+            $towns = DB::table('random_outlet_visits')
+                ->select('town')
+                ->whereNotNull('town')
+                ->where('town', '!=', '')
+                ->distinct()
+                ->orderBy('town')
+                ->pluck('town');
+
+            return response()->json([
+                'success' => true,
+                'data' => $towns,
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unable to load towns.',
+            ], 500);
+        }
+    }
+
+    public function randomOutletVisitReport(Request $request)
+    {
+        $validated = $request->validate([
+            'department_id' => 'nullable|integer',
+            'employee_id'   => 'nullable|integer',
+            'town'          => 'nullable|string',
+            'date'          => 'nullable|date_format:Y-m-d',
+            'download'      => 'nullable|string',
+        ]);
+
+        $isDownload = isset($validated['download']) && $validated['download'] === 'csv';
+
+        $query = DB::table('random_outlet_visits as rov')
+            ->join('employees as e', 'e.id', '=', 'rov.eid')
+            ->leftJoin('officials as off', 'off.EID', '=', 'rov.eid')
+            ->leftJoin('departments as d', 'd.id', '=', 'off.Department_Id')
+            ->select(
+                'rov.id',
+                'rov.eid',
+                'rov.town',
+                'rov.outlet_name',
+                'rov.image_path',
+                'rov.latitude',
+                'rov.longitude',
+                'rov.location_name',
+                'rov.remarks',
+                'rov.created_at',
+                'e.Full_Name as employee_name',
+                'd.Name as department_name',
+                'd.id as department_id'
+            );
+
+        if (!empty($validated['department_id'])) {
+            $query->where('d.id', (int) $validated['department_id']);
+        }
+
+        if (!empty($validated['employee_id'])) {
+            $query->where('rov.eid', (int) $validated['employee_id']);
+        }
+
+        if (!empty($validated['town'])) {
+            $query->where('rov.town', $validated['town']);
+        }
+
+        if (!empty($validated['date'])) {
+            $query->whereDate('rov.created_at', $validated['date']);
+        }
+
+        $query->orderByDesc('rov.created_at')->orderByDesc('rov.id');
+
+        $rows = $query->get();
+
+        $report = $rows->map(function ($row) {
+            $imageUrl = null;
+            if ($row->image_path) {
+                $imageUrl = asset('storage/' . ltrim($row->image_path, '/'));
+            }
+
+            return [
+                'id'                => (int) $row->id,
+                'eid'               => (int) $row->eid,
+                'employee_name'     => $row->employee_name ?? '-',
+                'department_name'   => $row->department_name ?? '-',
+                'department_id'     => $row->department_id ? (int) $row->department_id : null,
+                'town'              => $row->town ?? '-',
+                'outlet_name'       => $row->outlet_name ?? '-',
+                'latitude'          => $row->latitude !== null ? (float) $row->latitude : null,
+                'longitude'         => $row->longitude !== null ? (float) $row->longitude : null,
+                'location_name'     => $row->location_name ?? '-',
+                'remarks'           => $row->remarks ?? '-',
+                'image_path'        => $row->image_path ?? null,
+                'image_url'         => $imageUrl,
+                'created_at'        => $row->created_at ? Carbon::parse($row->created_at)->format('d-M-Y h:i A') : '-',
+                'created_at_raw'    => $row->created_at ? Carbon::parse($row->created_at)->format('Y-m-d H:i:s') : null,
+            ];
+        })->values()->all();
+
+        if ($isDownload) {
+            return $this->buildRovCsvDownload($report);
+        }
+
+        $allDepartments = $rows->filter(fn($r) => !empty($r->department_id))
+            ->map(fn($r) => ['id' => (int) $r->department_id, 'name' => $r->department_name ?? '-'])
+            ->unique('id')
+            ->values()
+            ->sortBy('name')
+            ->values()
+            ->all();
+
+        $allEmployees = $rows->map(fn($r) => ['id' => (int) $r->eid, 'name' => $r->employee_name ?? '-'])
+            ->unique('id')
+            ->values()
+            ->sortBy('name')
+            ->values()
+            ->all();
+
+        $allTowns = $rows->filter(fn($r) => !empty($r->town))
+            ->map(fn($r) => trim($r->town))
+            ->unique()
+            ->sort()
+            ->values()
+            ->all();
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'report'      => $report,
+                'employees'   => $allEmployees,
+                'departments' => $allDepartments,
+                'towns'       => $allTowns,
+            ],
+        ]);
+    }
+
+    private function buildRovCsvDownload(array $report)
+    {
+        $headers = [
+            'Serial',
+            'Employee',
+            'Department',
+            'Town',
+            'Outlet Name',
+            'Location',
+            'Latitude',
+            'Longitude',
+            'Remarks',
+            'Image URL',
+            'Created At',
+        ];
+
+        $callback = function () use ($report, $headers) {
+            $handle = fopen('php://output', 'w');
+            fprintf($handle, chr(0xEF) . chr(0xBB) . chr(0xBF));
+            fputcsv($handle, $headers);
+
+            foreach ($report as $idx => $row) {
+                fputcsv($handle, [
+                    $idx + 1,
+                    $row['employee_name'],
+                    $row['department_name'],
+                    $row['town'],
+                    $row['outlet_name'],
+                    $row['location_name'],
+                    $row['latitude'] ?? '',
+                    $row['longitude'] ?? '',
+                    $row['remarks'],
+                    $row['image_url'] ?? '',
+                    $row['created_at'],
+                ]);
+            }
+
+            fclose($handle);
+        };
+
+        $filename = 'random_outlet_visit_report_' . date('Y_m_d') . '.csv';
 
         return response()->stream($callback, 200, [
             'Content-Type'        => 'text/csv; charset=UTF-8',

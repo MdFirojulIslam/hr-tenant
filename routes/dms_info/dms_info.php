@@ -17,3 +17,12 @@ Route::post('/outlet-visit-single-week-assignment', [DmsDistributionInfoControll
 
 
 Route::get('/outlet-visit-report', [DmsDistributionInfoController::class, 'outletVisitReport']);
+
+Route::get('/market-intelligence-report', [DmsDistributionInfoController::class, 'marketIntelligenceReport']);
+Route::get('/market-intelligence-brands', [DmsDistributionInfoController::class, 'marketIntelligenceBrands']);
+
+Route::get('/meeting-minutes-report', [DmsDistributionInfoController::class, 'meetingMinutesReport']);
+Route::get('/meeting-minutes-towns', [DmsDistributionInfoController::class, 'meetingMinutesTowns']);
+
+Route::get('/random-outlet-visit-report', [DmsDistributionInfoController::class, 'randomOutletVisitReport']);
+Route::get('/random-outlet-visit-towns', [DmsDistributionInfoController::class, 'randomOutletVisitTowns']);
