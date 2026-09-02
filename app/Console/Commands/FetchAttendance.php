@@ -22,8 +22,11 @@ class FetchAttendance extends Command
 
     public function handle()
     {
+
         $this->info('FetchAttendance command started.');
         $zkt_info = zkt_machine::where('Status', 1)->get();
+
+
 
         if ($zkt_info->isEmpty()) {
             $this->info('Cannot find any machine');
@@ -34,8 +37,12 @@ class FetchAttendance extends Command
             $this->info("Processing machine: IP {$info->IP}, Port {$info->port}");
             $zk = new ZKTeco($info->IP, $info->port);
 
+            dd($zk->connect());
+
             if ($zk->connect()) {
+                dd("asdfdsaf");
                 $attendanceData = $zk->getAttendance();
+
 
                 if (!empty($attendanceData)) {
                     // Prepare data for bulk insertion

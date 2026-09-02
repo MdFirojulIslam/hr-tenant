@@ -8,6 +8,7 @@ use App\Models\Distributor;
 use App\Models\employee;
 use App\Models\OutletVisitAssignment;
 use App\Models\OutletWeekSchedule;
+use App\Support\OutletVisitWeekCycle;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -652,18 +653,12 @@ class DmsDistributionInfoController extends Controller
         }
 
         $dateScheduleMap = [];
-        $occurrenceCounts = [];
         $daysInMonth = $startDate->daysInMonth;
 
         for ($d = 1; $d <= $daysInMonth; $d++) {
             $date    = Carbon::create($year, $month, $d);
-            $dayName = strtolower($date->englishDayOfWeek);
-
-            if (!isset($occurrenceCounts[$dayName])) {
-                $occurrenceCounts[$dayName] = 0;
-            }
-            $occurrenceCounts[$dayName]++;
-            $weekNo = $occurrenceCounts[$dayName];
+            $dayName = OutletVisitWeekCycle::weekdayName($date);
+            $weekNo  = OutletVisitWeekCycle::weekNo($date);
 
             $key = $dayName . '_' . $weekNo;
             if (isset($scheduleLookup[$key])) {

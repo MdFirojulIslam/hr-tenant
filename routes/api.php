@@ -26,6 +26,7 @@ Route::group(['middleware' => ['auth:sanctum']], function () {
     require_once __DIR__ . '/dashboard/dashboard.php';
     require_once __DIR__ . '/incentive/incentive.php';
     require_once __DIR__ . '/dms_info/dms_info.php';
+    require_once __DIR__ . '/planner/tasks.php';
 
     // TEMPORARY — Outlet Visited Phase 0.5 environment diagnostic (remove after verification)
     // require_once __DIR__ . '/diagnostics/diagnostics.php';

@@ -717,6 +717,24 @@ const routes = [
             pageId: 80,
         },
     },
+    {
+        path: "/planner/tasks-assign",
+        name: "TasksAssign",
+        component: () => import("./pages/planner/tasksAssign.vue"),
+        meta: {
+            requireAuth: true,
+            pageId: 82,
+        },
+    },
+    {
+        path: "/planner/my-tasks",
+        name: "MyTasks",
+        component: () => import("./pages/planner/myTasks.vue"),
+        meta: {
+            requireAuth: true,
+            pageId: 83,
+        },
+    },
 ];
 
 const router = createRouter({

@@ -25,8 +25,9 @@ class FetchZktecoUser extends Command
         foreach ($zkt_info as $info) {
             $this->info($info->IP);
             $this->info($info->port);
-            $zk = new ZKTeco($info->IP, $info->port); 
+            $zk = new ZKTeco($info->IP, $info->port);
 
+            dd($zk);
             if ($zk->connect()) {
                 $userData = $zk->getUser();
                 foreach ($userData as $user) {
@@ -47,7 +48,5 @@ class FetchZktecoUser extends Command
                 $this->error('Unable to connect to the device.');
             }
         }
-
-       
     }
 }

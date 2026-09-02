@@ -57,7 +57,6 @@ class AttendenceController extends Controller
 
     public function fetchZktAttendence()
     {
-
         Artisan::call('attendance:fetch');
         // FetchZKTecoAttendanceJob::dispatch();
         return response()->json([
