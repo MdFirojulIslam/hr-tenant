@@ -393,7 +393,7 @@ class TasksController extends Controller
     {
         $existing = TasksAssignee::where('task_id', $taskId)->get();
 
-        $incoming = collect($employees)->map(fn ($v) => (int) $v)->unique()->values();
+        $incoming = collect($employees)->map(fn($v) => (int) $v)->unique()->values();
 
         foreach ($existing as $row) {
             if (!$incoming->contains((int) $row->assigned_to)) {
@@ -637,7 +637,8 @@ class TasksController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => $query->limit(200)->get(),
+            // 'data' => $query->limit(200)->get(),
+            'data' => $query->get(),
         ]);
     }
 }

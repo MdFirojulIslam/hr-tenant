@@ -76,7 +76,6 @@ export function usePlanner() {
         try {
             const res = await api.post("/planner/tasks", data);
             const created = normalizeTask(res.data?.data);
-            tasks.value = [created, ...tasks.value];
             return created;
         } catch (err) {
             savingError.value = err.response?.data?.message || err.message;
