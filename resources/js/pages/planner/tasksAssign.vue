@@ -1,15 +1,23 @@
 <template>
     <div class="planner-page">
         <div class="page-header mb-3">
-            <h4 class="mb-0"><i class="fa-solid fa-list-check me-2"></i>Planner</h4>
-            <span class="text-muted small">Task assignment &amp; follow-up</span>
+            <h4 class="mb-0">
+                <i class="fa-solid fa-list-check me-2"></i>Planner
+            </h4>
+            <span class="text-muted small"
+                >Task assignment &amp; follow-up</span
+            >
         </div>
 
         <div class="planner-toolbar card mb-3">
-            <div class="card-body py-2 d-flex flex-wrap align-items-center gap-2">
+            <div
+                class="card-body py-2 d-flex flex-wrap align-items-center gap-2"
+            >
                 <button
                     class="btn btn-sm"
-                    :class="view === 'grid' ? 'btn-primary' : 'btn-outline-primary'"
+                    :class="
+                        view === 'grid' ? 'btn-primary' : 'btn-outline-primary'
+                    "
                     type="button"
                     @click="view = 'grid'"
                 >
@@ -17,7 +25,9 @@
                 </button>
                 <button
                     class="btn btn-sm"
-                    :class="view === 'board' ? 'btn-primary' : 'btn-outline-primary'"
+                    :class="
+                        view === 'board' ? 'btn-primary' : 'btn-outline-primary'
+                    "
                     type="button"
                     @click="view = 'board'"
                 >
@@ -28,7 +38,11 @@
 
                 <button
                     class="btn btn-sm"
-                    :class="privacy === 'Private' ? 'btn-secondary text-white' : 'btn-outline-secondary'"
+                    :class="
+                        privacy === 'Private'
+                            ? 'btn-secondary text-white'
+                            : 'btn-outline-secondary'
+                    "
                     type="button"
                     @click="togglePrivacy('Private')"
                 >
@@ -36,7 +50,11 @@
                 </button>
                 <button
                     class="btn btn-sm"
-                    :class="privacy === 'Shared' ? 'btn-secondary text-white' : 'btn-outline-secondary'"
+                    :class="
+                        privacy === 'Shared'
+                            ? 'btn-secondary text-white'
+                            : 'btn-outline-secondary'
+                    "
                     type="button"
                     @click="togglePrivacy('Shared')"
                 >
@@ -45,7 +63,11 @@
 
                 <div class="vr d-none d-sm-block"></div>
 
-                <select v-model="statusFilter" class="form-select form-select-sm" style="width: auto">
+                <select
+                    v-model="statusFilter"
+                    class="form-select form-select-sm"
+                    style="width: auto"
+                >
                     <option value="All">All</option>
                     <option value="Not started">Not started</option>
                     <option value="In progress">In progress</option>
@@ -65,7 +87,10 @@
 
                 <div class="ms-auto d-flex align-items-center gap-2">
                     <span v-if="loading" class="small text-muted">
-                        <span class="spinner-border spinner-border-sm me-1"></span>Loading...
+                        <span
+                            class="spinner-border spinner-border-sm me-1"
+                        ></span
+                        >Loading...
                     </span>
                     <button
                         class="btn btn-sm btn-outline-secondary"
@@ -86,11 +111,16 @@
         <div v-if="view === 'grid'" class="planner-grid card">
             <div class="card-body p-0">
                 <div class="table-responsive">
-                    <table class="table table-hover planner-table align-middle mb-0">
+                    <table
+                        class="table table-hover planner-table align-middle mb-0"
+                    >
                         <thead>
                             <tr class="table-light">
                                 <th style="width: 30px">
-                                    <input type="checkbox" class="form-check-input" />
+                                    <input
+                                        type="checkbox"
+                                        class="form-check-input"
+                                    />
                                 </th>
                                 <th style="min-width: 200px">Task Name</th>
                                 <th style="min-width: 120px">Assign To</th>
@@ -105,19 +135,37 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <template v-for="(task, index) in filteredTasks" :key="task.id ?? `new-${index}`">
+                            <template
+                                v-for="(task, index) in filteredTasks"
+                                :key="task.id ?? `new-${index}`"
+                            >
                                 <tr
                                     class="planner-row"
-                                    :class="{ 'planner-new-row': task.is_new, 'text-muted': !task.id }"
-                                    @mouseenter="hoverRow = task.id ?? `new-${index}`"
+                                    :class="{
+                                        'planner-new-row': task.is_new,
+                                        'text-muted': !task.id,
+                                    }"
+                                    @mouseenter="
+                                        hoverRow = task.id ?? `new-${index}`
+                                    "
                                     @mouseleave="hoverRow = null"
                                 >
                                     <td class="position-relative">
-                                        <input type="checkbox" class="form-check-input" />
+                                        <input
+                                            type="checkbox"
+                                            class="form-check-input"
+                                        />
                                         <button
-                                            v-if="hoverRow === (task.id ?? `new-${index}`)"
+                                            v-if="
+                                                hoverRow ===
+                                                (task.id ?? `new-${index}`)
+                                            "
                                             class="btn btn-sm btn-light btn-add-inline position-absolute"
-                                            style="left: 24px; top: 50%; transform: translateY(-50%)"
+                                            style="
+                                                left: 24px;
+                                                top: 50%;
+                                                transform: translateY(-50%);
+                                            "
                                             type="button"
                                             title="Add task below"
                                             @click="addInlineBelow(index)"
@@ -137,22 +185,42 @@
                                     </td>
                                     <td>
                                         <div class="d-flex align-items-center">
-                                            <div class="assignee-avatars d-flex align-items-center">
+                                            <div
+                                                class="assignee-avatars d-flex align-items-center"
+                                            >
                                                 <span
-                                                    v-for="(a, i) in task.assignees"
+                                                    v-for="(
+                                                        a, i
+                                                    ) in task.assignees"
                                                     :key="a.id ?? i"
                                                     class="avatar-chip"
-                                                    :title="a.employee?.Full_Name || 'Assigned'"
+                                                    :title="
+                                                        a.employee?.Full_Name ||
+                                                        'Assigned'
+                                                    "
                                                 >
-                                                    {{ initials(a.employee?.Full_Name) }}
+                                                    {{
+                                                        initials(
+                                                            a.employee
+                                                                ?.Full_Name,
+                                                        )
+                                                    }}
                                                 </span>
-                                                <span v-if="!task.assignees.length" class="text-muted small">—</span>
+                                                <span
+                                                    v-if="
+                                                        !task.assignees.length
+                                                    "
+                                                    class="text-muted small"
+                                                    >—</span
+                                                >
                                             </div>
                                             <button
                                                 class="btn btn-sm btn-outline-secondary ms-1 assignee-toggle"
                                                 type="button"
                                                 title="Assign employees"
-                                                @click="openAssigneePicker(task)"
+                                                @click="
+                                                    openAssigneePicker(task)
+                                                "
                                             >
                                                 <i class="fa-solid fa-user"></i>
                                             </button>
@@ -163,7 +231,9 @@
                                             type="date"
                                             class="form-control form-control-sm"
                                             :value="task.start_date"
-                                            @change="onStartDateChange(task, $event)"
+                                            @change="
+                                                onStartDateChange(task, $event)
+                                            "
                                         />
                                     </td>
                                     <td>
@@ -171,16 +241,26 @@
                                             <input
                                                 type="date"
                                                 class="form-control form-control-sm"
-                                                :class="{ 'due-overdue': isOverdue(task) }"
+                                                :class="{
+                                                    'due-overdue':
+                                                        isOverdue(task),
+                                                }"
                                                 :value="task.due_date"
-                                                @change="onDueDateChange(task, $event)"
+                                                @change="
+                                                    onDueDateChange(
+                                                        task,
+                                                        $event,
+                                                    )
+                                                "
                                             />
                                             <span
                                                 v-if="isOverdue(task)"
                                                 class="badge bg-danger ms-1"
                                                 title="Overdue"
                                             >
-                                                <i class="fa-solid fa-triangle-exclamation"></i>
+                                                <i
+                                                    class="fa-solid fa-triangle-exclamation"
+                                                ></i>
                                             </span>
                                         </div>
                                     </td>
@@ -188,9 +268,21 @@
                                         <select
                                             class="form-select form-select-sm"
                                             :value="task.bucket"
-                                            @change="onFieldChange(task, 'bucket', $event)"
+                                            @change="
+                                                onFieldChange(
+                                                    task,
+                                                    'bucket',
+                                                    $event,
+                                                )
+                                            "
                                         >
-                                            <option v-for="b in VALUES.buckets" :key="b" :value="b">{{ b }}</option>
+                                            <option
+                                                v-for="b in VALUES.buckets"
+                                                :key="b"
+                                                :value="b"
+                                            >
+                                                {{ b }}
+                                            </option>
                                         </select>
                                     </td>
                                     <td>
@@ -203,28 +295,66 @@
                                         <select
                                             class="form-select form-select-sm status-select mt-1"
                                             :value="task.status"
-                                            @change="onFieldChange(task, 'status', $event)"
+                                            @change="
+                                                onFieldChange(
+                                                    task,
+                                                    'status',
+                                                    $event,
+                                                )
+                                            "
                                         >
-                                            <option v-for="s in VALUES.statuses" :key="s" :value="s">{{ s }}</option>
+                                            <option
+                                                v-for="s in VALUES.statuses"
+                                                :key="s"
+                                                :value="s"
+                                            >
+                                                {{ s }}
+                                            </option>
                                         </select>
                                     </td>
                                     <td>
                                         <select
                                             class="form-select form-select-sm"
-                                            :class="priorityClass(task.priority)"
+                                            :class="
+                                                priorityClass(task.priority)
+                                            "
                                             :value="task.priority"
-                                            @change="onFieldChange(task, 'priority', $event)"
+                                            @change="
+                                                onFieldChange(
+                                                    task,
+                                                    'priority',
+                                                    $event,
+                                                )
+                                            "
                                         >
-                                            <option v-for="p in VALUES.priorities" :key="p" :value="p">{{ p }}</option>
+                                            <option
+                                                v-for="p in VALUES.priorities"
+                                                :key="p"
+                                                :value="p"
+                                            >
+                                                {{ p }}
+                                            </option>
                                         </select>
                                     </td>
                                     <td>
                                         <select
                                             class="form-select form-select-sm"
                                             :value="task.privacy"
-                                            @change="onFieldChange(task, 'privacy', $event)"
+                                            @change="
+                                                onFieldChange(
+                                                    task,
+                                                    'privacy',
+                                                    $event,
+                                                )
+                                            "
                                         >
-                                            <option v-for="pr in VALUES.privacies" :key="pr" :value="pr">{{ pr }}</option>
+                                            <option
+                                                v-for="pr in VALUES.privacies"
+                                                :key="pr"
+                                                :value="pr"
+                                            >
+                                                {{ pr }}
+                                            </option>
                                         </select>
                                     </td>
                                     <td>
@@ -248,13 +378,17 @@
                                                 <i class="fa-solid fa-eye"></i>
                                             </button>
                                             <button
-                                                v-if="task.id && canDelete(task)"
+                                                v-if="
+                                                    task.id && canDelete(task)
+                                                "
                                                 class="btn btn-sm btn-light text-danger"
                                                 type="button"
                                                 title="Delete task"
                                                 @click="confirmDelete(task)"
                                             >
-                                                <i class="fa-solid fa-trash"></i>
+                                                <i
+                                                    class="fa-solid fa-trash"
+                                                ></i>
                                             </button>
                                         </div>
                                     </td>
@@ -266,7 +400,11 @@
                 </div>
 
                 <div class="add-task-bottom">
-                    <button class="btn btn-link text-primary w-100 py-3" type="button" @click="addNewTask">
+                    <button
+                        class="btn btn-link text-primary w-100 py-3"
+                        type="button"
+                        @click="addNewTask"
+                    >
                         <i class="fa-solid fa-plus me-1"></i>Add new task
                     </button>
                 </div>
@@ -282,12 +420,11 @@
                 >
                     <div class="board-column card h-100">
                         <div class="card-header py-2 d-flex align-items-center">
-                            <span
-                                class="dot me-2"
-                                :class="col.dotClass"
-                            ></span>
+                            <span class="dot me-2" :class="col.dotClass"></span>
                             <strong class="small">{{ col.status }}</strong>
-                            <span class="badge bg-light text-dark ms-2">{{ boardTasks(col.status).length }}</span>
+                            <span class="badge bg-light text-dark ms-2">{{
+                                boardTasks(col.status).length
+                            }}</span>
                         </div>
                         <div class="card-body bg-light border-top">
                             <div class="board-cards">
@@ -298,13 +435,22 @@
                                     @click="openDetailModal(task)"
                                 >
                                     <div class="card-body p-2">
-                                        <div class="d-flex justify-content-between align-items-start">
-                                            <div class="fw-semibold small board-task-name">
-                                                {{ task.task_name || "Untitled task" }}
+                                        <div
+                                            class="d-flex justify-content-between align-items-start"
+                                        >
+                                            <div
+                                                class="fw-semibold small board-task-name"
+                                            >
+                                                {{
+                                                    task.task_name ||
+                                                    "Untitled task"
+                                                }}
                                             </div>
                                             <span
                                                 class="badge"
-                                                :class="priorityBadge(task.priority)"
+                                                :class="
+                                                    priorityBadge(task.priority)
+                                                "
                                                 style="font-size: 0.65rem"
                                             >
                                                 {{ task.priority }}
@@ -312,32 +458,65 @@
                                         </div>
                                         <div
                                             class="small mt-1"
-                                            :class="{ 'text-danger fw-semibold': isOverdue(task) }"
+                                            :class="{
+                                                'text-danger fw-semibold':
+                                                    isOverdue(task),
+                                            }"
                                         >
-                                            <i class="fa-regular fa-calendar me-1"></i>
+                                            <i
+                                                class="fa-regular fa-calendar me-1"
+                                            ></i>
                                             <span v-if="isOverdue(task)">
                                                 Overdue · {{ task.due_date }}
-                                                <i class="fa-solid fa-triangle-exclamation ms-1"></i>
+                                                <i
+                                                    class="fa-solid fa-triangle-exclamation ms-1"
+                                                ></i>
                                             </span>
-                                            <span v-else>{{ task.due_date || "No due date" }}</span>
+                                            <span v-else>{{
+                                                task.due_date || "No due date"
+                                            }}</span>
                                         </div>
 
-                                        <div v-if="showChecklistToggle" class="mt-2">
-                                            <div class="d-flex align-items-center small text-muted">
-                                                <i class="fa-regular fa-square-check me-1"></i>
+                                        <div
+                                            v-if="showChecklistToggle"
+                                            class="mt-2"
+                                        >
+                                            <div
+                                                class="d-flex align-items-center small text-muted"
+                                            >
+                                                <i
+                                                    class="fa-regular fa-square-check me-1"
+                                                ></i>
                                                 <button
                                                     class="btn btn-link btn-sm p-0"
                                                     type="button"
-                                                    @click="toggleChecklistVisibility(task)"
+                                                    @click="
+                                                        toggleChecklistVisibility(
+                                                            task,
+                                                        )
+                                                    "
                                                 >
-                                                    {{ task.checklist_progress.completed }}/{{ task.checklist_progress.total }}
+                                                    {{
+                                                        task.checklist_progress
+                                                            .completed
+                                                    }}/{{
+                                                        task.checklist_progress
+                                                            .total
+                                                    }}
                                                     <i
                                                         class="fa-solid ms-1"
-                                                        :class="task._showChecklists ? 'fa-chevron-up' : 'fa-chevron-down'"
+                                                        :class="
+                                                            task._showChecklists
+                                                                ? 'fa-chevron-up'
+                                                                : 'fa-chevron-down'
+                                                        "
                                                     ></i>
                                                 </button>
                                             </div>
-                                            <div v-if="task._showChecklists" class="checklist-items mt-1">
+                                            <div
+                                                v-if="task._showChecklists"
+                                                class="checklist-items mt-1"
+                                            >
                                                 <div
                                                     v-for="cl in task.checklists"
                                                     :key="cl.id"
@@ -345,38 +524,66 @@
                                                 >
                                                     <i
                                                         class="fa-regular me-1"
-                                                        :class="cl.completed_status ? 'fa-square-check text-success' : 'fa-square text-muted'"
+                                                        :class="
+                                                            cl.completed_status
+                                                                ? 'fa-square-check text-success'
+                                                                : 'fa-square text-muted'
+                                                        "
                                                     ></i>
-                                                    <span :class="{ 'text-decoration-line-through text-muted': cl.completed_status }">
+                                                    <span
+                                                        :class="{
+                                                            'text-decoration-line-through text-muted':
+                                                                cl.completed_status,
+                                                        }"
+                                                    >
                                                         {{ cl.checklist_name }}
                                                     </span>
                                                 </div>
                                             </div>
                                         </div>
 
-                                        <div class="d-flex align-items-center mt-2">
-                                            <div class="assignee-avatars d-flex align-items-center flex-wrap">
+                                        <div
+                                            class="d-flex align-items-center mt-2"
+                                        >
+                                            <div
+                                                class="assignee-avatars d-flex align-items-center flex-wrap"
+                                            >
                                                 <span
-                                                    v-for="(a, i) in task.assignees"
+                                                    v-for="(
+                                                        a, i
+                                                    ) in task.assignees"
                                                     :key="a.id ?? i"
                                                     class="avatar-chip"
-                                                    :title="a.employee?.Full_Name || 'Assigned'"
+                                                    :title="
+                                                        a.employee?.Full_Name ||
+                                                        'Assigned'
+                                                    "
                                                 >
-                                                    {{ initials(a.employee?.Full_Name) }}
+                                                    {{
+                                                        initials(
+                                                            a.employee
+                                                                ?.Full_Name,
+                                                        )
+                                                    }}
                                                 </span>
                                             </div>
                                             <button
                                                 class="btn btn-sm btn-outline-secondary ms-auto board-assignee-btn"
                                                 type="button"
                                                 title="Assign employees"
-                                                @click.stop="openAssigneePicker(task)"
+                                                @click.stop="
+                                                    openAssigneePicker(task)
+                                                "
                                             >
                                                 <i class="fa-solid fa-user"></i>
                                             </button>
                                         </div>
                                     </div>
                                 </div>
-                                <div v-if="!boardTasks(col.status).length" class="text-center text-muted small py-4">
+                                <div
+                                    v-if="!boardTasks(col.status).length"
+                                    class="text-center text-muted small py-4"
+                                >
                                     No tasks
                                 </div>
                             </div>
@@ -386,23 +593,36 @@
             </div>
 
             <div class="d-flex justify-content-end mt-3">
-                <button class="btn btn-primary btn-sm" type="button" @click="addNewTask">
+                <button
+                    class="btn btn-primary btn-sm"
+                    type="button"
+                    @click="addNewTask"
+                >
                     <i class="fa-solid fa-plus me-1"></i>Add new task
                 </button>
             </div>
         </div>
 
-        <div v-if="!loading && !filteredTasks.length && view === 'grid'" class="empty-state text-center py-5 text-muted">
+        <div
+            v-if="!loading && !filteredTasks.length && view === 'grid'"
+            class="empty-state text-center py-5 text-muted"
+        >
             <i class="fa-regular fa-folder-open fa-2x mb-2"></i>
             <div>No tasks found</div>
         </div>
 
-        <div v-if="detailTask" class="modal fade show d-block task-detail-modal" tabindex="-1">
+        <div
+            v-if="detailTask"
+            class="modal fade show d-block task-detail-modal"
+            tabindex="-1"
+        >
             <div class="modal-dialog modal-xl modal-dialog-centered">
                 <div class="modal-content shadow">
                     <div class="modal-header py-2">
                         <h5 class="modal-title small fw-semibold">
-                            <i class="fa-solid fa-list-check me-2 text-primary"></i>
+                            <i
+                                class="fa-solid fa-list-check me-2 text-primary"
+                            ></i>
                             {{ detailForm.task_name || "Untitled task" }}
                         </h5>
                         <button
@@ -415,7 +635,9 @@
                     <div class="modal-body">
                         <div class="row g-3">
                             <div class="col-md-12">
-                                <label class="form-label small fw-semibold">Task Name</label>
+                                <label class="form-label small fw-semibold"
+                                    >Task Name</label
+                                >
                                 <input
                                     v-model="detailForm.task_name"
                                     type="text"
@@ -426,8 +648,12 @@
                             </div>
 
                             <div class="col-md-6">
-                                <label class="form-label small fw-semibold">Assignees</label>
-                                <div class="assignee-avatars d-flex flex-wrap align-items-center mb-2">
+                                <label class="form-label small fw-semibold"
+                                    >Assignees</label
+                                >
+                                <div
+                                    class="assignee-avatars d-flex flex-wrap align-items-center mb-2"
+                                >
                                     <span
                                         v-for="(a, i) in detailForm.assignees"
                                         :key="a.id ?? i"
@@ -436,19 +662,26 @@
                                     >
                                         {{ initials(a.employee?.Full_Name) }}
                                     </span>
-                                    <span v-if="!detailForm.assignees.length" class="text-muted small">None</span>
+                                    <span
+                                        v-if="!detailForm.assignees.length"
+                                        class="text-muted small"
+                                        >None</span
+                                    >
                                 </div>
                                 <button
                                     class="btn btn-outline-primary btn-sm"
                                     type="button"
                                     @click="openAssigneePicker(detailTask)"
                                 >
-                                    <i class="fa-solid fa-user-plus me-1"></i>Manage Assignees
+                                    <i class="fa-solid fa-user-plus me-1"></i
+                                    >Manage Assignees
                                 </button>
                             </div>
 
                             <div class="col-md-3">
-                                <label class="form-label small fw-semibold">Start Date</label>
+                                <label class="form-label small fw-semibold"
+                                    >Start Date</label
+                                >
                                 <input
                                     v-model="detailForm.start_date"
                                     type="date"
@@ -457,69 +690,116 @@
                                 />
                             </div>
                             <div class="col-md-3">
-                                <label class="form-label small fw-semibold">Due Date</label>
+                                <label class="form-label small fw-semibold"
+                                    >Due Date</label
+                                >
                                 <input
                                     v-model="detailForm.due_date"
                                     type="date"
                                     class="form-control form-control-sm"
-                                    :class="{ 'due-overdue-input': isOverdue(detailForm) }"
+                                    :class="{
+                                        'due-overdue-input':
+                                            isOverdue(detailForm),
+                                    }"
                                     @change="immediateSave('due_date')"
                                 />
                             </div>
 
                             <div class="col-md-3">
-                                <label class="form-label small fw-semibold">Status</label>
+                                <label class="form-label small fw-semibold"
+                                    >Status</label
+                                >
                                 <select
                                     v-model="detailForm.status"
                                     class="form-select form-select-sm"
                                     @change="immediateSave('status')"
                                 >
-                                    <option v-for="s in VALUES.statuses" :key="s" :value="s">{{ s }}</option>
+                                    <option
+                                        v-for="s in VALUES.statuses"
+                                        :key="s"
+                                        :value="s"
+                                    >
+                                        {{ s }}
+                                    </option>
                                 </select>
                             </div>
                             <div class="col-md-3">
-                                <label class="form-label small fw-semibold">Repeat</label>
+                                <label class="form-label small fw-semibold"
+                                    >Repeat</label
+                                >
                                 <select
                                     v-model="detailForm.repeat"
                                     class="form-select form-select-sm"
                                     @change="immediateSave('repeat')"
                                 >
-                                    <option v-for="r in VALUES.repeats" :key="r" :value="r">{{ r }}</option>
+                                    <option
+                                        v-for="r in VALUES.repeats"
+                                        :key="r"
+                                        :value="r"
+                                    >
+                                        {{ r }}
+                                    </option>
                                 </select>
                             </div>
                             <div class="col-md-3">
-                                <label class="form-label small fw-semibold">Bucket</label>
+                                <label class="form-label small fw-semibold"
+                                    >Bucket</label
+                                >
                                 <select
                                     v-model="detailForm.bucket"
                                     class="form-select form-select-sm"
                                     @change="immediateSave('bucket')"
                                 >
-                                    <option v-for="b in VALUES.buckets" :key="b" :value="b">{{ b }}</option>
+                                    <option
+                                        v-for="b in VALUES.buckets"
+                                        :key="b"
+                                        :value="b"
+                                    >
+                                        {{ b }}
+                                    </option>
                                 </select>
                             </div>
                             <div class="col-md-3">
-                                <label class="form-label small fw-semibold">Priority</label>
+                                <label class="form-label small fw-semibold"
+                                    >Priority</label
+                                >
                                 <select
                                     v-model="detailForm.priority"
                                     class="form-select form-select-sm"
                                     @change="immediateSave('priority')"
                                 >
-                                    <option v-for="p in VALUES.priorities" :key="p" :value="p">{{ p }}</option>
+                                    <option
+                                        v-for="p in VALUES.priorities"
+                                        :key="p"
+                                        :value="p"
+                                    >
+                                        {{ p }}
+                                    </option>
                                 </select>
                             </div>
                             <div class="col-md-3">
-                                <label class="form-label small fw-semibold">Privacy</label>
+                                <label class="form-label small fw-semibold"
+                                    >Privacy</label
+                                >
                                 <select
                                     v-model="detailForm.privacy"
                                     class="form-select form-select-sm"
                                     @change="immediateSave('privacy')"
                                 >
-                                    <option v-for="pr in VALUES.privacies" :key="pr" :value="pr">{{ pr }}</option>
+                                    <option
+                                        v-for="pr in VALUES.privacies"
+                                        :key="pr"
+                                        :value="pr"
+                                    >
+                                        {{ pr }}
+                                    </option>
                                 </select>
                             </div>
 
                             <div class="col-md-12">
-                                <label class="form-label small fw-semibold">Notes</label>
+                                <label class="form-label small fw-semibold"
+                                    >Notes</label
+                                >
                                 <textarea
                                     v-model="detailForm.notes"
                                     class="form-control form-control-sm"
@@ -531,15 +811,26 @@
 
                             <div class="col-md-12">
                                 <div class="checklist-section">
-                                    <div class="d-flex align-items-center justify-content-between mb-2">
+                                    <div
+                                        class="d-flex align-items-center justify-content-between mb-2"
+                                    >
                                         <strong class="small">
-                                            Checklists ({{ detailChecklistCompleted }} of {{ detailChecklists.length }})
+                                            Checklists ({{
+                                                detailChecklistCompleted
+                                            }}
+                                            of {{ detailChecklists.length }})
                                         </strong>
-                                        <div class="d-flex align-items-center gap-2">
-                                            <div class="form-check form-switch mb-0">
+                                        <div
+                                            class="d-flex align-items-center gap-2"
+                                        >
+                                            <div
+                                                class="form-check form-switch mb-0"
+                                            >
                                                 <input
                                                     id="showChecklistToggle"
-                                                    v-model="showChecklistToggle"
+                                                    v-model="
+                                                        showChecklistToggle
+                                                    "
                                                     class="form-check-input"
                                                     type="checkbox"
                                                 />
@@ -550,26 +841,36 @@
                                                     Show on card
                                                 </label>
                                             </div>
-                                            <div class="input-group input-group-sm" style="width: auto">
+                                            <div
+                                                class="input-group input-group-sm"
+                                                style="width: auto"
+                                            >
                                                 <input
                                                     v-model="newChecklistName"
                                                     type="text"
                                                     class="form-control"
                                                     placeholder="New checklist item"
-                                                    @keyup.enter="addChecklistItem"
+                                                    @keyup.enter="
+                                                        addChecklistItem
+                                                    "
                                                 />
                                                 <button
                                                     class="btn btn-outline-primary"
                                                     type="button"
                                                     @click="addChecklistItem"
                                                 >
-                                                    <i class="fa-solid fa-plus"></i>
+                                                    <i
+                                                        class="fa-solid fa-plus"
+                                                    ></i>
                                                 </button>
                                             </div>
                                         </div>
                                     </div>
 
-                                    <div v-if="!detailChecklists.length" class="text-muted small py-2">
+                                    <div
+                                        v-if="!detailChecklists.length"
+                                        class="text-muted small py-2"
+                                    >
                                         No checklists yet.
                                     </div>
                                     <div
@@ -581,11 +882,16 @@
                                             type="checkbox"
                                             class="form-check-input me-2"
                                             :checked="cl.completed_status"
-                                            @change="onChecklistToggle(cl, $event)"
+                                            @change="
+                                                onChecklistToggle(cl, $event)
+                                            "
                                         />
                                         <input
                                             class="form-control form-control-sm flex-grow-1 checklist-name-input"
-                                            :class="{ 'text-decoration-line-through': cl.completed_status }"
+                                            :class="{
+                                                'text-decoration-line-through':
+                                                    cl.completed_status,
+                                            }"
                                             :value="cl.checklist_name"
                                             @keyup.enter="saveChecklistName(cl)"
                                         />
@@ -603,24 +909,39 @@
 
                             <div class="col-md-12 small text-muted">
                                 <span>Created by:</span>
-                                <span class="fw-semibold ms-1">{{ detailTask.created_by_info?.Full_Name || "—" }}</span>
+                                <span class="fw-semibold ms-1">{{
+                                    detailTask.created_by_info?.Full_Name || "—"
+                                }}</span>
                                 <span class="mx-2">·</span>
-                                <span v-if="detailTask.my_read_status" class="text-success">
-                                    <i class="fa-solid fa-check-circle me-1"></i>Read
+                                <span
+                                    v-if="detailTask.my_read_status"
+                                    class="text-success"
+                                >
+                                    <i class="fa-solid fa-check-circle me-1"></i
+                                    >Read
                                 </span>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-            <div class="modal-backdrop fade show" @click="closeDetailModal"></div>
+            <div
+                class="modal-backdrop fade show"
+                @click="closeDetailModal"
+            ></div>
         </div>
 
-        <div v-if="assigneePickerTask" class="modal fade show d-block assignee-modal" tabindex="-1">
+        <div
+            v-if="assigneePickerTask"
+            class="modal fade show d-block assignee-modal"
+            tabindex="-1"
+        >
             <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content shadow">
                     <div class="modal-header py-2">
-                        <h5 class="modal-title small fw-semibold">Assign Employees</h5>
+                        <h5 class="modal-title small fw-semibold">
+                            Assign Employees
+                        </h5>
                         <button
                             class="btn-close"
                             type="button"
@@ -636,7 +957,10 @@
                                 placeholder="Search employees..."
                             />
                         </div>
-                        <div class="assignee-list" style="max-height: 280px; overflow-y: auto">
+                        <div
+                            class="assignee-list"
+                            style="max-height: 280px; overflow-y: auto"
+                        >
                             <div
                                 v-for="emp in filteredEmployees"
                                 :key="emp.id"
@@ -644,25 +968,42 @@
                                 :class="{ 'bg-light': isAssigned(emp.id) }"
                             >
                                 <div class="d-flex align-items-center gap-2">
-                                    <span class="avatar-chip">{{ initials(emp.Full_Name) }}</span>
+                                    <span class="avatar-chip">{{
+                                        initials(emp.Full_Name)
+                                    }}</span>
                                     <div>
-                                        <div class="small fw-semibold">{{ emp.Full_Name }}</div>
-                                        <div class="small text-muted">{{ emp.Employee_Id }}</div>
+                                        <div class="small fw-semibold">
+                                            {{ emp.Full_Name }}
+                                        </div>
+                                        <div class="small text-muted">
+                                            {{ emp.Employee_Id }}
+                                        </div>
                                     </div>
                                 </div>
                                 <button
                                     class="btn btn-sm"
-                                    :class="isAssigned(emp.id) ? 'btn-outline-danger' : 'btn-outline-primary'"
+                                    :class="
+                                        isAssigned(emp.id)
+                                            ? 'btn-outline-danger'
+                                            : 'btn-outline-primary'
+                                    "
                                     type="button"
                                     @click="toggleAssignment(emp)"
                                 >
                                     <i
                                         class="fa-solid"
-                                        :class="isAssigned(emp.id) ? 'fa-minus' : 'fa-plus'"
+                                        :class="
+                                            isAssigned(emp.id)
+                                                ? 'fa-minus'
+                                                : 'fa-plus'
+                                        "
                                     ></i>
                                 </button>
                             </div>
-                            <div v-if="!filteredEmployees.length" class="text-center text-muted small py-3">
+                            <div
+                                v-if="!filteredEmployees.length"
+                                class="text-center text-muted small py-3"
+                            >
                                 No employees found
                             </div>
                         </div>
@@ -681,7 +1022,10 @@
                             :disabled="pickerSaving"
                             @click="saveAssigneePicker"
                         >
-                            <span v-if="pickerSaving" class="spinner-border spinner-border-sm me-1"></span>
+                            <span
+                                v-if="pickerSaving"
+                                class="spinner-border spinner-border-sm me-1"
+                            ></span>
                             Assign
                         </button>
                     </div>
@@ -741,7 +1085,9 @@ const assigneePickerTask = ref(null);
 const assigneeSearch = ref("");
 const pickerSaving = ref(false);
 
-const isAdmin = computed(() => [1, 2].includes(Number(store.getters.getRoleId)));
+const isAdmin = computed(() =>
+    [1, 2].includes(Number(store.getters.getRoleId)),
+);
 
 onMounted(async () => {
     await Promise.all([loadTasks(buildParams()), loadEmployees()]);
@@ -750,7 +1096,8 @@ onMounted(async () => {
 function buildParams() {
     const params = { view: "assign" };
     if (privacy.value) params.privacy = privacy.value;
-    if (statusFilter.value && statusFilter.value !== "All") params.status = statusFilter.value;
+    if (statusFilter.value && statusFilter.value !== "All")
+        params.status = statusFilter.value;
     if (employeeSearch.value) params.employee = employeeSearch.value;
     return params;
 }
@@ -760,7 +1107,7 @@ const filteredTasks = computed(() => {
     return tasks.value.filter((task) => {
         if (!q) return true;
         return task.assignees.some((a) =>
-            (a.employee?.Full_Name || "").toLowerCase().includes(q)
+            (a.employee?.Full_Name || "").toLowerCase().includes(q),
         );
     });
 });
@@ -856,7 +1203,9 @@ async function onStartDateChange(task, event) {
         await createInlineTask(task);
         return;
     }
-    await onFieldChange(task, "start_date", { target: { value: task.start_date } });
+    await onFieldChange(task, "start_date", {
+        target: { value: task.start_date },
+    });
 }
 
 async function onDueDateChange(task, event) {
@@ -914,7 +1263,10 @@ async function persistNewTask(task) {
 async function createInlineTask(task) {
     await persistNewTask(task);
     if (task.assignees.length) {
-        await saveAssignees(task.id, task.assignees.map((a) => Number(a.assigned_to || a)));
+        await saveAssignees(
+            task.id,
+            task.assignees.map((a) => Number(a.assigned_to || a)),
+        );
     }
 }
 
@@ -938,7 +1290,9 @@ function priorityBadge(priority) {
 }
 
 function canDelete(task) {
-    return isAdmin.value || Number(task.created_by) === Number(currentEid.value);
+    return (
+        isAdmin.value || Number(task.created_by) === Number(currentEid.value)
+    );
 }
 
 function confirmDelete(task) {
@@ -973,21 +1327,23 @@ const filteredEmployees = computed(() => {
     return employees.value.filter(
         (e) =>
             e.Full_Name.toLowerCase().includes(q) ||
-            (e.Employee_Id || "").toLowerCase().includes(q)
+            (e.Employee_Id || "").toLowerCase().includes(q),
     );
 });
 
 function isAssigned(empId) {
     const task = assigneePickerTask.value;
     if (!task) return false;
-    return task.assignees.some((a) => Number(a.assigned_to || a.employee?.id) === Number(empId));
+    return task.assignees.some(
+        (a) => Number(a.assigned_to || a.employee?.id) === Number(empId),
+    );
 }
 
 async function toggleAssignment(emp) {
     const task = assigneePickerTask.value;
     if (!task) return;
     const idx = task.assignees.findIndex(
-        (a) => Number(a.assigned_to || a.employee?.id) === Number(emp.id)
+        (a) => Number(a.assigned_to || a.employee?.id) === Number(emp.id),
     );
     if (idx !== -1) {
         task.assignees.splice(idx, 1);
@@ -1009,7 +1365,9 @@ async function saveAssigneePicker() {
         await persistNewTask(task);
     }
 
-    const ids = task.assignees.map((a) => Number(a.assigned_to || a.employee?.id));
+    const ids = task.assignees.map((a) =>
+        Number(a.assigned_to || a.employee?.id),
+    );
     pickerSaving.value = true;
     try {
         const updated = await saveAssignees(task.id, ids);
@@ -1079,7 +1437,9 @@ function syncDetailToTask() {
         tasks.value[idx] = { ...tasks.value[idx], ...detailForm };
         tasks.value[idx].checklists = [...detailChecklists.value];
         tasks.value[idx].assignees = [...detailForm.assignees];
-        const completed = detailChecklists.value.filter((c) => c.completed_status).length;
+        const completed = detailChecklists.value.filter(
+            (c) => c.completed_status,
+        ).length;
         tasks.value[idx].checklist_progress = {
             completed,
             total: detailChecklists.value.length,
@@ -1087,8 +1447,8 @@ function syncDetailToTask() {
     }
 }
 
-const detailChecklistCompleted = computed(() =>
-    detailChecklists.value.filter((c) => c.completed_status).length
+const detailChecklistCompleted = computed(
+    () => detailChecklists.value.filter((c) => c.completed_status).length,
 );
 
 async function addChecklistItem() {
@@ -1139,7 +1499,9 @@ async function removeChecklistItem(cl) {
     if (!detailTask.value?.id || !cl?.id) return;
     try {
         await deleteChecklist(detailTask.value.id, cl.id);
-        detailChecklists.value = detailChecklists.value.filter((c) => c.id !== cl.id);
+        detailChecklists.value = detailChecklists.value.filter(
+            (c) => c.id !== cl.id,
+        );
         syncDetailToTask();
     } catch (e) {
         Swal.fire("Error", "Could not remove checklist item.", "error");
@@ -1155,7 +1517,9 @@ function debouncedDetailSave(field) {
     detailForm._timer = setTimeout(async () => {
         if (!detailTask.value?.id) return;
         try {
-            await updateTask(detailTask.value.id, { [field]: detailForm[field] });
+            await updateTask(detailTask.value.id, {
+                [field]: detailForm[field],
+            });
             syncDetailToTask();
         } catch (e) {
             savingError.value = e.response?.data?.message || e.message;
@@ -1177,7 +1541,10 @@ watch(detailTask, (nt) => {
     if (nt) {
         nt.assignees = nt.assignees || [];
         nt.checklists = nt.checklists || [];
-        nt.checklist_progress = nt.checklist_progress || { completed: 0, total: 0 };
+        nt.checklist_progress = nt.checklist_progress || {
+            completed: 0,
+            total: 0,
+        };
     }
 });
 </script>
@@ -1288,7 +1655,9 @@ watch(detailTask, (nt) => {
 
 .planner-board .board-card {
     cursor: pointer;
-    transition: transform 0.12s ease, box-shadow 0.12s ease;
+    transition:
+        transform 0.12s ease,
+        box-shadow 0.12s ease;
 }
 
 .planner-board .board-card:hover {
