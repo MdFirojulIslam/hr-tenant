@@ -10,6 +10,9 @@ import "vue-multiselect/dist/vue-multiselect.min.css";
 // ---------------- PROPS / EMIT ----------------
 const props = defineProps({
     isOpen: Boolean,
+    defaultDate: { type: String, default: "" },
+    defaultDept: { type: [String, Number], default: "" },
+    defaultEmployee: { type: Object, default: null },
 });
 const emit = defineEmits(["modal-close"]);
 
@@ -53,6 +56,26 @@ const getEmployee = async (deptID) => {
         console.error(err);
     }
 };
+
+// Pre-fill from the report page's current filters
+onMounted(async () => {
+    await getData();
+
+    if (props.defaultDate) {
+        from_date.value = props.defaultDate;
+        to_date.value = props.defaultDate;
+    }
+
+    if (props.defaultDept) {
+        searchDept.value = props.defaultDept;
+        await getEmployee(props.defaultDept);
+    }
+
+    if (props.defaultEmployee) {
+        selectedEmployee.value = props.defaultEmployee;
+        await getEmployeeImg(props.defaultEmployee.id);
+    }
+});
 
 // ✅ FIXED: Get employee image from API
 const getEmployeeImg = async (empId) => {
@@ -140,8 +163,24 @@ const downloadReport = async () => {
 };
 
 // ---------------- INIT ----------------
-onMounted(() => {
-    getData();
+// Pre-fill from the report page's current filters
+onMounted(async () => {
+    await getData();
+
+    if (props.defaultDate) {
+        from_date.value = props.defaultDate;
+        to_date.value = props.defaultDate;
+    }
+
+    if (props.defaultDept) {
+        searchDept.value = props.defaultDept;
+        await getEmployee(props.defaultDept);
+    }
+
+    if (props.defaultEmployee) {
+        selectedEmployee.value = props.defaultEmployee;
+        await getEmployeeImg(props.defaultEmployee.id);
+    }
 });
 </script>
 

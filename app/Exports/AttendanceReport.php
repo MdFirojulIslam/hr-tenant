@@ -8,7 +8,6 @@ use Illuminate\Support\Collection;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
-use Carbon\Carbon;
 
 
 class AttendanceReport implements FromCollection, WithHeadings, ShouldAutoSize
@@ -26,42 +25,22 @@ class AttendanceReport implements FromCollection, WithHeadings, ShouldAutoSize
     {
         return collect($this->data)->map(function ($row) {
 
-
-            // ✅ time formatter (AM/PM)
-            $formatTime = function ($time) {
-                if (!$time) return '-';
-
-
-                try {
-                    return Carbon::parse($time)->format('g:i A'); // 12-hour format
-                } catch (\Exception $e) {
-                    return $time;
-                }
-            };
-
-
             return [
-                'Employee ID' => $row->official_id,
+                'Employee ID' => 'ABNB' . $row->official_id,
                 'Employee Name' => $row->employee_name,
                 'Department' => $row->department_name,
-
-
-                'Date' => $row->report_date,
+                'Date' => $row->date,
                 'Day' => $row->day_name,
-
-
                 'Status' => $row->attendance_status,
-
-
-                'In' => $formatTime($row->actual_in),
-                'Out' => $formatTime($row->actual_out),
-
-
+                'In' => $row->fmt_in,
+                'Out' => $row->fmt_out,
                 'In Diff' => $row->in_diff,
                 'Out Diff' => $row->out_diff,
-
-
                 'Working Hours' => $row->working_hours,
+                'Rostered In' => $row->fmt_rostered_in,
+                'Rostered Out' => $row->fmt_rostered_out,
+                'Rostered Status' => $row->rostered_status,
+                'Remarks' => $row->remarks,
             ];
         });
     }
@@ -73,24 +52,18 @@ class AttendanceReport implements FromCollection, WithHeadings, ShouldAutoSize
             'Employee ID',
             'Employee Name',
             'Department',
-
-
             'Date',
             'Day',
-
-
             'Status',
-
-
             'In',
             'Out',
-
-
             'In Diff',
             'Out Diff',
-
-
             'Working Hours',
+            'Rostered In',
+            'Rostered Out',
+            'Rostered Status',
+            'Remarks',
         ];
     }
 }

@@ -12,6 +12,7 @@ const eid = empId || store.state.employeeId;
 
 const loading = ref(false);
 const saving = ref(false);
+const exporting = ref(false);
 const existingRecord = ref(false);
 const error = ref([]);
 const employeeName = ref("");
@@ -269,6 +270,39 @@ const submit = () => {
     }
 };
 
+const downloadReport = async () => {
+    exporting.value = true;
+    try {
+        const response = await api.get("/export-documentation-report", {
+            responseType: "blob",
+            params: { employee_id: eid || undefined },
+        });
+
+        const url = window.URL.createObjectURL(
+            new Blob([response.data]),
+        );
+        const link = document.createElement("a");
+        link.href = url;
+        link.setAttribute(
+            "download",
+            "employee_documentation_report.xlsx",
+        );
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+    } catch (err) {
+        console.error("Error downloading documentation report:", err);
+        Swal.fire({
+            icon: "error",
+            title: "Download failed!",
+            text: "Something went wrong while downloading the report. Please try again.",
+        });
+    } finally {
+        exporting.value = false;
+    }
+};
+
 onMounted(() => {
     getData();
     fetchEmployeeName();
@@ -445,6 +479,21 @@ onMounted(() => {
                     </div>
 
                     <div class="d-flex justify-content-end mt-3">
+                        <button
+                            type="button"
+                            class="custom-btn btn-14 m-3 p-2"
+                            @click="downloadReport"
+                            :disabled="exporting"
+                        >
+                            <span
+                                v-if="exporting"
+                                class="spinner-border spinner-border-sm me-1"
+                                role="status"
+                            ></span>
+                            <i v-else class="fa-solid fa-download"></i>
+                            |
+                            {{ exporting ? "Exporting..." : "Download Report" }}
+                        </button>
                         <button
                             type="button"
                             class="custom-btn btn-13 m-3 p-2"
@@ -751,6 +800,20 @@ onMounted(() => {
 }
 
 .btn-13:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+}
+
+.btn-14 {
+    background-color: #006a92;
+    color: #fff;
+}
+
+.btn-14:hover:not(:disabled) {
+    background-color: #004e6e;
+}
+
+.btn-14:disabled {
     opacity: 0.65;
     cursor: not-allowed;
 }

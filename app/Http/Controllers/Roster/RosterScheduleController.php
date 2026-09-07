@@ -12,6 +12,8 @@ use Illuminate\Support\Facades\DB;
 use App\Models\roster_schedule;
 use App\Exports\AttendanceReport;
 use Maatwebsite\Excel\Facades\Excel;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Carbon\Carbon;
 use Carbon\CarbonPeriod;
 use App\Models\app_attendance;
 use App\Models\attendence;
@@ -464,213 +466,168 @@ class RosterScheduleController extends Controller
     }
 
 
+
     public function reportList(Request $request)
     {
-        $role_id = Auth::user()->role_id;
-        $date = $request->searchDate;
+        $date = $request->filled('searchDate') ? $request->searchDate : Carbon::now()->format('Y-m-d');
 
-        $dayName = \Carbon\Carbon::parse($date)->format('l');
+        $query = $this->reportQuery($request, $date, $date);
 
-        if ($role_id == 1) {
-
-            $machine_attendance_sub = DB::table('attendences')
-                ->select(
-                    'EID',
-                    DB::raw('MIN(Time_In) as in_time'),
-                    DB::raw('MAX(Time_Out) as out_time')
-                )
-                ->whereDate('Date', $date)
-                ->groupBy('EID');
-
-            $app_attendance_sub = DB::table('app_attendances')
-                ->select(
-                    'EID',
-                    DB::raw("TIME(MIN(CASE WHEN LOWER(status)='in' THEN created_at END)) as in_time"),
-                    DB::raw("TIME(MAX(CASE WHEN LOWER(status)='out' THEN created_at END)) as out_time")
-                )
-                ->whereDate('created_at', $date)
-                ->groupBy('EID');
-
-            $query = DB::table('employees')
-
-                ->join('roster_schedules', function ($join) use ($date, $dayName) {
-                    $join->on('employees.id', '=', 'roster_schedules.employee_id')
-                        ->whereDate('roster_schedules.effective_from', '<=', $date)
-                        ->where(function ($q) use ($date) {
-                            $q->whereNull('roster_schedules.effective_to')
-                                ->orWhereDate('roster_schedules.effective_to', '>=', $date);
-                        })
-                        ->where('roster_schedules.day_name', $dayName);
-                })
-
-                ->join('officials', 'officials.EID', '=', 'employees.id')
-                ->join('departments', 'departments.id', '=', 'officials.Department_Id')
-
-                ->leftJoin('holidays', function ($join) use ($date) {
-                    $join->whereDate('holidays.from_date', '<=', $date)
-                        ->whereDate('holidays.to_date', '>=', $date);
-                })
-
-                ->leftJoin('leaves', function ($join) use ($date) {
-                    $join->on('leaves.employee_id', '=', 'employees.id')
-                        ->where('leaves.status', 'Approved')
-                        ->whereDate('leaves.from_date', '<=', $date)
-                        ->whereDate('leaves.to_date', '>=', $date);
-                })
-
-                ->leftJoinSub($machine_attendance_sub, 'machine_att', function ($join) {
-                    $join->on('machine_att.EID', '=', 'employees.id');
-                })
-
-                ->leftJoinSub($app_attendance_sub, 'app_att', function ($join) {
-                    $join->on('app_att.EID', '=', 'employees.id');
-                })
-
-                ->select(
-                    DB::raw("'$date' as report_date"),
-
-
-                    'employees.Full_Name as employee_name',
-                    'employees.id as employee_id',
-                    'employees.Employee_Id as official_id',
-                    'departments.Name as department_name',
-
-
-                    'roster_schedules.day_name',
-                    'roster_schedules.time_in',
-                    'roster_schedules.time_out',
-                    'roster_schedules.weekend',
-
-
-                    'machine_att.in_time as machine_in',
-                    'machine_att.out_time as machine_out',
-                    'app_att.in_time as app_in',
-                    'app_att.out_time as app_out',
-
-
-                    'holidays.holiday_name',
-                    'leaves.id as leave_id',
-
-
-                    DB::raw("COALESCE(app_att.in_time, machine_att.in_time) as actual_in"),
-                    DB::raw("COALESCE(app_att.out_time, machine_att.out_time) as actual_out"),
-
-
-                    DB::raw("
-                    CASE
-                        WHEN roster_schedules.weekend = 1 THEN NULL
-                        ELSE TIMESTAMPDIFF(
-                            MINUTE,
-                            CONCAT('$date',' ', roster_schedules.time_in),
-                            CONCAT('$date',' ', COALESCE(app_att.in_time, machine_att.in_time))
-                        )
-                    END as in_diff_minutes
-                "),
-
-
-                    DB::raw("
-                    CASE
-                        WHEN roster_schedules.weekend = 1 THEN NULL
-                        ELSE TIMESTAMPDIFF(
-                            MINUTE,
-                            CONCAT('$date',' ', roster_schedules.time_out),
-                            CONCAT('$date',' ', COALESCE(app_att.out_time, machine_att.out_time))
-                        )
-                    END as out_diff_minutes
-                "),
-
-
-                    DB::raw("
-                    CASE
-                        WHEN roster_schedules.weekend = 1 THEN NULL
-                        ELSE TIMESTAMPDIFF(
-                            MINUTE,
-                            CONCAT('$date',' ', COALESCE(app_att.in_time, machine_att.in_time)),
-                            CONCAT('$date',' ', COALESCE(app_att.out_time, machine_att.out_time))
-                        )
-                    END as working_minutes
-                "),
-
-                    DB::raw("
-                    CASE
-                        WHEN holidays.id IS NOT NULL THEN holidays.holiday_name
-                        WHEN leaves.id IS NOT NULL THEN 'On Leave'
-                        WHEN roster_schedules.weekend = 1 THEN 'Weekend'
-                        WHEN COALESCE(app_att.in_time, machine_att.in_time) IS NULL THEN 'Absent'
-                        ELSE 'Present'
-                    END as attendance_status
-                ")
-                )
-
-                ->when($request->department_id, function ($q) use ($request) {
-                    $q->where('officials.Department_Id', $request->department_id);
-                })
-
-
-                ->when($request->employee_id, function ($q) use ($request) {
-                    $q->where('employees.id', $request->employee_id);
-                });
-
-            $result = $query->get();
-        }
-
-
-
-        // -------------------------
-        // FORMAT
-        // -------------------------
-        $result = $result->map(function ($row) {
-
-
-            $formatInMinutes = function ($minutes) {
-                if ($minutes === null) return null;
-                $sign = $minutes < 0 ? '+' : '-';
-                $minutes = abs($minutes);
-                $hours = floor($minutes / 60);
-                $mins = $minutes % 60;
-                return $hours == 0 ? "$sign $mins min" : "$sign $hours h $mins min";
-            };
-
-
-            $formatOutMinutes = function ($minutes) {
-                if ($minutes === null) return null;
-                $sign = $minutes < 0 ? '-' : '+';
-                $minutes = abs($minutes);
-                $hours = floor($minutes / 60);
-                $mins = $minutes % 60;
-                return $hours == 0 ? "$sign $mins min" : "$sign $hours h $mins min";
-            };
-
-
-            $formatWorkingHours = function ($minutes) {
-                if ($minutes === null || $minutes < 0) return null;
-                $hours = floor($minutes / 60);
-                $mins = $minutes % 60;
-                if ($hours == 0) return "$mins min";
-                if ($mins == 0) return "$hours h";
-                return "$hours h $mins min";
-            };
-
-
-            $row->in_diff = $formatInMinutes($row->in_diff_minutes);
-            $row->out_diff = $formatOutMinutes($row->out_diff_minutes);
-            $row->working_hours = $formatWorkingHours($row->working_minutes);
-
-
-
-            $row->working_hour_decimal = $row->working_minutes !== null
-                ? round($row->working_minutes / 60, 2)
-                : null;
-
-
-            return $row;
-        });
-
+        $result = $this->mapReportRows($query->get());
 
         return response()->json([
             'success' => true,
             'data' => $result
         ]);
+    }
+
+    public function reportDownload(Request $request)
+    {
+        $fromDate = $request->filled('from_date') ? $request->from_date : ($request->filled('searchDate') ? $request->searchDate : Carbon::now()->format('Y-m-d'));
+        $toDate   = $request->filled('to_date')   ? $request->to_date   : $fromDate;
+        $format   = $request->format ?? 'xlsx';
+
+        $result = $this->mapReportRows($this->reportQuery($request, $fromDate, $toDate)->get());
+
+        if ($format === 'pdf') {
+            $pdf = Pdf::loadView('roster.attendance-report-pdf', [
+                'data'      => $result,
+                'fromDate'  => $fromDate,
+                'toDate'    => $toDate
+            ]);
+
+            return $pdf->download('attendance_report.pdf');
+        }
+
+        return Excel::download(new AttendanceReport($result), 'attendance_report.xlsx');
+    }
+
+    protected function reportQuery(Request $request, $fromDate = null, $toDate = null)
+    {
+        $query = DB::table('attendance_summaries')
+            ->join('employees', 'employees.id', '=', 'attendance_summaries.employee_id')
+            ->join('officials', 'officials.EID', '=', 'employees.id')
+            ->join('departments', 'departments.id', '=', 'attendance_summaries.department_id')
+            ->select(
+                'attendance_summaries.id',
+                'attendance_summaries.employee_id',
+                'attendance_summaries.department_id',
+                'attendance_summaries.date',
+                'attendance_summaries.out_time',
+                'attendance_summaries.in_time',
+                'attendance_summaries.rostered_in_time',
+                'attendance_summaries.rostered_out_time',
+                'attendance_summaries.rostered_status',
+                'attendance_summaries.remarks',
+                'attendance_summaries.status as attendance_status',
+                'employees.Full_Name as employee_name',
+                'employees.Employee_Id as official_id',
+                'departments.Name as department_name'
+            );
+
+        if ($fromDate) {
+            $query->whereDate('attendance_summaries.date', '>=', $fromDate);
+        }
+
+        if ($toDate) {
+            $query->whereDate('attendance_summaries.date', '<=', $toDate);
+        }
+
+        if ($request->filled('department_id')) {
+            $query->where('attendance_summaries.department_id', $request->department_id);
+        }
+
+        if ($request->filled('employee_id')) {
+            $query->where('attendance_summaries.employee_id', $request->employee_id);
+        }
+
+        $query->orderBy('attendance_summaries.employee_id')
+            ->orderBy('attendance_summaries.date');
+
+        return $query;
+    }
+
+    protected function mapReportRows($rows)
+    {
+        $formatTime = function ($time) {
+            if (!$time) return '-';
+            try {
+                return Carbon::parse($time)->format('g:i A');
+            } catch (\Exception $e) {
+                return $time;
+            }
+        };
+
+        return $rows->map(function ($row) use ($formatTime) {
+
+            $row->day_name = $row->date
+                ? Carbon::parse($row->date)->format('D')
+                : null;
+
+            $row->actual_in  = $row->in_time;
+            $row->actual_out = $row->out_time;
+
+            // IN Time == OUT Time special rule: treat as IN only
+            if ($row->actual_in !== null && $row->actual_out !== null && $row->actual_in == $row->actual_out) {
+                $row->out_time    = null;
+                $row->actual_out  = null;
+            }
+
+            // ---------- in_time difference / out_time difference ----------
+            $inDiffSeconds  = null;
+            $outDiffSeconds = null;
+
+            if ($row->rostered_in_time !== null && $row->in_time !== null) {
+                $inDiffSeconds = strtotime($row->in_time) - strtotime($row->rostered_in_time);
+            }
+
+            if ($row->rostered_out_time !== null && $row->out_time !== null) {
+                $outDiffSeconds = strtotime($row->out_time) - strtotime($row->rostered_out_time);
+            }
+
+            $inDiffMinutes  = $inDiffSeconds  !== null ? round($inDiffSeconds / 60)  : null;
+            $outDiffMinutes = $outDiffSeconds !== null ? round($outDiffSeconds / 60) : null;
+
+            $formatSigned = function ($minutes) {
+                if ($minutes === null) return null;
+                $minutes = abs($minutes);
+                $hours = floor($minutes / 60);
+                $mins  = $minutes % 60;
+                return $hours == 0 ? "$mins min" : "$hours h $mins min";
+            };
+
+            $row->in_diff         = $formatSigned($inDiffMinutes);
+            $row->out_diff        = $formatSigned($outDiffMinutes);
+            $row->in_diff_minutes = $inDiffMinutes;
+            $row->out_diff_minutes = $outDiffMinutes;
+
+            // ---------- total working hours from actual in/out ----------
+            if ($row->in_time !== null && $row->out_time !== null) {
+                $totalWorkingSeconds = strtotime($row->out_time) - strtotime($row->in_time);
+
+                $formatHours = function ($seconds) {
+                    if ($seconds < 0) $seconds = 0;
+                    $hours   = floor($seconds / 3600);
+                    $minutes = floor(($seconds % 3600) / 60);
+                    if ($hours == 0) return "$minutes min";
+                    if ($minutes == 0) return "$hours h";
+                    return "$hours h $minutes min";
+                };
+
+                $row->working_hours   = $formatHours($totalWorkingSeconds);
+                $row->working_minutes = round($totalWorkingSeconds / 60);
+            } else {
+                $row->working_hours   = null;
+                $row->working_minutes = null;
+            }
+
+            $row->fmt_in        = $formatTime($row->in_time);
+            $row->fmt_out       = $formatTime($row->out_time);
+            $row->fmt_rostered_in  = $formatTime($row->rostered_in_time);
+            $row->fmt_rostered_out = $formatTime($row->rostered_out_time);
+
+            return $row;
+        });
     }
 
 

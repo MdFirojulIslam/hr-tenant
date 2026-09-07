@@ -28,6 +28,8 @@ use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use App\Models\EmpInfoDocumentation;
+use App\Exports\EmployeeDocumentationExport;
+use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Http\Request;
 
 class EmployeeInformationController extends Controller
@@ -610,5 +612,15 @@ class EmployeeInformationController extends Controller
             'success' => true,
             'message' => 'Successfully updated',
         ]);
+    }
+
+    public function exportDocumentationReport(Request $request)
+    {
+        $employeeId = $request->query('employee_id');
+
+        return Excel::download(
+            new EmployeeDocumentationExport($employeeId),
+            'employee_documentation_report.xlsx'
+        );
     }
 }

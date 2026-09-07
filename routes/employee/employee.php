@@ -112,3 +112,4 @@ Route::get('/get-documentation-info', [EmployeeInformationController::class, 'ge
 Route::get('/get-documentation-info/{emp_id}/edit', [EmployeeInformationController::class, 'editDocumentationInfo']);
 Route::post('/get-documentation-info', [EmployeeInformationController::class, 'insertDocumentationInfo']);
 Route::put('/get-documentation-info/{emp_id}', [EmployeeInformationController::class, 'updateDocumentationInfo']);
+Route::get('/export-documentation-report', [EmployeeInformationController::class, 'exportDocumentationReport']);

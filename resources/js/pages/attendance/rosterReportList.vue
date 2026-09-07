@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, defineAsyncComponent } from "vue";
+import { ref, onMounted } from "vue";
 import api from "@/api";
 import { useStore } from "vuex";
 
@@ -16,21 +16,38 @@ const searchDept = ref("");
 const selectedEmployee = ref(null);
 const rosterReports = ref([]);
 const searchDate = ref("");
-const downloadReport = ref(false);
-
-const rosterReportModal = defineAsyncComponent(
-    () => import("@/pages/attendance/component/rosterReportDownload.vue"),
-);
+const downloading = ref(false);
 
 // -------------------------
 // DATE & TIME HELPERS
 // -------------------------
-const downloadRosterReport = () => {
-    downloadReport.value = true;
-};
+const downloadAttendance = async () => {
+    const date = searchDate.value || getTodayDate();
 
-const closeDownloadReport = () => {
-    downloadReport.value = false;
+    try {
+        downloading.value = true;
+
+        const response = await api.get("/roster-report-download", {
+            params: {
+                department_id: searchDept.value,
+                employee_id: selectedEmployee.value?.id,
+                from_date: date,
+                to_date: date,
+                format: "xlsx",
+            },
+            responseType: "blob",
+        });
+
+        const blob = new Blob([response.data]);
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = "attendance_report.xlsx";
+        link.click();
+    } catch (error) {
+        console.error("Error downloading attendance report:", error);
+    } finally {
+        downloading.value = false;
+    }
 };
 
 const getTodayDate = () => {
@@ -40,12 +57,20 @@ const getTodayDate = () => {
 
 const formatDate = (dateStr) => {
     if (!dateStr) return "-";
-    const date = new Date(dateStr);
+    const [y, m, d] = dateStr.split("-").map(Number);
+    const date = new Date(y, m - 1, d);
     return date.toLocaleDateString("en-US", {
         day: "2-digit",
         month: "short",
         year: "numeric",
     });
+};
+
+const getDayName = (dateStr) => {
+    if (!dateStr) return "-";
+    const [y, m, d] = dateStr.split("-").map(Number);
+    const date = new Date(y, m - 1, d);
+    return date.toLocaleDateString("en-US", { weekday: "short" });
 };
 
 const formatTime = (timeStr) => {
@@ -143,10 +168,20 @@ const isEarlyOut = (roster) => {
 const getStatusBadgeClass = (status) => {
     if (!status) return "badge-secondary";
     const s = status.toLowerCase();
-    if (s.includes("p") || s.includes("present")) return "badge-present";
-    if (s.includes("a") || s.includes("absent")) return "badge-absent";
-    if (s.includes("l") || s.includes("leave")) return "badge-leave";
-    if (s.includes("off") || s.includes("holiday")) return "badge-off";
+    if (s.includes("late")) return "badge-late";
+    if (s.includes("present") || s.includes("manual")) return "badge-present";
+    if (s.includes("absent")) return "badge-absent";
+    if (s.includes("leave")) return "badge-leave";
+    if (s.includes("holiday")) return "badge-holiday";
+    return "badge-secondary";
+};
+
+const getRosteredStatusBadgeClass = (status) => {
+    if (!status) return "badge-secondary";
+    const s = status.toLowerCase();
+    if (s.includes("office")) return "badge-roster-office";
+    if (s.includes("home")) return "badge-roster-home";
+    if (s.includes("weekend")) return "badge-roster-weekend";
     return "badge-secondary";
 };
 
@@ -160,14 +195,6 @@ onMounted(() => {
 </script>
 
 <template>
-    <!-- Modal Dynamic Component -->
-    <component
-        v-if="downloadReport"
-        :is="rosterReportModal"
-        :isOpen="downloadReport"
-        @modal-close="closeDownloadReport"
-    />
-
     <div class="attendance-page">
         <!-- Top Navigation / Header -->
         <header class="header-bar border-bottom">
@@ -179,11 +206,14 @@ onMounted(() => {
                     </div>
                 </div>
                 <button
-                    @click="downloadRosterReport"
+                    @click="downloadAttendance"
+                    :disabled="downloading"
                     class="btn btn-primary btn-download"
                 >
                     <i class="fa-solid fa-file-arrow-down"></i>
-                    <span>Export Roster</span>
+                    <span>{{
+                        downloading ? "Exporting..." : "Export Attendance"
+                    }}</span>
                 </button>
             </div>
         </header>
@@ -276,24 +306,24 @@ onMounted(() => {
                         <thead>
                             <tr>
                                 <th width="3%" class="text-center">#</th>
-                                <th width="7%" class="text-center">
+                                <th width="6%" class="text-center">
                                     <i class="fa-solid fa-id-badge"></i> ID
                                 </th>
-                                <th width="19%">
+                                <th width="13%">
                                     <i class="fa-solid fa-user"></i> Name
                                 </th>
-                                <th width="22%">
+                                <th width="13%">
                                     <i class="fa-solid fa-sitemap"></i>
                                     Department
                                 </th>
-                                <!-- <th width="9%" class="text-center">
-                                   <i class="fa-solid fa-calendar"></i> Date
-                               </th> -->
-                                <!-- <th width="6%" class="text-center">Day</th> -->
-                                <th width="8%" class="text-center">
+                                <!-- <th width="8%" class="text-center">
+                                    <i class="fa-solid fa-calendar"></i> Date
+                                </th> -->
+                                <th width="6%" class="text-center">Day</th>
+                                <!-- <th width="7%" class="text-center">
                                     <i class="fa-solid fa-shield-halved"></i>
                                     Status
-                                </th>
+                                </th> -->
                                 <th width="8%" class="text-center">
                                     <i class="fa-solid fa-right-to-bracket"></i>
                                     In
@@ -304,18 +334,35 @@ onMounted(() => {
                                     ></i>
                                     Out
                                 </th>
-                                <th width="8%" class="text-center">In Diff</th>
-                                <th width="8%" class="text-center">Out Diff</th>
-                                <th width="9%" class="text-center">
+                                <th width="6%" class="text-center">In Diff</th>
+                                <th width="6%" class="text-center">Out Diff</th>
+                                <th width="8%" class="text-center">
                                     <i class="fa-solid fa-clock"></i> Working
                                 </th>
+                                <!-- <th width="8%" class="text-center">
+                                    <i class="fa-solid fa-calendar-check"></i>
+                                    Rostered In
+                                </th>
+                                <th width="8%" class="text-center">
+                                    <i class="fa-solid fa-calendar-xmark"></i>
+                                    Rostered Out
+                                </th>
+                                <th width="7%" class="text-center">
+                                    <i
+                                        class="fa-solid fa-clock-rotate-left"
+                                    ></i>
+                                    Rostered Status
+                                </th>
+                                <th width="9%">
+                                    <i class="fa-solid fa-comment"></i> Remarks
+                                </th> -->
                             </tr>
                         </thead>
 
                         <tbody>
                             <tr
                                 v-for="(roster, index) in rosterReports"
-                                :key="index"
+                                :key="roster.id ?? index"
                             >
                                 <td class="text-center col-sn">
                                     {{ index + 1 }}
@@ -330,12 +377,15 @@ onMounted(() => {
                                     {{ roster.department_name || "-" }}
                                 </td>
                                 <!-- <td class="text-center text-nowrap col-date">
-                                   {{ formatDate(roster.report_date) }}
-                               </td>
-                               <td class="text-center col-day">
-                                   {{ roster.day_name }}
-                               </td> -->
-                                <td class="text-center">
+                                    {{ formatDate(roster.date) }}
+                                </td> -->
+                                <td class="text-center col-day">
+                                    {{
+                                        roster.day_name ||
+                                        getDayName(roster.date)
+                                    }}
+                                </td>
+                                <!-- <td class="text-center">
                                     <span
                                         class="status-pill"
                                         :class="
@@ -346,7 +396,7 @@ onMounted(() => {
                                     >
                                         {{ roster.attendance_status || "-" }}
                                     </span>
-                                </td>
+                                </td> -->
 
                                 <!-- IN TIME -->
                                 <td
@@ -383,17 +433,47 @@ onMounted(() => {
                                 <td class="text-center diff-cell">
                                     {{ roster.in_diff || "-" }}
                                 </td>
+
                                 <td class="text-center diff-cell">
                                     {{ roster.out_diff || "-" }}
                                 </td>
+
                                 <td class="text-center col-worktime">
                                     {{ roster.working_hours || "-" }}
                                 </td>
+
+                                <!-- ROSTERED SCHEDULE -->
+                                <!-- <td class="text-center time-cell roster-time">
+                                    {{ formatTime(roster.rostered_in_time) }}
+                                </td>
+
+                                <td class="text-center time-cell roster-time">
+                                    {{ formatTime(roster.rostered_out_time) }}
+                                </td>
+
+                                <td class="text-center">
+                                    <span
+                                        v-if="roster.rostered_status"
+                                        class="status-pill"
+                                        :class="
+                                            getRosteredStatusBadgeClass(
+                                                roster.rostered_status,
+                                            )
+                                        "
+                                    >
+                                        {{ roster.rostered_status }}
+                                    </span>
+                                    <span v-else>-</span>
+                                </td>
+
+                                <td class="col-remarks">
+                                    {{ roster.remarks || "-" }}
+                                </td> -->
                             </tr>
 
                             <!-- Empty State -->
                             <tr v-if="rosterReports.length === 0">
-                                <td colspan="12" class="empty-cell">
+                                <td colspan="16" class="empty-cell">
                                     <div class="empty-box">
                                         <i
                                             class="fa-solid fa-folder-open empty-icon"
@@ -712,12 +792,19 @@ onMounted(() => {
     border-radius: 3px;
     text-transform: uppercase;
     letter-spacing: 0.3px;
+    white-space: nowrap;
 }
 
 .badge-present {
     background-color: #dcfce7;
     color: #166534;
     border: 1px solid #86efac;
+}
+
+.badge-late {
+    background-color: #fef9c3;
+    color: #854d0e;
+    border: 1px solid #facc15;
 }
 
 .badge-absent {
@@ -732,7 +819,7 @@ onMounted(() => {
     border: 1px solid #fde047;
 }
 
-.badge-off {
+.badge-holiday {
     background-color: #f1f5f9;
     color: #475569;
     border: 1px solid #cbd5e1;
@@ -741,6 +828,39 @@ onMounted(() => {
 .badge-secondary {
     background-color: #e2e8f0;
     color: #475569;
+    border: 1px solid #cbd5e1;
+}
+
+/* Rostered Status Badges */
+.badge-roster-office {
+    background-color: #dbeafe;
+    color: #1e40af;
+    border: 1px solid #93c5fd;
+}
+
+.badge-roster-home {
+    background-color: #e0f2fe;
+    color: #075985;
+    border: 1px solid #7dd3fc;
+}
+
+.badge-roster-weekend {
+    background-color: #ede9fe;
+    color: #5b21b6;
+    border: 1px solid #c4b5fd;
+}
+
+.roster-time {
+    color: #1d4ed8 !important;
+}
+
+.col-remarks {
+    color: #475569;
+    font-size: 0.775rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 140px;
 }
 
 /* Highlighted Alarm Cell Styles */
