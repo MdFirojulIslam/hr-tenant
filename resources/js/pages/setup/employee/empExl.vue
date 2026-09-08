@@ -12,6 +12,9 @@
         <button @click="exportToExcel" class="custom-btn btn-13 mt-3">
             Export to Excel
         </button>
+        <button @click="exportDocumentation" class="custom-btn btn-13 mt-3">
+            Documentation Export
+        </button>
     </div>
 </template>
 
@@ -194,6 +197,24 @@ function exportToExcel() {
 
     // Clean up the URL object
     URL.revokeObjectURL(link.href);
+}
+
+async function exportDocumentation() {
+    try {
+        const response = await api.get("/export-documentation-excel", {
+            responseType: "blob",
+        });
+        const blob = new Blob([response.data], {
+            type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = "employee_documentation_export.xlsx";
+        link.click();
+        URL.revokeObjectURL(link.href);
+    } catch (error) {
+        console.error("Error exporting documentation:", error);
+    }
 }
 
 onMounted(() => getData());

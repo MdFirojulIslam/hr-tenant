@@ -35,6 +35,7 @@ Route::get('empEmail/{id}', [EmployeeController::class, 'getEmail']);
 Route::post('/employee/{id}', [EmployeeController::class, 'update']);
 Route::get('/allemp', [EmployeeController::class, 'allemp']);
 Route::get('/employee-exl', [EmployeeController::class, 'EmployeeExl']);
+Route::get('/export-documentation-excel', [EmployeeController::class, 'exportDocumentationExcel']);
 Route::get('/emp-id', [EmployeeController::class, 'EmployeeId']);
 Route::get('/employee-search', [EmployeeController::class, 'search']);
 Route::get('/all-employee/{id}', [EmployeeController::class, 'getAllEmployee']);

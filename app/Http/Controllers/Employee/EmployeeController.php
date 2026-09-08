@@ -12,6 +12,8 @@ use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use App\Exports\EmployeeDocumentationHorizontalExport;
+use Maatwebsite\Excel\Facades\Excel;
 
 
 class EmployeeController extends Controller
@@ -634,6 +636,14 @@ class EmployeeController extends Controller
             ];
             return response()->json($response);
         }
+    }
+
+    public function exportDocumentationExcel()
+    {
+        return Excel::download(
+            new EmployeeDocumentationHorizontalExport(),
+            'employee_documentation_export.xlsx'
+        );
     }
 
     /**
