@@ -2,6 +2,7 @@
 import { ref, onMounted, watch, computed } from "vue";
 import api from "@/api";
 import dashboardChart from "./commonComponent/dashboardChart.vue";
+import dailyStandup from "./commonComponent/dailyStandup.vue";
 import Multiselect from "vue-multiselect";
 import "vue-multiselect/dist/vue-multiselect.min.css";
 
@@ -157,7 +158,7 @@ onMounted(() => {
                     </div>
 
                     <!-- Department Selector -->
-                    <div class="col-12 col-md-5 col-lg-4">
+                    <!-- <div class="col-12 col-md-5 col-lg-4">
                         <div class="control-box multiselect-wrapper">
                             <multiselect
                                 v-model="selectedDepartment"
@@ -170,7 +171,7 @@ onMounted(() => {
                                 placeholder="All Departments"
                             />
                         </div>
-                    </div>
+                    </div> -->
                 </div>
             </section>
 
@@ -408,6 +409,9 @@ onMounted(() => {
             </section>
 
             <!-- Secondary Analytics / Charts Section -->
+            <section class="chart-section">
+                <dailyStandup />
+            </section>
             <section class="chart-section">
                 <dashboardChart :dashData="dashCount" />
             </section>

@@ -12,9 +12,6 @@
         <button @click="exportToExcel" class="custom-btn btn-13 mt-3">
             Export to Excel
         </button>
-        <button @click="exportDocumentation" class="custom-btn btn-13 mt-3">
-            Documentation Export
-        </button>
     </div>
 </template>
 
@@ -23,7 +20,7 @@ import { ref, onMounted } from "vue";
 import { HotTable } from "@handsontable/vue3";
 import { registerAllModules } from "handsontable/registry";
 import "handsontable/dist/handsontable.full.css";
-import api from '@/api';
+import api from "@/api";
 
 // Register Handsontable's modules
 registerAllModules();
@@ -149,7 +146,7 @@ const getData = async () => {
 
         employee.value = response.data.map((emp) => ({
             ...emp,
-            Employee_Id: "ABNB"+emp.Employee_Id,
+            Employee_Id: "ABNB" + emp.Employee_Id,
             status: emp.status === "N" ? "Active" : "Inactive",
             Marital_Status:
                 emp.Marital_Status === "M" ? "Married" : "Unmarried",
@@ -197,24 +194,6 @@ function exportToExcel() {
 
     // Clean up the URL object
     URL.revokeObjectURL(link.href);
-}
-
-async function exportDocumentation() {
-    try {
-        const response = await api.get("/export-documentation-excel", {
-            responseType: "blob",
-        });
-        const blob = new Blob([response.data], {
-            type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        });
-        const link = document.createElement("a");
-        link.href = URL.createObjectURL(blob);
-        link.download = "employee_documentation_export.xlsx";
-        link.click();
-        URL.revokeObjectURL(link.href);
-    } catch (error) {
-        console.error("Error exporting documentation:", error);
-    }
 }
 
 onMounted(() => getData());
