@@ -1,6 +1,9 @@
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, onMounted, onBeforeUnmount } from "vue";
+import { useRouter } from "vue-router";
 import api from "@/api";
+
+const router = useRouter();
 
 const standupData = ref({
     yesterday: null,
@@ -17,7 +20,7 @@ const error = ref(false);
 
 const formatNumber = (value) => {
     const num = Number(value) || 0;
-    return num.toString().padStart(2, "0");
+    return num.toString();
 };
 
 const formatDateLabel = (dateStr) => {
@@ -52,7 +55,73 @@ const dayCards = [
     { key: "tomorrow", label: "Tomorrow" },
 ];
 
-onMounted(fetchStandup);
+// Late employees modal
+const showLateModal = ref(false);
+const lateModalEmployees = ref([]);
+const lateModalDate = ref("");
+
+const openLateModal = (cardKey) => {
+    const data = standupData.value[cardKey];
+    if (!data || !data.late || !data.late.employees) return;
+    lateModalEmployees.value = data.late.employees;
+    lateModalDate.value = dates.value[cardKey] || "";
+    showLateModal.value = true;
+};
+
+const closeLateModal = () => {
+    showLateModal.value = false;
+    lateModalEmployees.value = [];
+    lateModalDate.value = "";
+};
+
+// Leave tooltip
+const showLeaveTooltip = ref(false);
+const leaveTooltipNames = ref([]);
+const leaveTooltipPos = ref({ x: 0, y: 0 });
+
+const showLeaveHover = (event, cardKey) => {
+    const data = standupData.value[cardKey];
+    if (
+        !data ||
+        !data.on_leave ||
+        !data.on_leave.employee_names ||
+        data.on_leave.employee_names.length === 0
+    )
+        return;
+    leaveTooltipNames.value = data.on_leave.employee_names;
+    const rect = event.currentTarget.getBoundingClientRect();
+    leaveTooltipPos.value = {
+        x: rect.left + rect.width / 2,
+        y: rect.top - 8,
+    };
+    showLeaveTooltip.value = true;
+};
+
+const hideLeaveHover = () => {
+    showLeaveTooltip.value = false;
+    leaveTooltipNames.value = [];
+};
+
+// Navigation
+const navigateTo = (routeName) => {
+    router.push({ name: routeName });
+};
+
+// Handle click outside modal
+const handleKeydown = (e) => {
+    if (e.key === "Escape" && showLateModal.value) {
+        closeLateModal();
+    }
+};
+
+onMounted(() => {
+    fetchStandup();
+    document.addEventListener("keydown", handleKeydown);
+});
+
+onBeforeUnmount(() => {
+    document.removeEventListener("keydown", handleKeydown);
+});
 </script>
 
 <template>
@@ -108,8 +177,12 @@ onMounted(fetchStandup);
                                             standupData[card.key]?.present
                                                 ?.count,
                                         )
+                                    }}/{{
+                                        formatNumber(
+                                            standupData[card.key]?.present
+                                                ?.total,
+                                        )
                                     }}
-                                    Persons
                                 </span>
                                 <span class="metric-pct text-success col-3"
                                     >{{
@@ -129,13 +202,19 @@ onMounted(fetchStandup);
                                     ></i>
                                     Late attendance
                                 </span>
-                                <span class="metric-count col-4">
+                                <span
+                                    class="metric-count col-4 metric-clickable"
+                                    @click="openLateModal(card.key)"
+                                >
                                     {{
                                         formatNumber(
                                             standupData[card.key]?.late?.count,
                                         )
+                                    }}/{{
+                                        formatNumber(
+                                            standupData[card.key]?.late?.total,
+                                        )
                                     }}
-                                    Persons
                                 </span>
                                 <span class="metric-pct text-danger col-3"
                                     >{{
@@ -155,14 +234,24 @@ onMounted(fetchStandup);
                                     ></i>
                                     On Leave
                                 </span>
-                                <span class="metric-count col-4">
+                                <span
+                                    class="metric-count col-4"
+                                    :class="{
+                                        'metric-hoverable':
+                                            standupData[card.key]?.on_leave
+                                                ?.count > 0,
+                                    }"
+                                    @mouseenter="
+                                        showLeaveHover($event, card.key)
+                                    "
+                                    @mouseleave="hideLeaveHover"
+                                >
                                     {{
                                         formatNumber(
                                             standupData[card.key]?.on_leave
                                                 ?.count,
                                         )
                                     }}
-                                    Persons
                                 </span>
                                 <span class="metric-pct text-warning col-3"
                                     >{{
@@ -182,15 +271,23 @@ onMounted(fetchStandup);
                                     ></i>
                                     Schedule Outlet Visited
                                 </span>
-                                <span class="metric-count col-4">
+                                <span
+                                    class="metric-count col-4 metric-clickable"
+                                    @click="navigateTo('OutletVisitReport')"
+                                >
                                     {{
                                         formatNumber(
                                             standupData[card.key]
                                                 ?.schedule_outlet_visited
                                                 ?.visited,
                                         )
+                                    }}/{{
+                                        formatNumber(
+                                            standupData[card.key]
+                                                ?.schedule_outlet_visited
+                                                ?.scheduled,
+                                        )
                                     }}
-                                    Outlets
                                 </span>
                                 <span class="metric-pct text-primary col-3"
                                     >{{
@@ -211,14 +308,24 @@ onMounted(fetchStandup);
                                     ></i>
                                     Random Outlet Visit
                                 </span>
-                                <span class="metric-count col-4">
+                                <span
+                                    class="metric-count col-4 metric-clickable"
+                                    @click="
+                                        navigateTo('RandomOutletVisitReport')
+                                    "
+                                >
                                     {{
                                         formatNumber(
                                             standupData[card.key]
                                                 ?.random_outlet_visit?.count,
                                         )
+                                    }}/{{
+                                        formatNumber(
+                                            standupData[card.key]
+                                                ?.random_outlet_visit
+                                                ?.employees,
+                                        )
                                     }}
-                                    Outlets
                                 </span>
                                 <span class="metric-pct text-muted col-3">
                                     {{
@@ -241,14 +348,16 @@ onMounted(fetchStandup);
                                     ></i>
                                     Meeting Minutes
                                 </span>
-                                <span class="metric-count col-4">
+                                <span
+                                    class="metric-count col-4 metric-clickable"
+                                    @click="navigateTo('MeetingMinutesReport')"
+                                >
                                     {{
                                         formatNumber(
                                             standupData[card.key]
                                                 ?.meeting_minutes?.meetings,
                                         )
                                     }}
-                                    Meetings
                                 </span>
                                 <span class="metric-pct text-muted col-3">
                                     {{
@@ -265,6 +374,103 @@ onMounted(fetchStandup);
                 </div>
             </div>
         </div>
+
+        <!-- Late Employees Modal -->
+        <Teleport to="body">
+            <div
+                v-if="showLateModal"
+                class="standup-modal-overlay"
+                @click.self="closeLateModal"
+            >
+                <div class="standup-modal">
+                    <div class="standup-modal-header">
+                        <h5 class="standup-modal-title">
+                            <i class="fa-solid fa-clock text-danger me-2"></i>
+                            Late Employees
+                        </h5>
+                        <button
+                            class="standup-modal-close"
+                            @click="closeLateModal"
+                        >
+                            <i class="fa-solid fa-xmark"></i>
+                        </button>
+                    </div>
+                    <div class="standup-modal-date">
+                        {{ formatDateLabel(lateModalDate) }}
+                    </div>
+                    <div class="standup-modal-body">
+                        <div
+                            v-if="lateModalEmployees.length === 0"
+                            class="standup-modal-empty"
+                        >
+                            No late employees found.
+                        </div>
+                        <table
+                            v-else
+                            class="table table-hover standup-modal-table mb-0"
+                        >
+                            <thead>
+                                <tr>
+                                    <th>Employee Name</th>
+                                    <th>Department</th>
+                                    <th class="text-end">In Time</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr
+                                    v-for="emp in lateModalEmployees"
+                                    :key="emp.eid"
+                                >
+                                    <td>{{ emp.name }}</td>
+                                    <td>{{ emp.department }}</td>
+                                    <td class="text-end">
+                                        <span
+                                            class="badge bg-danger-subtle text-danger"
+                                        >
+                                            {{ emp.time_in }}
+                                        </span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="standup-modal-footer">
+                        <span class="text-muted small">
+                            Total: {{ lateModalEmployees.length }} late
+                            employee(s)
+                        </span>
+                        <button
+                            class="btn btn-sm btn-secondary"
+                            @click="closeLateModal"
+                        >
+                            Close
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </Teleport>
+
+        <!-- Leave Tooltip -->
+        <Teleport to="body">
+            <div
+                v-if="showLeaveTooltip && leaveTooltipNames.length > 0"
+                class="standup-leave-tooltip"
+                :style="{
+                    left: leaveTooltipPos.x + 'px',
+                    top: leaveTooltipPos.y + 'px',
+                }"
+            >
+                <div class="leave-tooltip-header">Employees on Leave</div>
+                <div
+                    v-for="(name, idx) in leaveTooltipNames"
+                    :key="idx"
+                    class="leave-tooltip-item"
+                >
+                    <i class="fa-solid fa-user me-2 text-muted"></i>
+                    {{ name }}
+                </div>
+            </div>
+        </Teleport>
     </div>
 </template>
 
@@ -389,6 +595,22 @@ onMounted(fetchStandup);
     text-align: center;
 }
 
+.metric-clickable {
+    cursor: pointer;
+    transition:
+        color 0.15s ease,
+        text-decoration 0.15s ease;
+}
+
+.metric-clickable:hover {
+    color: #2563eb;
+    text-decoration: underline;
+}
+
+.metric-hoverable {
+    cursor: default;
+}
+
 .standup-loading,
 .standup-error {
     display: flex;
@@ -406,5 +628,160 @@ onMounted(fetchStandup);
     color: #b91c1c;
     background: #fef2f2;
     border-color: #fecaca;
+}
+
+/* Late Employees Modal */
+.standup-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1055;
+    padding: 1rem;
+}
+
+.standup-modal {
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+    width: 100%;
+    max-width: 550px;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.standup-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.standup-modal-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0;
+    display: flex;
+    align-items: center;
+}
+
+.standup-modal-close {
+    background: none;
+    border: none;
+    font-size: 1.25rem;
+    color: #64748b;
+    cursor: pointer;
+    padding: 0.25rem;
+    line-height: 1;
+    border-radius: 6px;
+    transition:
+        background 0.15s ease,
+        color 0.15s ease;
+}
+
+.standup-modal-close:hover {
+    background: #f1f5f9;
+    color: #0f172a;
+}
+
+.standup-modal-date {
+    padding: 0.5rem 1.25rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #2563eb;
+    background: #f0f7ff;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.standup-modal-body {
+    padding: 1rem 1.25rem;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.standup-modal-empty {
+    text-align: center;
+    padding: 2rem;
+    color: #94a3b8;
+    font-size: 0.875rem;
+}
+
+.standup-modal-table th {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    border-bottom: 2px solid #e2e8f0;
+    padding: 0.5rem 0.5rem;
+}
+
+.standup-modal-table td {
+    font-size: 0.85rem;
+    color: #334155;
+    padding: 0.6rem 0.5rem;
+    vertical-align: middle;
+}
+
+.standup-modal-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1.25rem;
+    border-top: 1px solid #e2e8f0;
+    background: #f8fafc;
+}
+
+/* Leave Tooltip */
+.standup-leave-tooltip {
+    position: fixed;
+    transform: translateX(-50%) translateY(-100%);
+    background: #1e293b;
+    color: #f1f5f9;
+    border-radius: 8px;
+    padding: 0.6rem 0.85rem;
+    z-index: 1060;
+    min-width: 180px;
+    max-width: 280px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+    pointer-events: none;
+}
+
+.standup-leave-tooltip::after {
+    content: "";
+    position: absolute;
+    bottom: -5px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-top: 6px solid #1e293b;
+}
+
+.leave-tooltip-header {
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #94a3b8;
+    margin-bottom: 0.4rem;
+    padding-bottom: 0.3rem;
+    border-bottom: 1px solid #334155;
+}
+
+.leave-tooltip-item {
+    font-size: 0.8rem;
+    padding: 0.2rem 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 </style>

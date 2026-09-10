@@ -10,8 +10,14 @@ namespace App\Http\Controllers;
 
 use App\Models\app_attendance;
 use App\Models\department;
+use App\Models\employee;
 use App\Models\leave;
 use App\Models\official;
+use App\Models\minutes_of_meeting;
+use App\Models\RandomOutletVisit;
+use App\Models\OutletVisitAssignment;
+use App\Models\OutletVisitedVisit;
+use App\Support\OutletVisitWeekCycle;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
@@ -578,6 +584,211 @@ class DashboardController extends Controller
 
 
 
+    public function dailyStandup(Request $request)
+    {
+        $date = $request->query('date');
+
+        $today = Carbon::now()->toDateString();
+        $yesterday = Carbon::now()->subDay()->toDateString();
+        $tomorrow = Carbon::now()->addDay()->toDateString();
+
+        if ($date) {
+            $date = Carbon::parse($date)->toDateString();
+            $yesterday = Carbon::parse($date)->subDay()->toDateString();
+            $today = Carbon::parse($date)->toDateString();
+            $tomorrow = Carbon::parse($date)->addDay()->toDateString();
+        }
+
+        $activeEmployees = official::where('Status', 'N')->count();
+
+        $buildStandup = function ($targetDate) use ($activeEmployees) {
+            // --- PRESENT (unique across both machine and app attendance) ---
+            $machineEids = attendence::whereIn('Status', ['P', 'L'])
+                ->whereDate('Date', $targetDate)
+                ->pluck('EID')
+                ->unique();
+
+            $appEids = app_attendance::where('status', 'in')
+                ->whereDate('created_at', $targetDate)
+                ->pluck('EID')
+                ->unique();
+
+            $allPresentEids = $machineEids->merge($appEids)->unique();
+            $totalPresent = $allPresentEids->count();
+            $presentPct = $activeEmployees > 0 ? round(($totalPresent / $activeEmployees) * 100, 1) : 0;
+
+            // --- LATE EMPLOYEES (with details) ---
+            $lateEmployees = [];
+            $lateDeadline = new DateTime('10:15:00');
+
+            // Machine attendance late employees
+            $machineLate = attendence::where('attendences.Status', 'L')
+                ->whereDate('Date', $targetDate)
+                ->join('employees', 'employees.id', '=', 'attendences.EID')
+                ->join('officials', 'officials.EID', '=', 'employees.id')
+                ->join('departments', 'departments.id', '=', 'officials.Department_Id')
+                ->select(
+                    'employees.id as eid',
+                    'employees.Full_Name as name',
+                    'departments.Name as department',
+                    'attendences.Time_In as time_in'
+                )
+                ->distinct('attendences.EID')
+                ->get();
+
+            foreach ($machineLate as $emp) {
+                $lateMins = 0;
+                if ($emp->time_in) {
+                    $in = new DateTime(date('H:i:s', strtotime($emp->time_in)));
+                    if ($in > $lateDeadline) {
+                        $lateMins = (int) round(($in->getTimestamp() - $lateDeadline->getTimestamp()) / 60);
+                    }
+                }
+                $lateEmployees[] = [
+                    'eid' => $emp->eid,
+                    'name' => $emp->name,
+                    'department' => $emp->department,
+                    'late_minutes' => $lateMins,
+                    'time_in' => $emp->time_in,
+                ];
+            }
+
+            $lateEidSet = collect($lateEmployees)->pluck('eid')->toArray();
+
+            // App attendance late employees (not already counted from machine)
+            $appLateRecords = app_attendance::where('status', 'in')
+                ->whereDate('created_at', $targetDate)
+                ->selectRaw('EID, MIN(created_at) as in_time')
+                ->groupBy('EID')
+                ->havingRaw('MIN(created_at) > ?', ['10:15:00'])
+                ->get();
+
+            foreach ($appLateRecords as $att) {
+                if (in_array($att->EID, $lateEidSet)) {
+                    continue;
+                }
+                $in = new DateTime(date('H:i:s', strtotime($att->in_time)));
+                $lateMins = (int) round(($in->getTimestamp() - $lateDeadline->getTimestamp()) / 60);
+
+                $empInfo = official::where('EID', $att->EID)
+                    ->join('employees', 'employees.id', '=', 'officials.EID')
+                    ->join('departments', 'departments.id', '=', 'officials.Department_Id')
+                    ->select('employees.Full_Name as name', 'departments.Name as department')
+                    ->first();
+
+                $lateEmployees[] = [
+                    'eid' => $att->EID,
+                    'name' => $empInfo ? $empInfo->name : 'Unknown',
+                    'department' => $empInfo ? $empInfo->department : 'Unknown',
+                    'late_minutes' => $lateMins,
+                    'time_in' => $att->in_time,
+                ];
+            }
+
+            usort($lateEmployees, function ($a, $b) {
+                return $b['late_minutes'] <=> $a['late_minutes'];
+            });
+
+            $totalLate = count($lateEmployees);
+            $latePct = $totalPresent > 0 ? round(($totalLate / $totalPresent) * 100, 1) : 0;
+
+            // --- ON LEAVE ---
+            $leaveBase = leave::where('status', 'Approved')
+                ->whereDate('from_date', '<=', $targetDate)
+                ->whereDate('to_date', '>=', $targetDate);
+
+            $totalLeave = (clone $leaveBase)->distinct('employee_id')->count('employee_id');
+
+            $leaveEmployeeIds = (clone $leaveBase)
+                ->distinct('employee_id')
+                ->pluck('employee_id');
+
+            $leaveEmployees = [];
+            if ($leaveEmployeeIds->isNotEmpty()) {
+                $leaveEmployees = employee::whereIn('id', $leaveEmployeeIds)
+                    ->pluck('Full_Name')
+                    ->toArray();
+            }
+
+            $leavePct = $activeEmployees > 0 ? round(($totalLeave / $activeEmployees) * 100, 1) : 0;
+
+            // --- SCHEDULE OUTLET VISITED ---
+            $cycleWeek = OutletVisitWeekCycle::weekNo(Carbon::parse($targetDate, OutletVisitWeekCycle::TIMEZONE));
+            $cycleWeekday = OutletVisitWeekCycle::weekdayName(Carbon::parse($targetDate, OutletVisitWeekCycle::TIMEZONE));
+
+            $scheduledOutlets = OutletVisitAssignment::where('is_active', true)
+                ->whereHas('weekSchedule', function ($query) use ($cycleWeek, $cycleWeekday) {
+                    $query->where('week_no', $cycleWeek)
+                        ->where('day_name', $cycleWeekday);
+                })
+                ->count();
+
+            $visitedOutlets = OutletVisitedVisit::whereDate('scheduled_date', $targetDate)
+                ->whereNotNull('check_in_at')
+                ->distinct('assignment_id')
+                ->count('assignment_id');
+
+            $outletPct = $scheduledOutlets > 0 ? round(($visitedOutlets / $scheduledOutlets) * 100, 1) : 0;
+
+            // --- RANDOM OUTLET VISIT ---
+            $randomQuery = RandomOutletVisit::whereDate('created_at', $targetDate);
+            $randomVisits = (clone $randomQuery)->count();
+            $randomEmployees = (clone $randomQuery)->distinct('eid')->count('eid');
+            $randomTowns = (clone $randomQuery)->distinct('town')->count('town');
+
+            // --- MEETING MINUTES ---
+            $meetingQuery = minutes_of_meeting::whereDate('date', $targetDate);
+            $meetings = (clone $meetingQuery)->count();
+            $meetingPersons = (clone $meetingQuery)->distinct('eid')->count('eid');
+
+            return [
+                'present' => [
+                    'count' => $totalPresent,
+                    'total' => $activeEmployees,
+                    'percentage' => $presentPct,
+                ],
+                'late' => [
+                    'count' => $totalLate,
+                    'total' => $activeEmployees,
+                    'percentage' => $latePct,
+                    'employees' => $lateEmployees,
+                ],
+                'on_leave' => [
+                    'count' => $totalLeave,
+                    'percentage' => $leavePct,
+                    'employee_names' => $leaveEmployees,
+                ],
+                'schedule_outlet_visited' => [
+                    'visited' => $visitedOutlets,
+                    'scheduled' => $scheduledOutlets,
+                    'percentage' => $outletPct,
+                ],
+                'random_outlet_visit' => [
+                    'count' => $randomVisits,
+                    'employees' => $randomEmployees,
+                    'towns' => $randomTowns,
+                ],
+                'meeting_minutes' => [
+                    'meetings' => $meetings,
+                    'persons' => $meetingPersons,
+                ],
+            ];
+        };
+
+        return response()->json([
+            'active_employees' => $activeEmployees,
+            'dates' => [
+                'yesterday' => $yesterday,
+                'today' => $today,
+                'tomorrow' => $tomorrow,
+            ],
+            'yesterday' => $buildStandup($yesterday),
+            'today' => $buildStandup($today),
+            'tomorrow' => $buildStandup($tomorrow),
+        ]);
+    }
+
+
     public function getAttendanceData(Request $request)
     {
         // $department = $request->query('department_id');
@@ -626,7 +837,7 @@ class DashboardController extends Controller
             ->count('EID');
 
 
-        $presentAppAtt = app_attendance::where('Status', 'In')
+        $presentAppAtt = app_attendance::where('status', 'in')
             ->whereDate('created_at', $date)
             ->count();
 
@@ -798,55 +1009,4 @@ class DashboardController extends Controller
 
         return $result;
     }
-
-
-    // public function getAttendanceTableData(Request $request)
-    // {
-    //     $currentYear = now()->year;
-    //     $currentDate = now()->toDateString();
-
-
-    //     $firstDate = Carbon::now()->startOfYear();
-
-
-    //     $fridayCount = Carbon::now()->startOfYear()->diffInWeeks(Carbon::now()->addDay()) + 1;
-
-
-    //     $holidays = holiday::where('from_date', '>=', $firstDate)
-    //         ->where('to_date', '<=', $currentDate)
-    //         ->sum('duration');
-
-
-    //     $totalAppAttendance = app_attendance::whereDate('created_at', '>=', $firstDate)
-    //         ->where('Status', 'in')
-    //         ->groupBy('EID')
-    //         ->count('EID');
-
-
-
-
-    //     $basic_info = official::where('Status', 'N')
-    //         ->join('departments', 'officials.Department_Id', '=', 'departments.id')
-    //         ->join('employees', 'officials.EID', '=', 'employees.id')
-    //         ->select(
-    //             'employees.id as employee_id',
-    //             'employees.Employee_Id as employee_code',
-    //             'employees.Full_Name as emp_name',
-    //             'departments.Name as department_name',
-    //             'officials.DOJ as date_of_joining'
-    //         )
-    //         ->get();
-
-
-    //     $app_attendance = app_attendance::where('Status', 'In')
-    //         ->whereYear('created_at', $currentYear)
-    //         ->selectRaw('EID, COUNT(*) as present_count')
-    //         ->groupBy('EID')
-    //         ->pluck('present_count', 'EID');
-    //     return $basic_info;
-    // }
-
-
-
-
 }
