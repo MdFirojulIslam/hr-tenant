@@ -22,9 +22,12 @@ class EmployeeController extends Controller
      * Display a listing of the resource.
      */
 
-    public function index()
+    public function index(Request $request)
     {
-        $employee = employee::select(
+        $perPage = $request->input('per_page', 20);
+        $departmentId = $request->input('department_id');
+
+        $query = employee::select(
             'employees.id',
             'employees.Employee_Id',
             'employees.Full_Name',
@@ -33,14 +36,25 @@ class EmployeeController extends Controller
             'employees.Contact_No',
             'employees.Official_Email',
             'departments.Name as department_name',
+            'designations.Name as designation_name',
+            'officials.DOJ',
+            'officials.Status as emp_status',
+            'emp_info_documentations.completed_percent',
             DB::raw("CONCAT('" . url('/') . "', emp_imgs.img_url) as img_url")
         )
             ->leftJoin('officials', 'officials.EID', '=', 'employees.id')
             ->leftJoin('departments', 'officials.Department_Id', '=', 'departments.id')
+            ->leftJoin('designations', 'officials.Designation_Id', '=', 'designations.id')
             ->leftJoin('emp_imgs', 'emp_imgs.EID', '=', 'employees.id')
+            ->leftJoin('emp_info_documentations', 'emp_info_documentations.employee_id', '=', 'employees.id')
             ->distinct('employees.id')
-            ->orderBy('employees.Employee_Id', 'asc')
-            ->paginate(20);
+            ->orderBy('employees.Employee_Id', 'asc');
+
+        if ($departmentId) {
+            $query->where('officials.Department_Id', $departmentId);
+        }
+
+        $employee = $query->paginate($perPage);
 
         return response()->json($employee);
     }
@@ -245,8 +259,13 @@ class EmployeeController extends Controller
 
     public function search(Request $request)
     {
-        $query = $request->input('query');
-        $employee = employee::select(
+        $name = $request->input('name');
+        $employeeId = $request->input('employee_id');
+        $departmentId = $request->input('department_id');
+        $queryStr = $request->input('query');
+        $perPage = $request->input('per_page', 20);
+
+        $query = employee::select(
             'employees.id',
             'employees.Employee_Id',
             'employees.Full_Name',
@@ -255,18 +274,40 @@ class EmployeeController extends Controller
             'employees.Contact_No',
             'employees.Official_Email',
             'departments.Name as department_name',
+            'designations.Name as designation_name',
+            'officials.DOJ',
+            'officials.Status as emp_status',
+            'emp_info_documentations.completed_percent',
             DB::raw("CONCAT('" . url('/') . "', emp_imgs.img_url) as img_url")
         )
             ->leftJoin('officials', 'officials.EID', '=', 'employees.id')
             ->leftJoin('departments', 'officials.Department_Id', '=', 'departments.id')
+            ->leftJoin('designations', 'officials.Designation_Id', '=', 'designations.id')
             ->leftJoin('emp_imgs', 'emp_imgs.EID', '=', 'employees.id')
-            ->where(function ($q) use ($query) {
-                $q->where('employees.Full_Name', 'LIKE', "%{$query}%")
-                    ->orWhere('employees.Employee_Id', 'LIKE', "%{$query}%");
-            })
-            ->distinct('employees.id')
-            ->orderby('employees.Full_Name', 'asc')
-            ->paginate(20);
+            ->leftJoin('emp_info_documentations', 'emp_info_documentations.employee_id', '=', 'employees.id');
+
+        if ($queryStr) {
+            $query->where(function ($q) use ($queryStr) {
+                $q->where('employees.Full_Name', 'LIKE', "%{$queryStr}%")
+                    ->orWhere('employees.Employee_Id', 'LIKE', "%{$queryStr}%");
+            });
+        }
+
+        if ($name) {
+            $query->where('employees.Full_Name', 'LIKE', "%{$name}%");
+        }
+
+        if ($employeeId) {
+            $query->where('employees.Employee_Id', 'LIKE', "%{$employeeId}%");
+        }
+
+        if ($departmentId) {
+            $query->where('officials.Department_Id', $departmentId);
+        }
+
+        $employee = $query->distinct('employees.id')
+            ->orderBy('employees.Full_Name', 'asc')
+            ->paginate($perPage);
         return response()->json($employee);
     }
 
