@@ -34,6 +34,22 @@ const formatDateLabel = (dateStr) => {
     });
 };
 
+const ROSTERED_START_MINUTES = 10 * 60;
+const LATE_GRACE_MINUTES = 15;
+
+const parseTimeToMinutes = (timeStr) => {
+    if (!timeStr) return null;
+    const match = String(timeStr).match(/(\d{1,2}):(\d{2})/);
+    if (!match) return null;
+    return parseInt(match[1], 10) * 60 + parseInt(match[2], 10);
+};
+
+const isBeyondGracePeriod = (timeIn) => {
+    const inMinutes = parseTimeToMinutes(timeIn);
+    if (inMinutes === null) return false;
+    return inMinutes > ROSTERED_START_MINUTES + LATE_GRACE_MINUTES;
+};
+
 const fetchStandup = async () => {
     loading.value = true;
     error.value = false;
@@ -41,6 +57,21 @@ const fetchStandup = async () => {
         const response = await api.get("/daily-standup");
         standupData.value = response.data;
         dates.value = response.data.dates || {};
+
+        ["yesterday", "today", "tomorrow"].forEach((key) => {
+            const day = standupData.value[key];
+            if (!day || !Array.isArray(day.late?.employees)) return;
+            const lateEmployees = day.late.employees.filter((emp) =>
+                isBeyondGracePeriod(emp.time_in),
+            );
+            day.late.employees = lateEmployees;
+            day.late.count = lateEmployees.length;
+            const presentCount = day.present?.count || 0;
+            day.late.percentage =
+                presentCount > 0
+                    ? Math.round((lateEmployees.length / presentCount) * 1000) / 10
+                    : 0;
+        });
     } catch (err) {
         console.error("Error fetching daily standup data:", err);
         error.value = true;

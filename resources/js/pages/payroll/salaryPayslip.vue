@@ -43,6 +43,35 @@ const monthNumber = computed(
     () => months.value.indexOf(selectedMonth.value) + 1,
 );
 
+// ---------------- Safe number helpers ----------------
+const toNumber = (value) => {
+    const num = Number(value);
+    return Number.isFinite(num) ? num : 0;
+};
+
+const formatAmount = (value) => toNumber(value).toFixed(2);
+
+const earningsTotal = (p) =>
+    toNumber(p.basic_salary) +
+    toNumber(p.house_rent) +
+    toNumber(p.conveyance) +
+    toNumber(p.medical_allowance) +
+    toNumber(p.travel_allowance) +
+    toNumber(p.daily_allowance) +
+    toNumber(p.mobile_bill) +
+    toNumber(p.other_allowance) +
+    toNumber(p.earning_adjustment) +
+    toNumber(p.bonus_amounts);
+
+const deductionsTotal = (p) =>
+    toNumber(p.provident_fund) +
+    toNumber(p.income_tax) +
+    toNumber(p.revenue_stamp) +
+    toNumber(p.monthly_loan_repayments) +
+    toNumber(p.deduction_adjustment);
+
+const netPayable = (p) => earningsTotal(p) - deductionsTotal(p);
+
 const printFormate = async () => {
     const idToFetch = employee_id.value || user.id;
 
@@ -232,67 +261,67 @@ onMounted(async () => {
                                     <tr>
                                         <td>Basic Salary</td>
                                         <td class="text-end">
-                                            {{ p.basic_salary }}
+                                            {{ formatAmount(p.basic_salary) }}
                                         </td>
                                     </tr>
                                     <tr>
                                         <td>House Rent</td>
                                         <td class="text-end">
-                                            {{ p.house_rent }}
+                                            {{ formatAmount(p.house_rent) }}
                                         </td>
                                     </tr>
                                     <tr>
                                         <td>Conveyance</td>
                                         <td class="text-end">
-                                            {{ p.conveyance }}
+                                            {{ formatAmount(p.conveyance) }}
                                         </td>
                                     </tr>
                                     <tr>
                                         <td>Medical Allowance</td>
                                         <td class="text-end">
-                                            {{ p.medical_allowance }}
+                                            {{ formatAmount(p.medical_allowance) }}
                                         </td>
                                     </tr>
                                     <tr>
                                         <td>Travel Allowance</td>
                                         <td class="text-end">
-                                            {{ p.travel_allowance }}
+                                            {{ formatAmount(p.travel_allowance) }}
                                         </td>
                                     </tr>
                                     <tr>
                                         <td>Daily Allowance</td>
                                         <td class="text-end">
-                                            {{ p.daily_allowance }}
+                                            {{ formatAmount(p.daily_allowance) }}
                                         </td>
                                     </tr>
                                     <tr>
                                         <td>Mobile Bill</td>
                                         <td class="text-end">
-                                            {{ p.mobile_bill }}
+                                            {{ formatAmount(p.mobile_bill) }}
                                         </td>
                                     </tr>
                                     <tr>
                                         <td>Other Allowance</td>
                                         <td class="text-end">
-                                            {{ p.other_allowance }}
+                                            {{ formatAmount(p.other_allowance) }}
                                         </td>
                                     </tr>
                                     <tr>
                                         <td>Earning Adjustment</td>
                                         <td class="text-end">
-                                            {{ p.earning_adjustment }}
+                                            {{ formatAmount(p.earning_adjustment) }}
                                         </td>
                                     </tr>
                                     <tr>
                                         <td>Bonus Amount</td>
                                         <td class="text-end">
-                                            {{ p.bonus_amounts }}
+                                            {{ formatAmount(p.bonus_amounts) }}
                                         </td>
                                     </tr>
                                     <tr class="fw-bold table-light">
                                         <td>Total Earnings</td>
                                         <td class="text-end">
-                                            {{ p.net_total_earning }}
+                                            {{ formatAmount(earningsTotal(p)) }}
                                         </td>
                                     </tr>
                                 </tbody>
@@ -309,37 +338,37 @@ onMounted(async () => {
                                     <tr>
                                         <td>Provident Fund</td>
                                         <td class="text-end">
-                                            {{ p.provident_fund }}
+                                            {{ formatAmount(p.provident_fund) }}
                                         </td>
                                     </tr>
                                     <tr>
                                         <td>Income Tax</td>
                                         <td class="text-end">
-                                            {{ p.income_tax }}
+                                            {{ formatAmount(p.income_tax) }}
                                         </td>
                                     </tr>
                                     <tr>
                                         <td>Revenue Stamp</td>
                                         <td class="text-end">
-                                            {{ p.revenue_stamp }}
+                                            {{ formatAmount(p.revenue_stamp) }}
                                         </td>
                                     </tr>
                                     <tr>
                                         <td>Loan Repayment</td>
                                         <td class="text-end">
-                                            {{ p.monthly_loan_repayments }}
+                                            {{ formatAmount(p.monthly_loan_repayments) }}
                                         </td>
                                     </tr>
                                     <tr>
                                         <td>Deduction Adjustment</td>
                                         <td class="text-end">
-                                            {{ p.deduction_adjustment }}
+                                            {{ formatAmount(p.deduction_adjustment) }}
                                         </td>
                                     </tr>
                                     <tr class="fw-bold table-light">
                                         <td>Total Deductions</td>
                                         <td class="text-end">
-                                            {{ p.net_total_deduction }}
+                                            {{ formatAmount(deductionsTotal(p)) }}
                                         </td>
                                     </tr>
                                 </tbody>
@@ -349,8 +378,7 @@ onMounted(async () => {
                             <h3>
                                 Net Pay:
                                 <span class="amount">{{
-                                    Number(p.net_total_earning) -
-                                    p.net_total_deduction
+                                    formatAmount(netPayable(p))
                                 }}</span>
                             </h3>
                         </div>
