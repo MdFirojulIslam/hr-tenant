@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use App\Exports\EmployeeDocumentationHorizontalExport;
+use App\Models\department;
 use Maatwebsite\Excel\Facades\Excel;
 
 
@@ -691,4 +692,59 @@ class EmployeeController extends Controller
      * Remove the specified resource from storage.
      */
     public function destroy(employee $employee) {}
+
+
+    public function customDepartment(Request $request)
+    {
+        $role = Auth::user()->role_id;
+
+        $userId = Auth::user()->EID;
+
+        if ($role == 1) {
+            $result = department::select('id as department_id', 'Name as department_name')->get();
+        } else {
+            $result = employee::select('departments.id as department_id', 'departments.Name as department_name')
+                ->join('officials', 'officials.EID', '=', 'employees.id')
+                ->join('departments', 'departments.id', '=', 'officials.Department_Id')
+                ->where('employees.id', $userId)
+                ->get();
+        }
+        return response()->json($result);
+    }
+
+    public function customEmployee($id)
+    {
+        $role = Auth::user()->role_id;
+
+        $userId = Auth::user()->EID;
+
+        if ($role == 1) {
+            $employee = Employee::select('employees.id', 'employees.Full_Name', 'employees.Employee_Id', 'designations.Name')
+                ->join('officials', 'officials.EID', '=', 'employees.id')
+                ->join('departments', 'officials.Department_Id', '=', 'departments.id')
+                ->join('designations', 'officials.Designation_Id', '=', 'designations.id')
+                ->where('departments.id', '=', $id)
+                ->orderby('employees.Full_Name', 'asc')
+                ->get();
+
+            if (!$employee) {
+                return response()->json(['message' => 'Employee not found'], 404);
+            }
+        } else {
+            $employee = Employee::select('employees.id', 'employees.Full_Name', 'employees.Employee_Id', 'designations.Name')
+                ->join('officials', 'officials.EID', '=', 'employees.id')
+                ->join('departments', 'officials.Department_Id', '=', 'departments.id')
+                ->join('designations', 'officials.Designation_Id', '=', 'designations.id')
+                ->where('employees.id', '=', $userId)
+                ->orderby('employees.Full_Name', 'asc')
+                ->get();
+
+            if (!$employee) {
+                return response()->json(['message' => 'Employee not found'], 404);
+            }
+        }
+
+
+        return response()->json($employee);
+    }
 }

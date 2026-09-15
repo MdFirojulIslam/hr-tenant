@@ -32,6 +32,14 @@
             font-size: 14px;
             text-align: justify;
         }
+
+        .department-padding {
+            margin-top: 3.5px;
+        }
+
+        .signature-padding {
+            margin-bottom: 2px;
+        }
     </style>
 </head>
 
@@ -112,10 +120,13 @@
         <br>
         <br>
         <div>
-            <p>
+            <p class="signature-padding">
                 ______________________<br>
                 <strong>Md. Hasan Miah</strong><br>
-                Assistant Manager, Credit Control & Revenue
+            <div class="department-padding">
+                Assistant Manager, Credit Control & Revenue<br>
+                Account & Finance
+            </div>
             </p>
         </div>
 

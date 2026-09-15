@@ -36,10 +36,16 @@
                                                     </option>
                                                     <option
                                                         v-for="dept in department"
-                                                        :key="dept.id"
-                                                        :value="dept.id"
+                                                        :key="
+                                                            dept.department_id
+                                                        "
+                                                        :value="
+                                                            dept.department_id
+                                                        "
                                                     >
-                                                        {{ dept.Name }}
+                                                        {{
+                                                            dept.department_name
+                                                        }}
                                                     </option>
                                                 </select>
                                             </div>
@@ -67,6 +73,38 @@
                                             </div>
                                         </div>
                                         <div
+                                            v-if="role_id == 3"
+                                            class="col-lg-12 col-md-12 col-sm-12 mb-3"
+                                        >
+                                            <div class="form-group">
+                                                <label for="exampleInputEmail1"
+                                                    >Template</label
+                                                >
+                                                <select
+                                                    class="form-control"
+                                                    v-model="form.template"
+                                                >
+                                                    <option
+                                                        value="salary-certificate"
+                                                    >
+                                                        Salary Certificate
+                                                    </option>
+                                                    <option
+                                                        value="salary-breakdown"
+                                                    >
+                                                        Salary Breakdown
+                                                    </option>
+
+                                                    <!-- <option
+                                                        value="salary-payslip"
+                                                    >
+                                                        Salary Payslip
+                                                    </option> -->
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div
+                                            v-if="role_id == 1"
                                             class="col-lg-12 col-md-12 col-sm-12 mb-3"
                                         >
                                             <div class="form-group">
@@ -116,6 +154,7 @@
                                                 </select>
                                             </div>
                                         </div>
+
                                         <div
                                             v-if="
                                                 form.template ==
@@ -179,7 +218,10 @@
 
 <script setup>
 import { ref, onMounted, watch } from "vue";
+import { useStore } from "vuex";
 import api from "@/api";
+const store = useStore();
+const role_id = store.getters.getRoleId;
 
 const department = ref([]);
 const employee = ref([]);
@@ -195,16 +237,15 @@ const form = ref({
 
 const getData = async () => {
     try {
-        const response = await api.get("/department");
+        const response = await api.get("/custom_department");
         department.value = response.data;
     } catch (err) {
         error.value = err.message || "Error fetching data";
     }
 };
-
 const getEmployee = async (id) => {
     try {
-        const response = await api.get(`/all-employee/${id}`);
+        const response = await api.get(`/custom_employee/${id}`);
         employee.value = response.data;
     } catch (error) {
         console.error("Error updating store:", error);

@@ -43,6 +43,14 @@
         .mt-5 {
             margin-top: 50px;
         }
+
+        .department-padding {
+            margin-top: 3.5px;
+        }
+
+        .signature-padding {
+            margin-bottom: 2px;
+        }
     </style>
 </head>
 
@@ -153,11 +161,14 @@
     </p>
 
     <div class="mt-5">
-        <p>
+        <p class="signature-padding">
             For ARTISAN BUSINESS NETWORK BANGLADESH<br><br>
             ____________________________<br>
             Md. Hasan Miah<br>
-            Assistant Manager, Credit Control & Revenue
+        <div class="department-padding">
+            Assistant Manager, Credit Control & Revenue<br>
+            Account & Finance
+        </div>
         </p>
     </div>
 

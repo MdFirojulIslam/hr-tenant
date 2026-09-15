@@ -114,3 +114,9 @@ Route::get('/get-documentation-info/{emp_id}/edit', [EmployeeInformationControll
 Route::post('/get-documentation-info', [EmployeeInformationController::class, 'insertDocumentationInfo']);
 Route::put('/get-documentation-info/{emp_id}', [EmployeeInformationController::class, 'updateDocumentationInfo']);
 Route::get('/export-documentation-report', [EmployeeInformationController::class, 'exportDocumentationReport']);
+
+
+
+//Custom department
+Route::get('/custom_department', [EmployeeController::class, 'customDepartment']);
+Route::get('/custom_employee/{id}', [EmployeeController::class, 'customEmployee']);
