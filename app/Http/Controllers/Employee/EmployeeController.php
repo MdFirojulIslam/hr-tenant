@@ -27,6 +27,7 @@ class EmployeeController extends Controller
     {
         $perPage = $request->input('per_page', 20);
         $departmentId = $request->input('department_id');
+        $status = $request->input('status');
 
         $query = employee::select(
             'employees.id',
@@ -53,6 +54,15 @@ class EmployeeController extends Controller
 
         if ($departmentId) {
             $query->where('officials.Department_Id', $departmentId);
+        }
+
+        if ($status === 'inactive') {
+            $query->where('officials.Status', '=', 'Y');
+        } elseif ($status === 'active') {
+            $query->where(function ($q) {
+                $q->whereNull('officials.Status')
+                    ->orWhere('officials.Status', '!=', 'Y');
+            });
         }
 
         $employee = $query->paginate($perPage);
@@ -265,6 +275,7 @@ class EmployeeController extends Controller
         $departmentId = $request->input('department_id');
         $queryStr = $request->input('query');
         $perPage = $request->input('per_page', 20);
+        $status = $request->input('status');
 
         $query = employee::select(
             'employees.id',
@@ -304,6 +315,15 @@ class EmployeeController extends Controller
 
         if ($departmentId) {
             $query->where('officials.Department_Id', $departmentId);
+        }
+
+        if ($status === 'inactive') {
+            $query->where('officials.Status', '=', 'Y');
+        } elseif ($status === 'active') {
+            $query->where(function ($q) {
+                $q->whereNull('officials.Status')
+                    ->orWhere('officials.Status', '!=', 'Y');
+            });
         }
 
         $employee = $query->distinct('employees.id')

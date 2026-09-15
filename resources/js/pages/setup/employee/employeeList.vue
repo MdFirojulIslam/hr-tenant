@@ -13,6 +13,7 @@ const heading = ref(null);
 const viewMode = ref("board");
 const departments = ref([]);
 const selectedDepartment = ref("");
+const selectedStatus = ref("active");
 const searchName = ref("");
 const searchId = ref("");
 const openMenuId = ref(null);
@@ -34,6 +35,9 @@ const getData = async (page = 1) => {
                 per_page: 20,
                 ...(selectedDepartment.value
                     ? { department_id: selectedDepartment.value }
+                    : {}),
+                ...(selectedStatus.value
+                    ? { status: selectedStatus.value }
                     : {}),
             },
         });
@@ -57,6 +61,9 @@ const searchEmployees = async (page = 1) => {
                 ...(searchId.value ? { employee_id: searchId.value } : {}),
                 ...(selectedDepartment.value
                     ? { department_id: selectedDepartment.value }
+                    : {}),
+                ...(selectedStatus.value
+                    ? { status: selectedStatus.value }
                     : {}),
             },
         });
@@ -86,6 +93,11 @@ const onSearchInput = () => {
 };
 
 const onDepartmentChange = () => {
+    openMenuId.value = null;
+    loadEmployees(1);
+};
+
+const onStatusChange = () => {
     openMenuId.value = null;
     loadEmployees(1);
 };
@@ -317,6 +329,21 @@ onUnmounted(() => {
                         />
                     </div>
                 </div>
+
+                <div class="emp-filter">
+                    <label class="emp-filter__label" for="filter-status">
+                        Status
+                    </label>
+                    <select
+                        id="filter-status"
+                        class="emp-filter__select"
+                        v-model="selectedStatus"
+                        @change="onStatusChange"
+                    >
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                    </select>
+                </div>
             </div>
 
             <div class="view-switch" role="tablist" aria-label="View mode">
@@ -343,7 +370,7 @@ onUnmounted(() => {
             </div>
         </div>
 
-        <div class="emp-nav">
+        <!-- <div class="emp-nav">
             <div class="emp-nav__total">
                 <i class="fa-solid fa-users"></i>
                 <span>
@@ -351,9 +378,9 @@ onUnmounted(() => {
                     <strong>{{ totalEmployees }}</strong>
                 </span>
             </div>
-        </div>
+        </div> -->
 
-        <div class="emp-content">
+        <div class="emp-content mt-1">
             <div class="emp-state" v-if="isLoading">
                 <template v-if="viewMode === 'board'">
                     <div class="board-skeleton">
@@ -768,6 +795,7 @@ onUnmounted(() => {
                     class="btn-ghost"
                     @click="
                         selectedDepartment = '';
+                        selectedStatus = 'active';
                         searchName = '';
                         searchId = '';
                         loadEmployees(1);

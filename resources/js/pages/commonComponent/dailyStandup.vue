@@ -69,7 +69,8 @@ const fetchStandup = async () => {
             const presentCount = day.present?.count || 0;
             day.late.percentage =
                 presentCount > 0
-                    ? Math.round((lateEmployees.length / presentCount) * 1000) / 10
+                    ? Math.round((lateEmployees.length / presentCount) * 1000) /
+                      10
                     : 0;
         });
     } catch (err) {
