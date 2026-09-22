@@ -22,6 +22,7 @@ Route::get('/market-intelligence-report', [DmsDistributionInfoController::class,
 Route::get('/market-intelligence-brands', [DmsDistributionInfoController::class, 'marketIntelligenceBrands']);
 
 Route::get('/meeting-minutes-report', [DmsDistributionInfoController::class, 'meetingMinutesReport']);
+Route::get('/meeting-minutes/export', [DmsDistributionInfoController::class, 'exportMeetingMinutes']);
 Route::get('/meeting-minutes-towns', [DmsDistributionInfoController::class, 'meetingMinutesTowns']);
 
 Route::get('/random-outlet-visit-report', [DmsDistributionInfoController::class, 'randomOutletVisitReport']);

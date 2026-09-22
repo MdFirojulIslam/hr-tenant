@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\DMS;
 
+use App\Exports\MeetingMinutesExport;
 use App\Http\Controllers\Controller;
 use App\Models\Brand;
 use App\Models\Distributor;
@@ -15,6 +16,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
+use Maatwebsite\Excel\Facades\Excel;
 
 class DmsDistributionInfoController extends Controller
 {
@@ -1266,6 +1268,77 @@ class DmsDistributionInfoController extends Controller
             'Pragma'              => 'no-cache',
             'Expires'             => '0',
         ]);
+    }
+
+    public function exportMeetingMinutes(Request $request)
+    {
+        $validated = $request->validate([
+            'from_date' => 'required|date',
+            'to_date'   => 'required|date|after_or_equal:from_date',
+            'template'  => 'required|in:meeting_minutes_master,town_wise_meeting_view,tso_wise_meeting_view',
+        ]);
+
+        $fromDate = Carbon::parse($validated['from_date'])->format('Y-m-d');
+        $toDate = Carbon::parse($validated['to_date'])->format('Y-m-d');
+
+        $query = DB::table('minutes_of_meetings as mom')
+            ->join('employees as e', 'e.id', '=', 'mom.eid')
+            ->leftJoin('officials as off', 'off.EID', '=', 'mom.eid')
+            ->leftJoin('departments as d', 'd.id', '=', 'off.Department_Id')
+            ->leftJoin('towns as t', 't.id', '=', 'mom.town')
+            ->select(
+                'mom.id',
+                'mom.eid',
+                'mom.str_time',
+                'mom.end_time',
+                'mom.town',
+                'mom.date',
+                'mom.meeting_with',
+                'mom.mom',
+                'mom.file',
+                'mom.created_at',
+                'e.Full_Name as employee_name',
+                'd.Name as department_name',
+                'd.id as department_id',
+                't.Name as town_name'
+            )
+            ->whereDate('mom.date', '>=', $fromDate)
+            ->whereDate('mom.date', '<=', $toDate)
+            ->orderBy('mom.date')
+            ->orderBy('mom.id');
+
+        $rows = $query->get();
+
+        if ($rows->isEmpty()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No meeting minutes found for the selected date range.',
+            ], 404);
+        }
+
+        $report = $rows->map(function ($row) {
+            $fileUrl = null;
+            if ($row->file) {
+                $fileUrl = asset('storage/' . ltrim($row->file, '/'));
+            }
+
+            return [
+                'date'            => $row->date ? Carbon::parse($row->date)->format('d-M-Y') : '-',
+                'employee_name'   => $row->employee_name ?? '-',
+                'department_name' => $row->department_name ?? '-',
+                'town_name'       => $row->town_name ?? '-',
+                'str_time'        => $this->formatMomTime($row->str_time) ?? '-',
+                'end_time'        => $this->formatMomTime($row->end_time) ?? '-',
+                'meeting_with'    => $row->meeting_with ?? '-',
+                'mom'             => $row->mom ?? '-',
+                'file_url'        => $fileUrl ?? '-',
+                'created_at'      => $row->created_at ? Carbon::parse($row->created_at)->format('d-M-Y h:i A') : '-',
+            ];
+        })->values()->all();
+
+        $filename = $validated['template'] . '_' . $fromDate . '_to_' . $toDate . '.xlsx';
+
+        return Excel::download(new MeetingMinutesExport($report, $validated['template']), $filename);
     }
 
     public function randomOutletVisitTowns()

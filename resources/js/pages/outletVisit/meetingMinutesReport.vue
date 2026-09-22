@@ -177,6 +177,98 @@ const dateStamp = () => {
     );
 };
 
+const exportModalVisible = ref(false);
+const exportFromDate = ref("");
+const exportToDate = ref("");
+const exportTemplate = ref("");
+
+const openExportModal = () => {
+    exportFromDate.value = "";
+    exportToDate.value = "";
+    exportTemplate.value = "";
+    exportModalVisible.value = true;
+};
+
+const closeExportModal = () => {
+    exportModalVisible.value = false;
+    downloading.value = false;
+};
+
+const exportFilename = () =>
+    `${exportTemplate.value}_${exportFromDate.value}_to_${exportToDate.value}.xlsx`;
+
+const extractExportError = async (err) => {
+    const data = err.response?.data;
+    if (data instanceof Blob) {
+        try {
+            const text = await data.text();
+            const parsed = JSON.parse(text);
+            const errors = parsed?.errors;
+            if (errors && Object.keys(errors).length) {
+                return Object.values(errors).flat().join(", ");
+            }
+            return parsed?.message || "Failed to export report.";
+        } catch {
+            return "Failed to export report.";
+        }
+    }
+    return data?.message || "Failed to export report.";
+};
+
+const downloadExcel = async () => {
+    let invalidMessage = "";
+
+    if (!exportFromDate.value) {
+        invalidMessage = "From Date is required.";
+    } else if (!exportToDate.value) {
+        invalidMessage = "To Date is required.";
+    } else if (!exportTemplate.value) {
+        invalidMessage = "Please select a template.";
+    } else if (exportFromDate.value > exportToDate.value) {
+        invalidMessage = "From Date cannot be greater than To Date.";
+    }
+
+    if (invalidMessage) {
+        Swal.fire({
+            icon: "warning",
+            title: invalidMessage,
+            confirmColor: "#10b981",
+        });
+        return;
+    }
+
+    downloading.value = true;
+    try {
+        const res = await api.get("/meeting-minutes/export", {
+            params: {
+                from_date: exportFromDate.value,
+                to_date: exportToDate.value,
+                template: exportTemplate.value,
+            },
+            responseType: "blob",
+        });
+
+        const blob = new Blob([res.data], {
+            type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = exportFilename();
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+
+        closeExportModal();
+    } catch (err) {
+        const message = await extractExportError(err);
+        Swal.fire("Error", message, "error");
+    } finally {
+        downloading.value = false;
+    }
+};
+
 const momModalVisible = ref(false);
 const selectedMom = ref("");
 
@@ -265,22 +357,10 @@ const truncateText = (text, maxLen = 60) => {
                         <div class="align-self-end">
                             <button
                                 class="btn btn-sm btn-success btn-download d-inline-flex align-items-center gap-2 px-3"
-                                @click="downloadReport"
-                                :disabled="downloading"
+                                @click="openExportModal"
                             >
-                                <i
-                                    class="fa-solid"
-                                    :class="
-                                        downloading
-                                            ? 'fa-spinner fa-spin'
-                                            : 'fa-download'
-                                    "
-                                ></i>
-                                <span>{{
-                                    downloading
-                                        ? "Exporting..."
-                                        : "Export Excel"
-                                }}</span>
+                                <i class="fa-solid fa-download"></i>
+                                <span>Export Excel</span>
                             </button>
                         </div>
                     </div>
@@ -623,6 +703,128 @@ const truncateText = (text, maxLen = 60) => {
                         </button>
                     </div>
                 </div>
+            </div>
+        </teleport>
+
+        <!-- Export Excel Modal -->
+        <teleport to="body">
+            <div v-if="exportModalVisible">
+                <div
+                    class="modal fade show d-block"
+                    tabindex="-1"
+                    role="dialog"
+                    aria-modal="true"
+                    @click.self="closeExportModal"
+                >
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content border-0 shadow">
+                            <div
+                                class="modal-header border-bottom bg-light px-4 py-3"
+                            >
+                                <div class="d-flex align-items-center gap-2">
+                                    <i
+                                        class="fa-solid fa-file-excel text-success fs-5"
+                                    ></i>
+                                    <h5
+                                        class="modal-title fw-semibold text-dark mb-0"
+                                    >
+                                        Export Meeting Minutes
+                                    </h5>
+                                </div>
+                                <button
+                                    type="button"
+                                    class="btn-close shadow-none"
+                                    @click="closeExportModal"
+                                    aria-label="Close"
+                                ></button>
+                            </div>
+
+                            <div class="modal-body p-4">
+                                <div class="mb-3">
+                                    <label
+                                        class="form-label fw-bold small text-secondary"
+                                    >
+                                        From Date
+                                    </label>
+                                    <input
+                                        v-model="exportFromDate"
+                                        type="date"
+                                        class="form-control"
+                                    />
+                                </div>
+
+                                <div class="mb-3">
+                                    <label
+                                        class="form-label fw-bold small text-secondary"
+                                    >
+                                        To Date
+                                    </label>
+                                    <input
+                                        v-model="exportToDate"
+                                        type="date"
+                                        class="form-control"
+                                    />
+                                </div>
+
+                                <div class="mb-3">
+                                    <label
+                                        class="form-label fw-bold small text-secondary"
+                                    >
+                                        Template
+                                    </label>
+                                    <select
+                                        v-model="exportTemplate"
+                                        class="form-select"
+                                    >
+                                        <option value="" disabled>
+                                            -- Choose a template --
+                                        </option>
+                                        <option value="meeting_minutes_master">
+                                            Meeting Minutes Master
+                                        </option>
+                                        <option value="town_wise_meeting_view">
+                                            Town Wise Meeting View
+                                        </option>
+                                        <option value="tso_wise_meeting_view">
+                                            TSO Wise Meeting View
+                                        </option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div
+                                class="modal-footer border-top bg-light px-4 py-2"
+                            >
+                                <button
+                                    type="button"
+                                    class="btn btn-outline-secondary px-3 btn-sm fw-semibold"
+                                    @click="closeExportModal"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="button"
+                                    class="btn btn-success px-4 btn-sm fw-semibold d-flex align-items-center gap-2"
+                                    :disabled="downloading"
+                                    @click="downloadExcel"
+                                >
+                                    <span
+                                        v-if="downloading"
+                                        class="spinner-border spinner-border-sm"
+                                        role="status"
+                                    ></span>
+                                    <i v-else class="fa-solid fa-download"></i>
+                                    <span>{{
+                                        downloading
+                                            ? "Downloading..."
+                                            : "Download Excel"
+                                    }}</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-backdrop fade show"></div>
             </div>
         </teleport>
     </div>
