@@ -1,14 +1,16 @@
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, computed, onMounted } from "vue";
 import api from "@/api";
 import Swal from "sweetalert2";
+import Multiselect from "vue-multiselect";
+import "vue-multiselect/dist/vue-multiselect.min.css";
 
 const loading = ref(false);
 const submitting = ref(false);
 const error = ref(null);
 const events = ref([]);
 const departments = ref([]);
-const eventTypes = ref(["Holiday", "Meeting", "Meet-up", "Other"]);
+const eventTypes = ref(["Holiday", "Meeting", "Meet-Up", "Others"]);
 const showForm = ref(false);
 const editingId = ref(null);
 const picturePreview = ref(null);
@@ -17,12 +19,25 @@ const pictureInput = ref(null);
 const form = ref({
     event_header: "",
     event_description: "",
-    event_type: "Other",
+    event_type: "Others",
     event_date_from: "",
     event_date_to: "",
     picture: null,
-    for_all_departments: false,
     department_ids: [],
+});
+
+const departmentOptions = computed(() =>
+    departments.value.map((d) => ({ id: d.id, Name: d.Name })),
+);
+
+const selectedDepartments = computed({
+    get: () =>
+        departmentOptions.value.filter((d) =>
+            form.value.department_ids.includes(String(d.id)),
+        ),
+    set: (value) => {
+        form.value.department_ids = (value || []).map((d) => String(d.id));
+    },
 });
 
 const formatDateTime = (value) => {
@@ -46,11 +61,10 @@ const resetForm = () => {
     form.value = {
         event_header: "",
         event_description: "",
-        event_type: "Other",
+        event_type: "Others",
         event_date_from: "",
         event_date_to: "",
         picture: null,
-        for_all_departments: false,
         department_ids: [],
     };
     editingId.value = null;
@@ -75,13 +89,12 @@ const openEdit = (item) => {
     form.value = {
         event_header: item.event_header || "",
         event_description: item.event_description || "",
-        event_type: item.event_type || "Other",
+        event_type: item.event_type || "Others",
         event_date_from: toLocalInput(item.event_date_from),
         event_date_to: toLocalInput(item.event_date_to),
         picture: null,
-        for_all_departments: !!item.for_all_departments,
         department_ids: item.for_all_departments
-            ? []
+            ? departments.value.map((d) => String(d.id))
             : (item.for_departments || []).map(String),
     };
     picturePreview.value = item.picture_url || null;
@@ -94,21 +107,6 @@ const onPicture = (e) => {
     picturePreview.value = file
         ? URL.createObjectURL(file)
         : picturePreview.value;
-};
-
-const toggleAllDepartments = () => {
-    if (form.value.for_all_departments) {
-        form.value.department_ids = departments.value.map((d) => String(d.id));
-    } else {
-        form.value.department_ids = [];
-    }
-};
-
-const onDepartmentChange = () => {
-    const allIds = departments.value.map((d) => String(d.id));
-    form.value.for_all_departments =
-        allIds.length > 0 &&
-        allIds.every((id) => form.value.department_ids.includes(id));
 };
 
 const loadEvents = async () => {
@@ -134,11 +132,8 @@ const validateForm = () => {
     if (form.value.event_date_to < form.value.event_date_from) {
         return "Date to must be on or after date from.";
     }
-    if (
-        !form.value.for_all_departments &&
-        form.value.department_ids.length === 0
-    ) {
-        return "Select at least one department, or Select All Departments.";
+    if (form.value.department_ids.length === 0) {
+        return "Select at least one department.";
     }
     if (form.value.picture) {
         const allowed = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
@@ -175,10 +170,6 @@ const submit = async () => {
         formData.append(
             "event_date_to",
             form.value.event_date_to.replace("T", " ") + ":00",
-        );
-        formData.append(
-            "for_all_departments",
-            form.value.for_all_departments ? "1" : "0",
         );
         form.value.department_ids.forEach((id) => {
             formData.append("for_departments[]", id);
@@ -337,43 +328,21 @@ onMounted(() => loadEvents());
                             />
                         </div>
                         <div class="col-12">
-                            <div class="form-check mb-2">
-                                <input
-                                    class="form-check-input"
-                                    type="checkbox"
-                                    id="allDepts"
-                                    v-model="form.for_all_departments"
-                                    @change="toggleAllDepartments"
-                                />
-                                <label class="form-check-label" for="allDepts">
-                                    Select All Departments
-                                </label>
-                            </div>
-                            <div class="row">
-                                <div
-                                    class="col-md-3"
-                                    v-for="dept in departments"
-                                    :key="dept.id"
-                                >
-                                    <div class="form-check">
-                                        <input
-                                            class="form-check-input"
-                                            type="checkbox"
-                                            :id="'dept-' + dept.id"
-                                            :value="String(dept.id)"
-                                            v-model="form.department_ids"
-                                            :disabled="form.for_all_departments"
-                                            @change="onDepartmentChange"
-                                        />
-                                        <label
-                                            class="form-check-label"
-                                            :for="'dept-' + dept.id"
-                                        >
-                                            {{ dept.Name }}
-                                        </label>
-                                    </div>
-                                </div>
-                            </div>
+                            <label class="form-label">Departments</label>
+                            <Multiselect
+                                v-model="selectedDepartments"
+                                :options="departmentOptions"
+                                label="Name"
+                                track-by="id"
+                                :multiple="true"
+                                :searchable="true"
+                                :close-on-select="false"
+                                :preserve-search="true"
+                                :show-labels="false"
+                                :allow-empty="true"
+                                :disabled="loading"
+                                placeholder="Select departments"
+                            />
                         </div>
                         <div class="col-12" v-if="picturePreview">
                             <img

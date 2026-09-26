@@ -19,10 +19,10 @@ class TaskBoard extends Model
         self::STATUS_INCOMPLETE,
     ];
 
-    protected $table = 'task_board';
+    protected $table = 'task_boards';
 
     protected $fillable = [
-        'eid',
+        'assigned_to',
         'assigned_by',
         'task_name',
         'description',
@@ -30,7 +30,6 @@ class TaskBoard extends Model
         'task_assigned_at',
         'task_finished_at',
         'remarks',
-        'created_by',
         'updated_by',
     ];
 
@@ -41,7 +40,7 @@ class TaskBoard extends Model
 
     public function employee()
     {
-        return $this->belongsTo(employee::class, 'eid');
+        return $this->belongsTo(employee::class, 'assigned_to');
     }
 
     public function assigner()
@@ -49,14 +48,14 @@ class TaskBoard extends Model
         return $this->belongsTo(employee::class, 'assigned_by');
     }
 
-    public function creator()
-    {
-        return $this->belongsTo(employee::class, 'created_by');
-    }
-
     public function updater()
     {
         return $this->belongsTo(employee::class, 'updated_by');
+    }
+
+    public function assignees()
+    {
+        return $this->hasMany(TaskBoardAssignee::class, 'task_board_id');
     }
 
     public function isAssigned(): bool

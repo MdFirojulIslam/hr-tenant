@@ -158,12 +158,12 @@ onBeforeUnmount(() => {
 
 <template>
     <div class="daily-standup-content">
-        <div class="d-flex align-items-center justify-content-between mb-3">
-            <div class="d-flex align-items-center gap-2">
-                <div class="icon-badge">
+        <div class="d-flex align-items-center justify-content-between mb-2">
+            <div class="d-flex align-items-center">
+                <!-- <div class="icon-badge">
                     <i class="fa-solid fa-sun"></i>
-                </div>
-                <h2 class="standup-title mb-0">Daily Standup Notes</h2>
+                </div> -->
+                <h2 class="standup-title ms-2">Daily Standup Notes</h2>
             </div>
         </div>
 
@@ -209,7 +209,9 @@ onBeforeUnmount(() => {
                                             standupData[card.key]?.present
                                                 ?.count,
                                         )
-                                    }}/{{
+                                    }}
+                                    of
+                                    {{
                                         formatNumber(
                                             standupData[card.key]?.present
                                                 ?.total,
@@ -242,9 +244,12 @@ onBeforeUnmount(() => {
                                         formatNumber(
                                             standupData[card.key]?.late?.count,
                                         )
-                                    }}/{{
+                                    }}
+                                    of
+                                    {{
                                         formatNumber(
-                                            standupData[card.key]?.late?.total,
+                                            standupData[card.key]?.present
+                                                ?.count,
                                         )
                                     }}
                                 </span>
@@ -313,7 +318,9 @@ onBeforeUnmount(() => {
                                                 ?.schedule_outlet_visited
                                                 ?.visited,
                                         )
-                                    }}/{{
+                                    }}
+                                    of
+                                    {{
                                         formatNumber(
                                             standupData[card.key]
                                                 ?.schedule_outlet_visited
@@ -351,7 +358,9 @@ onBeforeUnmount(() => {
                                             standupData[card.key]
                                                 ?.random_outlet_visit?.count,
                                         )
-                                    }}/{{
+                                    }}
+                                    by
+                                    {{
                                         formatNumber(
                                             standupData[card.key]
                                                 ?.random_outlet_visit
@@ -534,6 +543,7 @@ onBeforeUnmount(() => {
 }
 
 .standup-title {
+    font-family: "Inter", sans-serif;
     font-size: 1.25rem;
     font-weight: 700;
     color: #0f172a;
@@ -550,21 +560,24 @@ onBeforeUnmount(() => {
 }
 
 .standup-card-header {
+    font-family: "Inter", sans-serif;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding-bottom: 0.75rem;
+    padding-bottom: 0.35rem;
     margin-bottom: 0.75rem;
     border-bottom: 1px solid #e2e8f0;
 }
 
 .standup-day-label {
+    font-family: "Inter", sans-serif;
     font-size: 0.875rem;
     font-weight: 700;
     color: #0f172a;
 }
 
 .standup-date-label {
+    font-family: "Inter", sans-serif;
     font-size: 0.75rem;
     font-weight: 600;
     color: #2563eb;
@@ -575,22 +588,26 @@ onBeforeUnmount(() => {
 }
 
 .standup-metrics {
+    font-family: "Inter", sans-serif;
     display: flex;
     flex-direction: column;
     gap: 0.85rem;
 }
 
 .standup-metric {
+    font-family: "Inter", sans-serif;
     padding-bottom: 0.85rem;
     border-bottom: 1px dashed #e2e8f0;
 }
 
 .standup-metric:last-child {
+    font-family: "Inter", sans-serif;
     border-bottom: none;
     padding-bottom: 0;
 }
 
 .metric-row {
+    font-family: "Inter", sans-serif;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -600,6 +617,7 @@ onBeforeUnmount(() => {
 
 .metric-name {
     font-size: 0.8rem;
+    font-family: "Inter", sans-serif;
     font-weight: 600;
     color: #64748b;
     display: flex;
@@ -612,6 +630,7 @@ onBeforeUnmount(() => {
 }
 
 .metric-pct {
+    font-family: "Inter", sans-serif;
     font-size: 0.8rem;
     font-weight: 600;
     white-space: nowrap;
@@ -619,10 +638,9 @@ onBeforeUnmount(() => {
 }
 
 .metric-count {
-    font-size: 1.05rem;
-    font-weight: 700;
-    color: #0f172a;
-    line-height: 1.2;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 0;
     font-variant-numeric: tabular-nums;
     text-align: center;
 }

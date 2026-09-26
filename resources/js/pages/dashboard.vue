@@ -212,62 +212,55 @@ onMounted(() => {
                 </div> -->
 
                 <div class="metric-card">
-                    <!-- <div class="metric-header">
-                        <i class="fa-solid fa-users metric-icon"></i>
-                    </div> -->
-                    <div class="metric-body">
-                        <div
-                            class="primary-stat d-flex align-items-center justify-content-center mt-3"
-                        >
-                            {{ activeAttendanceData.active_employee || 0 }}
-                        </div>
-                        <div class="sub-stat-group mt-2">
-                            <!-- <span class="lob-badge">
-                                <strong>{{
-                                    activeAttendanceData.gulshan_office_total_employee ||
-                                    0
-                                }}</strong>
-                                <small>G</small>
-                            </span>
-                            <span class="lob-badge">
-                                <strong>{{
-                                    activeAttendanceData.warehouse_total_employee ||
-                                    0
-                                }}</strong>
-                                <small>W</small>
-                            </span>
-                            <span class="lob-badge">
-                                <strong>{{
-                                    activeAttendanceData.field_force_total_employee ||
-                                    0
-                                }}</strong>
-                                <small>F</small>
-                            </span> -->
-                        </div>
+                    <i class="fa-solid fa-users metric-card-icon"></i>
+                    <div class="primary-stat">
+                        {{ activeAttendanceData.active_employee || 0 }}
                     </div>
-                    <span class="metric-title">Total employees</span>
+                    <div class="metric-footer">
+                        <span class="metric-title">Total employees</span>
+                    </div>
                 </div>
 
                 <div class="metric-card">
-                    <div class="metric-body">
-                        <div
-                            class="primary-stat d-flex align-items-center justify-content-center mt-3"
-                        >
-                            {{ activeAttendanceData.total_present || 0 }}
-                        </div>
+                    <i class="fa-solid fa-sitemap metric-card-icon"></i>
+                    <div class="primary-stat">
+                        {{ activeAttendanceData.department_total || 0 }}
                     </div>
-                    <span class="metric-title">Present attendance</span>
+                    <div class="metric-footer">
+                        <span class="metric-title">Departments</span>
+                    </div>
                 </div>
 
                 <div class="metric-card">
-                    <div class="metric-body">
-                        <div
-                            class="primary-stat d-flex align-items-center justify-content-center mt-3"
-                        >
-                            {{ activeAttendanceData.total_absent || 0 }}
-                        </div>
+                    <i class="fa-solid fa-user-check metric-card-icon"></i>
+                    <div class="primary-stat">
+                        {{ activeAttendanceData.total_present || 0 }}
                     </div>
-                    <span class="metric-title">Absent attendance</span>
+                    <div class="metric-footer">
+                        <span class="metric-title">Present attendance</span>
+                        <span
+                            class="metric-change"
+                            v-if="activeAttendanceData.avg_present != null"
+                        >
+                            {{ activeAttendanceData.avg_present }}%
+                        </span>
+                    </div>
+                </div>
+
+                <div class="metric-card">
+                    <i class="fa-solid fa-user-xmark metric-card-icon"></i>
+                    <div class="primary-stat">
+                        {{ activeAttendanceData.total_absent || 0 }}
+                    </div>
+                    <div class="metric-footer">
+                        <span class="metric-title">Absent attendance</span>
+                        <span
+                            class="metric-change"
+                            v-if="activeAttendanceData.avg_absent != null"
+                        >
+                            {{ activeAttendanceData.avg_absent }}%
+                        </span>
+                    </div>
                 </div>
 
                 <!-- Card 2: Attendance Split -->
@@ -311,25 +304,29 @@ onMounted(() => {
                 </div> -->
 
                 <div class="metric-card">
-                    <div class="metric-body">
-                        <div
-                            class="primary-stat d-flex align-items-center justify-content-center mt-3"
-                        >
-                            {{ activeAttendanceData.total_late || 0 }}
-                        </div>
+                    <i class="fa-solid fa-user-clock metric-card-icon"></i>
+                    <div class="primary-stat">
+                        {{ activeAttendanceData.total_late || 0 }}
                     </div>
-                    <span class="metric-title">Late arrivals</span>
+                    <div class="metric-footer">
+                        <span class="metric-title">Late arrivals</span>
+                        <span
+                            class="metric-change"
+                            v-if="activeAttendanceData.avg_late != null"
+                        >
+                            {{ activeAttendanceData.avg_late }}%
+                        </span>
+                    </div>
                 </div>
 
                 <div class="metric-card">
-                    <div class="metric-body">
-                        <div
-                            class="primary-stat d-flex align-items-center justify-content-center mt-3"
-                        >
-                            {{ activeAttendanceData.average_work_hours || 0 }}
-                        </div>
+                    <i class="fa-solid fa-business-time metric-card-icon"></i>
+                    <div class="primary-stat">
+                        {{ activeAttendanceData.average_work_hours || 0 }}
                     </div>
-                    <span class="metric-title">Avg. work hours</span>
+                    <div class="metric-footer">
+                        <span class="metric-title">Avg. work hours</span>
+                    </div>
                 </div>
 
                 <!-- Card 3: Working Hours & Late -->
@@ -365,25 +362,33 @@ onMounted(() => {
                 </div> -->
 
                 <div class="metric-card">
-                    <div class="metric-body">
-                        <div
-                            class="primary-stat d-flex align-items-center justify-content-center mt-3"
-                        >
-                            {{ activeAttendanceData.total_leave || 0 }}
-                        </div>
+                    <i class="fa-solid fa-plane-departure metric-card-icon"></i>
+                    <div class="primary-stat">
+                        {{ activeAttendanceData.total_leave || 0 }}
                     </div>
-                    <span class="metric-title">On leave</span>
+                    <div class="metric-footer">
+                        <span class="metric-title">On leave</span>
+                    </div>
                 </div>
 
                 <div class="metric-card">
-                    <div class="metric-body">
-                        <div
-                            class="primary-stat d-flex align-items-center justify-content-center mt-3"
-                        >
-                            {{ activeAttendanceData.total_pending_leave || 0 }}
-                        </div>
+                    <i class="fa-solid fa-hourglass-half metric-card-icon"></i>
+                    <div class="primary-stat">
+                        {{ activeAttendanceData.total_pending_leave || 0 }}
                     </div>
-                    <span class="metric-title">Pending leave</span>
+                    <div class="metric-footer">
+                        <span class="metric-title">Pending leave</span>
+                    </div>
+                </div>
+
+                <div class="metric-card">
+                    <i class="fa-solid fa-cake-candles metric-card-icon"></i>
+                    <div class="primary-stat">
+                        {{ activeAttendanceData.averageAge || 0 }}
+                    </div>
+                    <div class="metric-footer">
+                        <span class="metric-title">Average age (years)</span>
+                    </div>
                 </div>
 
                 <!-- Card 4: Leave Summary -->
@@ -412,14 +417,13 @@ onMounted(() => {
                 </div> -->
 
                 <div class="metric-card">
-                    <div class="metric-body">
-                        <div
-                            class="primary-stat d-flex align-items-center justify-content-center mt-3"
-                        >
-                            {{ activeAttendanceData.averageTenure || 0 }}
-                        </div>
+                    <i class="fa-solid fa-award metric-card-icon"></i>
+                    <div class="primary-stat">
+                        {{ activeAttendanceData.averageTenure || 0 }}
                     </div>
-                    <span class="metric-title">Average tenure (years)</span>
+                    <div class="metric-footer">
+                        <span class="metric-title">Average tenure (years)</span>
+                    </div>
                 </div>
 
                 <!-- Card 5: Average Tenure -->
@@ -437,14 +441,13 @@ onMounted(() => {
                 </div> -->
 
                 <div class="metric-card">
-                    <div class="metric-body">
-                        <div
-                            class="primary-stat d-flex align-items-center justify-content-center mt-3"
-                        >
-                            {{ activeAttendanceData.total_expense || 0 }}
-                        </div>
+                    <i class="fa-solid fa-receipt metric-card-icon"></i>
+                    <div class="primary-stat">
+                        {{ activeAttendanceData.total_expense || 0 }} TK.
                     </div>
-                    <span class="metric-title">TA/DA (MTD)</span>
+                    <div class="metric-footer">
+                        <span class="metric-title">TA/DA (MTD)</span>
+                    </div>
                 </div>
 
                 <!-- Card 6: TA/DA Expense -->
@@ -461,17 +464,6 @@ onMounted(() => {
                     </div>
                 </div> -->
 
-                <div class="metric-card">
-                    <div class="metric-body">
-                        <div
-                            class="primary-stat d-flex align-items-center justify-content-center mt-3"
-                        >
-                            {{ activeAttendanceData.department_total || 0 }}
-                        </div>
-                    </div>
-                    <span class="metric-title">Departments</span>
-                </div>
-
                 <!-- Card 7: Department Count -->
                 <!-- <div class="metric-card">
                     <div class="metric-header">
@@ -484,17 +476,6 @@ onMounted(() => {
                         </div>
                     </div>
                 </div> -->
-
-                <div class="metric-card">
-                    <div class="metric-body">
-                        <div
-                            class="primary-stat d-flex align-items-center justify-content-center mt-3"
-                        >
-                            {{ activeAttendanceData.averageAge || 0 }}
-                        </div>
-                    </div>
-                    <span class="metric-title">Average age (years)</span>
-                </div>
 
                 <!-- Card 8: Average Age -->
                 <!-- <div class="metric-card">
@@ -511,17 +492,31 @@ onMounted(() => {
                 </div> -->
 
                 <div class="metric-card">
-                    <div class="metric-body">
-                        <div
-                            class="primary-stat d-flex align-items-center justify-content-center mt-3"
-                        >
-                            {{ activeAttendanceData.averageAge || 0 }}
-                        </div>
+                    <i class="fa-solid fa-file-shield metric-card-icon"></i>
+                    <div class="primary-stat">
+                        {{ activeAttendanceData.active_employee || 0 }}
+                        /
+                        {{
+                            activeAttendanceData.totalEmployeeDocumentation || 0
+                        }}
                     </div>
-                    <span class="metric-title">Document Compliance</span>
+                    <div class="metric-footer">
+                        <span class="metric-title">Document Compliance</span>
+                        <span
+                            class="metric-change"
+                            v-if="
+                                activeAttendanceData.averagePercentageOfDocumentation !=
+                                null
+                            "
+                        >
+                            {{
+                                activeAttendanceData.averagePercentageOfDocumentation
+                            }}%
+                        </span>
+                    </div>
                 </div>
 
-                <div class="metric-card">
+                <!-- <div class="metric-card">
                     <div class="metric-header">
                         <span class="metric-title">
                             <i
@@ -562,14 +557,14 @@ onMounted(() => {
                             </span>
                         </div>
                     </div>
-                </div>
+                </div> -->
             </section>
 
             <!-- Secondary Analytics / Charts Section -->
             <section class="chart-section">
                 <dailyStandup />
             </section>
-            <section class="chart-section">
+            <section class="chart-section mt-3">
                 <dashboardChart :dashData="dashCount" />
             </section>
         </div>
@@ -607,6 +602,7 @@ onMounted(() => {
 }
 
 .dashboard-title {
+    font-family: "Inter", sans-serif;
     font-size: 32px;
     font-weight: 300;
     letter-spacing: 0.5px;
@@ -707,6 +703,7 @@ onMounted(() => {
     display: flex;
     flex-direction: column;
     justify-content: space-between;
+    min-height: 80px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
     transition:
         transform 0.15s ease,
@@ -718,6 +715,36 @@ onMounted(() => {
     box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
 }
 
+.metric-card-icon {
+    font-size: 1.125rem;
+    color: #94a3b8;
+    margin-bottom: 0.75rem;
+    align-self: flex-start;
+}
+
+.metric-body {
+    flex: 1;
+}
+
+.metric-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-top: 0.875rem;
+}
+
+.metric-change {
+    font-size: 0.75rem;
+    font-family: "Inter", sans-serif;
+    font-weight: 600;
+    color: #040405;
+    background: #f1f5f9;
+    border-radius: 999px;
+    padding: 0.15rem 0.5rem;
+    white-space: nowrap;
+}
+
 .metric-header {
     display: flex;
     justify-content: space-between;
@@ -725,10 +752,19 @@ onMounted(() => {
     margin-bottom: 0.75rem;
 }
 
+/* .metric-title {
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.6px;
+    font-family: sans-serif;
+} */
+
 .metric-title {
-    font-size: 0.85rem;
-    font-weight: 600;
-    color: #64748b;
+    font-family: "Inter", sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.1px;
+    line-height: 1.4;
 }
 
 .metric-icon {
@@ -737,10 +773,15 @@ onMounted(() => {
 }
 
 .primary-stat {
-    font-size: 1.75rem;
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 2rem;
     font-weight: 700;
     color: #0f172a;
     line-height: 1.1;
+    text-align: center;
 }
 
 .primary-stat .unit {

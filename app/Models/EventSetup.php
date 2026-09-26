@@ -12,8 +12,8 @@ class EventSetup extends Model
 
     public const TYPE_HOLIDAY = 'Holiday';
     public const TYPE_MEETING = 'Meeting';
-    public const TYPE_MEETUP = 'Meet-up';
-    public const TYPE_OTHER = 'Other';
+    public const TYPE_MEETUP = 'Meet-Up';
+    public const TYPE_OTHER = 'Others';
 
     public const TYPES = [
         self::TYPE_HOLIDAY,
@@ -23,11 +23,11 @@ class EventSetup extends Model
     ];
 
     /**
-     * JSON sentinel stored in for_departments when "Select All Departments" is used.
+     * Sentinel stored in for_departments when an event targets all departments.
      */
     public const ALL_DEPARTMENTS = ['all'];
 
-    protected $table = 'event_setup';
+    protected $table = 'event_setups';
 
     protected $fillable = [
         'event_header',
@@ -39,13 +39,11 @@ class EventSetup extends Model
         'for_departments',
         'created_by',
         'updated_by',
-        'deleted_by',
     ];
 
     protected $casts = [
         'event_date_from' => 'datetime',
         'event_date_to' => 'datetime',
-        'for_departments' => 'array',
         'deleted_at' => 'datetime',
     ];
 
@@ -98,5 +96,53 @@ class EventSetup extends Model
         }
 
         return $this->event_date_from->lte($when) && $this->event_date_to->gte($when);
+    }
+
+    /**
+     * Store multiple department ids as a comma-separated string, e.g. "1,2,3",
+     * while the controller always works with an array of department ids.
+     */
+    public function setForDepartmentsAttribute($value): void
+    {
+        if ($value === null || $value === '' || $value === []) {
+            $this->attributes['for_departments'] = null;
+
+            return;
+        }
+
+        if (is_array($value)) {
+            foreach ($value as $item) {
+                if (is_string($item) && strtolower($item) === 'all') {
+                    $this->attributes['for_departments'] = 'all';
+
+                    return;
+                }
+            }
+
+            $ids = array_values(array_unique(array_filter(array_map('intval', $value), fn($id) => $id > 0)));
+            $this->attributes['for_departments'] = $ids === [] ? null : implode(',', $ids);
+
+            return;
+        }
+
+        $this->attributes['for_departments'] = (string) $value;
+    }
+
+    /**
+     * Read the comma-separated "1,2,3" string back as an array of dept ids.
+     */
+    public function getForDepartmentsAttribute($value): array
+    {
+        if ($value === null || trim((string) $value) === '') {
+            return [];
+        }
+
+        $value = (string) $value;
+
+        if (strtolower($value) === 'all') {
+            return self::ALL_DEPARTMENTS;
+        }
+
+        return array_values(array_unique(array_filter(array_map('intval', explode(',', $value)), fn($id) => $id > 0)));
     }
 }
