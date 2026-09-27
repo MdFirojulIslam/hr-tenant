@@ -20,6 +20,8 @@ return new class extends Migration
             $table->dateTime('event_date_from');
             $table->dateTime('event_date_to');
             $table->unsignedInteger('department_id');
+            $table->unsignedInteger('created_by');
+            $table->unsignedInteger('updated_by');
             $table->timestamps();
         });
     }

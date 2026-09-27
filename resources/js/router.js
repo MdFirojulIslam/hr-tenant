@@ -735,6 +735,15 @@ const routes = [
             pageId: 83,
         },
     },
+    {
+        path: "/employee-hr-event/hr-event-setup",
+        name: "HrEventSetup",
+        component: () => import("./pages/hrEvent/hrEventSetup.vue"),
+        meta: {
+            requireAuth: true,
+            pageId: 85,
+        },
+    },
 ];
 
 const router = createRouter({
