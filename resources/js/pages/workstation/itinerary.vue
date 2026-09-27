@@ -10,6 +10,8 @@ import { useRouter } from "vue-router";
 // ----------------------------
 const store = useStore();
 const user = store.getters.getUser;
+const role_id = store.getters.getRoleId;
+
 const router = useRouter();
 
 const itineraries_items = ref([]);
@@ -97,7 +99,8 @@ const visibleItineraries = computed(() =>
         const isEmployee = Number(item.employee_id) === Number(user.id);
         const isSupervisor = Number(item.supervisor_id) === Number(user.id);
         if (isEmployee) return true;
-        if (isSupervisor && item.status !== "SAVE") return true;
+        if (Number(role_id) == 1 || (isSupervisor && item.status !== "SAVE"))
+            return true;
         return false;
     }),
 );

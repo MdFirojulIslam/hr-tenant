@@ -401,6 +401,14 @@ class ItineraryController extends Controller
             ->where('itinerary_logs.status', '!=', 'SAVE')
             ->get();
 
+        // $admin = DB::table('users')
+        //     ->select('users.EID as supervisor_id')
+        //     ->where('users.role_id', 1)
+        //     ->get();
+
+        // // Merge both collections
+        // $supervisors = $supervisors->merge($admin);
+
         return response()->json($supervisors);
     }
 
