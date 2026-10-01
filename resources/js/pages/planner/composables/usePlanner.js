@@ -9,12 +9,21 @@ export function usePlanner() {
     const saving = ref(false);
     const savingError = ref(null);
 
-    const currentEid = ref(store.getters.getUser?.id ?? store.getters.getUser?.EID ?? null);
+    const currentEid = ref(
+        store.getters.getUser?.id ?? store.getters.getUser?.EID ?? null,
+    );
 
     const VALUES = {
         statuses: ["Not started", "In progress", "Completed"],
         repeats: ["Do not repeat", "Daily", "Custom"],
-        buckets: ["No bucket", "Backlog", "Up next", "In progress", "Blocked", "Completed"],
+        buckets: [
+            "No bucket",
+            "Backlog",
+            "Up next",
+            "In progress",
+            "Blocked",
+            "Completed",
+        ],
         priorities: ["Urgent", "Important", "Medium", "Low"],
         privacies: ["Public", "Private", "Shared", "Others"],
     };
@@ -120,7 +129,13 @@ export function usePlanner() {
     }
 
     async function saveAssignees(taskId, assignees) {
-        const res = await api.post(`/planner/tasks/${taskId}/assignees`, { assignees });
+        const res = await api.post(`/planner/tasks/${taskId}/assignees`, {
+            assignees,
+        });
+        const resmail = await api.post(
+            `/planner/tasks/mail/${taskId}/assignees`,
+            { assignees },
+        );
         return res.data?.data || [];
     }
 
@@ -137,7 +152,10 @@ export function usePlanner() {
     }
 
     async function updateChecklist(taskId, checklistId, data) {
-        const res = await api.patch(`/planner/tasks/${taskId}/checklists/${checklistId}`, data);
+        const res = await api.patch(
+            `/planner/tasks/${taskId}/checklists/${checklistId}`,
+            data,
+        );
         return res.data?.data;
     }
 

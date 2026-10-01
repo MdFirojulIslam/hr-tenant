@@ -13,6 +13,10 @@ return new class extends Migration
     {
         Schema::create('notification_recipients', function (Blueprint $table) {
             $table->id();
+            $table->unsignedInteger('notification_id');
+            $table->unsignedInteger('user_id');
+            $table->enum('status', ['success', 'failed', 'pending'])->default('pending');
+            $table->timestamp('read_at')->nullable();
             $table->timestamps();
         });
     }

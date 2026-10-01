@@ -16,8 +16,8 @@ return new class extends Migration
             $table->string('code');
             $table->string('name');
             $table->string('category');
-            $table->enum('priority', []);
-            $table->boolean('is_active');
+            $table->enum('priority', ['low', 'medium', 'high', 'urgent']);
+            $table->boolean('is_active')->default(false);
             $table->timestamps();
         });
     }

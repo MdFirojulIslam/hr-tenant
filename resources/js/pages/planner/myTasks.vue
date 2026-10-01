@@ -1,9 +1,47 @@
 <template>
     <div class="planner-page my-tasks">
-        <div class="page-header mb-3">
-            <h4 class="mb-0"><i class="fa-solid fa-user-check me-2"></i>My Tasks</h4>
-            <span class="text-muted small">Tasks assigned to you</span>
-        </div>
+        <!-- ===================== HEADER ===================== -->
+        <header class="pl-hero">
+            <div class="pl-hero-main">
+                <span class="pl-hero-icon" aria-hidden="true">
+                    <i class="fa-solid fa-user-check"></i>
+                </span>
+                <div class="pl-hero-text">
+                    <h1 class="pl-hero-title">My Tasks</h1>
+                    <p class="pl-hero-sub">Tasks assigned to you</p>
+                </div>
+            </div>
+
+            <dl class="pl-hero-stats" aria-label="My tasks overview">
+                <div class="pl-hero-stat">
+                    <dt>Tasks</dt>
+                    <dd>{{ tasks.length }}</dd>
+                </div>
+                <div class="pl-hero-stat">
+                    <dt>In progress</dt>
+                    <dd class="is-progress">
+                        {{
+                            tasks.filter((t) => t.status === "In progress")
+                                .length
+                        }}
+                    </dd>
+                </div>
+                <div class="pl-hero-stat">
+                    <dt>Completed</dt>
+                    <dd class="is-done">
+                        {{
+                            tasks.filter((t) => t.status === "Completed").length
+                        }}
+                    </dd>
+                </div>
+                <div class="pl-hero-stat">
+                    <dt>Overdue</dt>
+                    <dd :class="{ 'is-overdue': tasks.some(isOverdue) }">
+                        {{ tasks.filter(isOverdue).length }}
+                    </dd>
+                </div>
+            </dl>
+        </header>
 
         <TaskFiltersToolbar
             v-model:view="view"
@@ -15,12 +53,37 @@
             @reload="reload"
         />
 
-        <div v-if="savingError" class="alert alert-danger py-2 small">
-            <i class="fa-solid fa-circle-exclamation me-1"></i>{{ savingError }}
+        <div
+            v-if="savingError"
+            class="alert alert-danger py-2 small pl-alert"
+            role="alert"
+        >
+            <i
+                class="fa-solid fa-circle-exclamation me-1"
+                aria-hidden="true"
+            ></i
+            >{{ savingError }}
+        </div>
+
+        <div v-if="loading && !tasks.length" class="pl-skeleton-grid">
+            <div v-for="n in 3" :key="n" class="pl-panel sk-column">
+                <div class="pl-skeleton sk-column-head"></div>
+                <div class="sk-cards">
+                    <div
+                        v-for="c in n === 2 ? 3 : 2"
+                        :key="c"
+                        class="pl-skeleton sk-card"
+                    >
+                        <div class="pl-skeleton sk-line sk-line-title"></div>
+                        <div class="pl-skeleton sk-line sk-line-meta"></div>
+                        <div class="pl-skeleton sk-line sk-line-short"></div>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <TaskTable
-            v-if="view === 'grid'"
+            v-else-if="view === 'grid'"
             mode="my"
             :tasks="filteredTasks"
             :values="VALUES"
@@ -48,10 +111,16 @@
 
         <div
             v-if="!loading && !filteredTasks.length && view === 'grid'"
-            class="empty-state text-center py-5 text-muted"
+            class="pl-empty empty-state"
         >
-            <i class="fa-regular fa-folder-open fa-2x mb-2"></i>
-            <div>No tasks assigned to you</div>
+            <span class="pl-empty-icon" aria-hidden="true">
+                <i class="fa-regular fa-folder-open"></i>
+            </span>
+            <div class="pl-empty-title">No tasks assigned to you</div>
+            <p class="pl-empty-text">
+                Adjust the filters above or check back once work is assigned to
+                you.
+            </p>
         </div>
 
         <TaskDetailModal
@@ -118,7 +187,8 @@ onMounted(() => {
 function buildParams() {
     const params = { view: "my" };
     if (privacy.value) params.privacy = privacy.value;
-    if (statusFilter.value && statusFilter.value !== "All") params.status = statusFilter.value;
+    if (statusFilter.value && statusFilter.value !== "All")
+        params.status = statusFilter.value;
     if (employeeSearch.value) params.employee = employeeSearch.value;
     return params;
 }
@@ -128,7 +198,7 @@ const filteredTasks = computed(() => {
     return tasks.value.filter((task) => {
         if (!q) return true;
         return task.assignees.some((a) =>
-            (a.employee?.Full_Name || "").toLowerCase().includes(q)
+            (a.employee?.Full_Name || "").toLowerCase().includes(q),
         );
     });
 });
@@ -193,7 +263,9 @@ async function onFieldChange(task, field, event) {
 
 async function onStartDateChange(task, event) {
     task.start_date = event.target.value;
-    await onFieldChange(task, "start_date", { target: { value: task.start_date } });
+    await onFieldChange(task, "start_date", {
+        target: { value: task.start_date },
+    });
 }
 
 async function onDueDateChange(task, event) {
@@ -235,7 +307,9 @@ function syncDetailToTask() {
     if (idx !== -1) {
         tasks.value[idx] = { ...tasks.value[idx], ...detailForm };
         tasks.value[idx].checklists = [...detailChecklists.value];
-        const completed = detailChecklists.value.filter((c) => c.completed_status).length;
+        const completed = detailChecklists.value.filter(
+            (c) => c.completed_status,
+        ).length;
         tasks.value[idx].checklist_progress = {
             completed,
             total: detailChecklists.value.length,
@@ -243,8 +317,8 @@ function syncDetailToTask() {
     }
 }
 
-const detailChecklistCompleted = computed(() =>
-    detailChecklists.value.filter((c) => c.completed_status).length
+const detailChecklistCompleted = computed(
+    () => detailChecklists.value.filter((c) => c.completed_status).length,
 );
 
 async function addChecklistItem() {
@@ -293,7 +367,9 @@ async function removeChecklistItem(cl) {
     if (!detailTask.value?.id || !cl?.id) return;
     try {
         await deleteChecklist(detailTask.value.id, cl.id);
-        detailChecklists.value = detailChecklists.value.filter((c) => c.id !== cl.id);
+        detailChecklists.value = detailChecklists.value.filter(
+            (c) => c.id !== cl.id,
+        );
         syncDetailToTask();
     } catch (e) {
         Swal.fire("Error", "Could not remove checklist item.", "error");
@@ -305,7 +381,9 @@ function debouncedDetailSave(field) {
     detailForm._timer = setTimeout(async () => {
         if (!detailTask.value?.id) return;
         try {
-            await updateTask(detailTask.value.id, { [field]: detailForm[field] });
+            await updateTask(detailTask.value.id, {
+                [field]: detailForm[field],
+            });
             syncDetailToTask();
         } catch (e) {
             savingError.value = e.response?.data?.message || e.message;
@@ -325,7 +403,266 @@ async function immediateSave(field) {
 </script>
 
 <style scoped>
+@import "./styles/planner-theme.css";
+
+/* --- Page canvas ---------------------------------------------------------- */
 .planner-page {
-    font-family: inheritable, sans-serif;
+    /* Full-bleed module background (compensates the layout container
+       `.container-fluid.px-2.py-3` padding exactly: 6px x / 12px y) */
+    margin: -12px -6px;
+    padding: 14px 14px 18px;
+    min-height: 100%;
+    background-color: var(--pl-bg);
+    color: var(--pl-text);
+    font-family: inherit;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+/* --- Hero header ---------------------------------------------------------- */
+.pl-hero {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px 20px;
+    margin-bottom: 14px;
+    padding: 14px 16px;
+    background-color: var(--pl-surface);
+    border: 1px solid var(--pl-border);
+    border-radius: var(--pl-radius-lg);
+    box-shadow: var(--pl-shadow-sm);
+}
+
+.pl-hero-main {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+
+.pl-hero-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    flex-shrink: 0;
+    border: 1px solid var(--pl-accent-border);
+    border-radius: var(--pl-radius);
+    background-color: var(--pl-accent-soft);
+    color: var(--pl-accent-text);
+    font-size: 15px;
+}
+
+.pl-hero-text {
+    min-width: 0;
+}
+
+.pl-hero-title {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+    color: var(--pl-text);
+}
+
+.pl-hero-sub {
+    margin: 2px 0 0;
+    font-size: 12.5px;
+    font-weight: 500;
+    line-height: 1.35;
+    color: var(--pl-muted);
+}
+
+/* --- Overview stats ------------------------------------------------------- */
+.pl-hero-stats {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 0;
+    padding: 0 0 0 auto;
+}
+
+.pl-hero-stat {
+    display: flex;
+    align-items: baseline;
+    gap: 7px;
+    padding: 5px 11px;
+    border: 1px solid var(--pl-border);
+    border-radius: var(--pl-radius-sm);
+    background-color: var(--pl-surface-alt);
+}
+
+.pl-hero-stat dt {
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 1.3;
+    color: var(--pl-muted);
+    white-space: nowrap;
+}
+
+.pl-hero-stat dd {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.3;
+    color: var(--pl-text);
+    font-variant-numeric: tabular-nums;
+}
+
+.pl-hero-stat dd.is-progress {
+    color: var(--pl-accent-text);
+}
+
+.pl-hero-stat dd.is-done {
+    color: var(--pl-success-text);
+}
+
+.pl-hero-stat dd.is-overdue {
+    color: var(--pl-danger-text);
+}
+
+/* --- Inline error --------------------------------------------------------- */
+.pl-alert {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 14px;
+    padding: 10px 14px !important;
+    border: 1px solid var(--pl-danger-border);
+    border-radius: var(--pl-radius);
+    background-color: var(--pl-danger-soft);
+    color: var(--pl-danger-text) !important;
+    font-size: 13px;
+    box-shadow: none;
+}
+
+.pl-alert > i {
+    margin-top: 1px;
+    font-size: 12px;
+}
+
+/* --- Empty state ---------------------------------------------------------- */
+.empty-state {
+    margin-top: 4px;
+    color: var(--pl-text);
+}
+
+.empty-state .pl-empty-icon {
+    color: var(--pl-muted);
+}
+
+/* --- Loading skeletons (presentation only) -------------------------------- */
+.pl-skeleton-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.sk-column {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-height: 260px;
+    padding: 12px;
+    border-radius: var(--pl-radius-lg);
+    background-color: var(--pl-surface-alt);
+}
+
+.sk-column-head {
+    width: 46%;
+    height: 16px;
+}
+
+.sk-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.sk-card {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    padding: 12px;
+    border: 1px solid var(--pl-border);
+    border-radius: var(--pl-radius);
+    background-color: var(--pl-surface);
+}
+
+.sk-line {
+    height: 10px;
+}
+
+.sk-line-title {
+    width: 82%;
+    height: 12px;
+}
+
+.sk-line-meta {
+    width: 55%;
+}
+
+.sk-line-short {
+    width: 34%;
+}
+
+@media (max-width: 1199.98px) {
+    .pl-skeleton-grid {
+        grid-template-columns: repeat(3, minmax(300px, 1fr));
+        overflow-x: auto;
+        padding-bottom: 10px;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .pl-skeleton-grid {
+        grid-template-columns: repeat(3, minmax(84vw, 1fr));
+        gap: 10px;
+    }
+}
+
+/* --- Responsive ----------------------------------------------------------- */
+@media (max-width: 1199.98px) {
+    .pl-hero-stats {
+        order: 3;
+        width: 100%;
+        padding-left: 0;
+    }
+}
+
+@media (max-width: 767.98px) {
+    .pl-hero {
+        gap: 12px;
+        padding: 13px 14px;
+    }
+
+    .pl-hero-stats {
+        gap: 6px;
+    }
+
+    .pl-hero-stat {
+        flex: 1 1 calc(50% - 3px);
+        justify-content: space-between;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .planner-page {
+        margin: -12px -6px;
+        padding: 12px 8px 16px;
+    }
+
+    .pl-hero-title {
+        font-size: 18px;
+    }
+
+    .pl-hero-icon {
+        width: 34px;
+        height: 34px;
+        font-size: 13.5px;
+    }
 }
 </style>

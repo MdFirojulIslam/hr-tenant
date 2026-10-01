@@ -5,7 +5,6 @@ import { useStore } from "vuex";
 import api from "@/api";
 import Swal from "sweetalert2";
 
-
 const router = useRouter();
 const store = useStore();
 const form = reactive({
@@ -21,7 +20,7 @@ const submit = async () => {
             Swal.fire({
                 position: "middle",
                 icon: "success",
-                title: 'Password Changes Successfully',
+                title: "Password Changes Successfully",
                 showConfirmButton: false,
                 timer: 1500,
             });
@@ -71,7 +70,7 @@ const submit = async () => {
     display: flex;
     justify-content: center;
     align-items: center;
-    height: 100vh;
+    height: 85vh;
 }
 
 .form-container {
@@ -109,7 +108,8 @@ h3 {
 
 .form-btn {
     padding: 10px 15px;
-    font-family: "Lucida Sans", "Lucida Sans Regular", "Lucida Grande",
+    font-family:
+        "Lucida Sans", "Lucida Sans Regular", "Lucida Grande",
         "Lucida Sans Unicode", Geneva, Verdana, sans-serif;
     border-radius: 20px;
     border: 0 !important;
