@@ -3,41 +3,22 @@
 namespace App\Mail;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\Factory as Queue;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Address;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
-use Illuminate\Support\Facades\Log;
 
 /**
- * Prepared representation of the "task assigned" notification that belongs to an
- * employee once they are added to a task from the planner assignee picker
- * (resources/js/pages/planner/components/TaskAssigneeModal.vue).
+ * Task Assignment Notification Mailable.
  *
- * Intended relationship:
- *   Task Assignment -> Assigned Employee -> Employee Email -> emails.task_assign
+ * Used to deliver task assignment emails to the assigned employees.
  *
- * The email body is the existing template
- * resources/views/emails/task_assign.blade.php. No second template was added.
+ * The email body uses the existing template:
+ * resources/views/emails/task_assign.blade.php
  *
- * DELIVERY IS CURRENTLY DISABLED.
- *
- * This class deliberately does not implement ShouldQueue and it overrides every
- * public delivery entry point of the base Mailable (send, queue, later), so the
- * notification can neither be delivered nor enqueued regardless of the caller:
- *
- *   Mail::to($x)->send(new TaskAssignNotification(...))    -> blocked by send()
- *   Mail::to($x)->queue(new TaskAssignNotification(...))  -> blocked by queue()
- *   Mail::to($x)->later(60, new TaskAssignNotification())  -> blocked by later()
- *   Mail::queue(new TaskAssignNotification(...))           -> blocked by queue()
- *   SendQueuedMailable                                     -> can only be built by
- *                                                             the blocked methods
- *
- * The instance may be created and inspected (recipient, subject, view, view
- * data). Enabling delivery later is a single deliberate step: set
- * DELIVERY_ENABLED to true and remove the send()/queue()/later() overrides.
+ * System sender: noreply@hr.artisanbn.com (from MAIL_FROM_ADDRESS env)
+ * Recipient: employees.Official_mail of the assigned employee
  */
 class TaskAssignNotification extends Mailable
 {
@@ -49,19 +30,17 @@ class TaskAssignNotification extends Mailable
     public const VIEW = 'emails.task_assign';
 
     /**
-     * Global delivery kill switch for this mailable.
-     *
-     * While this is false the overridden send()/queue()/later() methods return
-     * immediately without touching the mail transport or the mail queue.
+     * Production delivery is enabled.
+     * This constant is informational; actual delivery is controlled by the caller
+     * (e.g., TasksMailController::mailTaskAssignees).
      */
-    public const DELIVERY_ENABLED = false;
+    public const DELIVERY_ENABLED = true;
 
     /** employees.id of the assigned employee. */
     public int $employeeId;
 
     /**
-     * Email of the assigned employee, resolved from users.email through
-     * users.EID = employees.id.
+     * Email of the assigned employee, resolved from employees.Official_mail.
      */
     public string $recipientEmail;
 
@@ -87,11 +66,11 @@ class TaskAssignNotification extends Mailable
 
     /**
      * @param  int  $employeeId  employees.id of the assigned employee.
-     * @param  string  $recipientEmail  Email of the assigned employee.
+     * @param  string  $recipientEmail  employees.Official_mail of the assigned employee.
      * @param  string  $recipientName  Full name of the assigned employee.
      * @param  string  $taskName  Task name.
      * @param  int  $taskId  Task id.
-     * @param  string  $assignedByName  Name of the person who assigned the task.
+     * @param  string  $assignedByName  Name of the person who assigned the task (from employees table).
      * @param  string  $status  Current task status.
      * @param  string  $priority  Task priority.
      * @param  string  $startDate  Task start date (Y-m-d).
@@ -130,6 +109,8 @@ class TaskAssignNotification extends Mailable
     /**
      * The recipient is the assigned employee, never the person who performed
      * the assignment.
+     *
+     * The system sender (noreply@hr.artisanbn.com) is configured in MAIL_FROM_ADDRESS env.
      */
     public function envelope(): Envelope
     {
@@ -195,53 +176,5 @@ class TaskAssignNotification extends Mailable
             'action_url' => $this->actionUrl,
             'notification_type' => 'task update',
         ];
-    }
-
-    /**
-     * Delivery is blocked. This is the entry point every Mailable goes through
-     * for Mailer::send() and PendingMail::send().
-     *
-     * @param  \Illuminate\Contracts\Mail\Factory|\Illuminate\Contracts\Mail\Mailer  $mailer
-     */
-    public function send($mailer)
-    {
-        $this->reportBlockedDelivery('send');
-    }
-
-    /**
-     * Queueing is blocked. Entry point for Mailer::queue() and
-     * PendingMail::queue().
-     */
-    public function queue(Queue $queue)
-    {
-        $this->reportBlockedDelivery('queue');
-    }
-
-    /**
-     * Delayed queueing is blocked. Entry point for Mailer::later() and
-     * PendingMail::later().
-     */
-    public function later($delay, Queue $queue)
-    {
-        $this->reportBlockedDelivery('later');
-    }
-
-    /**
-     * Audit trail for the deliberate "prepared, not delivered" state.
-     *
-     * This records the blocked attempt only. It never touches the mail
-     * transport, the mail queue, a Mailable send or any recipient.
-     */
-    private function reportBlockedDelivery(string $entryPoint): void
-    {
-        Log::warning('Task assignment notification prepared but not delivered', [
-            'entry_point' => $entryPoint,
-            'delivery_enabled' => self::DELIVERY_ENABLED,
-            'view' => self::VIEW,
-            'task_id' => $this->taskId,
-            'assignee_employee_id' => $this->employeeId,
-            'assignee_name' => $this->recipientName,
-            'recipient_email_resolved' => $this->hasRecipientEmail(),
-        ]);
     }
 }

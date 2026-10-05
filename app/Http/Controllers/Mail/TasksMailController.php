@@ -9,12 +9,12 @@ use App\Models\Task;
 use App\Models\TasksAssignee;
 use App\Models\TasksChecklists;
 use App\Models\TasksResult;
-use App\Models\User;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Mail\Message;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
@@ -26,25 +26,10 @@ class TasksMailController extends Controller
     /**
      * Master switch for the task mailing pipeline.
      *
-     * Delivery is OFF. While this is false no branch of this controller can
-     * reach the mail transport or the mail queue: sendTestTaskMail() returns
-     * before it touches Mail, and the assignee path never asks for a delivery
-     * at all. Flip it to true only when real delivery is intended.
+     * When true, emails are sent immediately upon task assignment.
+     * When false, only notification infrastructure is prepared (no email sent).
      */
-    public const MAIL_SENDING_ENABLED = false;
-
-    /**
-     * Restricted development test mail addresses.
-     *
-     * The sender and the recipient are compile time constants on purpose: no
-     * request parameter, route segment or model attribute can influence them,
-     * so the actual delivery target can never be redirected during this phase.
-     */
-    private const TEST_MAIL_FROM = 'firojulislamcse@gmail.com';
-
-    private const TEST_MAIL_FROM_NAME = 'Artisan HRIS';
-
-    private const TEST_MAIL_TO = 'ferojul@artisanbn.com';
+    public const MAIL_SENDING_ENABLED = true;
 
     /** Notification type "code" shared by every seeded task notification type. */
     private const NOTIFICATION_CODE = 'Tasks';
@@ -84,15 +69,14 @@ class TasksMailController extends Controller
      * GET /planner/tasks/mail
      *
      * Status endpoint for the task mailing pipeline. It reports the pipeline
-     * state and the restricted test mail route so the front-end can verify
-     * the wiring without inspecting source code.
+     * state so the front-end can verify the wiring without inspecting source code.
      */
     public function sendMail()
     {
         return response()->json([
             'success' => true,
             'message' => self::MAIL_SENDING_ENABLED
-                ? 'Task mailing pipeline is running in restricted test mail mode.'
+                ? 'Task mailing pipeline is active. Emails sent on assignment.'
                 : 'Task mailing pipeline is prepared only. No email is sent or queued.',
             'data' => [
                 'sending_enabled' => self::MAIL_SENDING_ENABLED,
@@ -101,9 +85,7 @@ class TasksMailController extends Controller
                 'task_assignment_mailable' => TaskAssignNotification::class,
                 'task_assignment_view' => TaskAssignNotification::VIEW,
                 'task_assignment_delivery_enabled' => TaskAssignNotification::DELIVERY_ENABLED,
-                'test_mail_from' => self::TEST_MAIL_FROM,
-                'test_mail_to' => self::TEST_MAIL_TO,
-                'restricted_to_test_recipient' => true,
+                'system_mail_from' => Config::get('mail.from.address'),
             ],
         ]);
     }
@@ -175,26 +157,12 @@ class TasksMailController extends Controller
      * list has been persisted by TasksController::storeAssignees. The stored
      * assignee rows are therefore the source of truth for the recipients.
      *
-     * Two things happen here, and neither of them delivers mail:
-     *
-     *   1. prepareAssigneeTaskMails() builds one TaskAssignNotification per
-     *      assigned employee. Each mailable is bound to the existing
-     *      resources/views/emails/task_assign.blade.php template and carries
-     *      the email address of the assigned employee as its recipient.
-     *      The mailable itself refuses to send or queue (see
-     *      App\Mail\TaskAssignNotification), and this controller never calls
-     *      Mail::to(), Mail::send(), Mail::queue() or Mail::later().
-     *
-     *   2. the notification, recipient and pending delivery rows are recorded.
-     *
-     * Runtime behaviour therefore stays: task assignment -> no email sent.
+     * This endpoint creates the notification and immediately sends the
+     * task assignment email to the assigned employees using their
+     * employees.Official_mail addresses. The system sender is
+     * noreply@hr.artisanbn.com (from MAIL_FROM_ADDRESS env).
      */
     public function mailTaskAssignees(Request $request, $id)
-    {
-        $notificationName = "";
-    }
-
-    public function testReserve(Request $request, $id)
     {
         $task = Task::with(['assignees', 'checklists', 'results'])->find($id);
 
@@ -204,11 +172,12 @@ class TasksMailController extends Controller
 
         $preparedMails = $this->prepareAssigneeTaskMails($task);
 
+        // deliverTestMail = true: record notification AND send email immediately
         $response = $this->dispatchTaskNotification(
             $request->merge(['task_id' => (int) $task->id]),
             self::TYPE_TASK_UPDATE,
             fn(Task $task, int $actorEid, array $validated) => $this->buildAssigneeChange($task, $actorEid, $validated),
-            false
+            true
         );
 
         return $this->withPreparedTaskAssignMails($response, $preparedMails);
@@ -385,7 +354,7 @@ class TasksMailController extends Controller
         }
 
         $deliveries = $deliverTestMail
-            ? $this->prepareAndDeliverTestMails($typeName, $payload, $stored['rows'], $recipients)
+            ? $this->prepareAndDeliverProductionMails($typeName, $payload, $stored['rows'], $recipients)
             : [];
 
         if (! $deliverTestMail) {
@@ -413,9 +382,7 @@ class TasksMailController extends Controller
                 'recipients' => $this->hydrateDeliveryStatus($stored['rows'], $deliveries),
                 'mail' => [
                     'sending_enabled' => self::MAIL_SENDING_ENABLED && $deliverTestMail,
-                    'restricted_to_test_recipient' => true,
-                    'from' => self::TEST_MAIL_FROM,
-                    'to' => self::TEST_MAIL_TO,
+                    'system_sender' => Config::get('mail.from.address'),
                     'queued' => false,
                     'sent' => $sentCount,
                     'failed' => $failedCount,
@@ -485,7 +452,7 @@ class TasksMailController extends Controller
     }
 
     /**
-     * Prepare the mail content and deliver the restricted test mail for every
+     * Prepare the mail content and deliver the production mail for every
      * stored recipient.
      *
      * A failure is isolated per recipient: the notification rows already exist,
@@ -493,26 +460,26 @@ class TasksMailController extends Controller
      * and the remaining recipients are still processed. No SMTP credential or
      * mail configuration detail is ever returned to the caller.
      */
-    private function prepareAndDeliverTestMails(string $typeName, array $payload, array $rows, array $recipients): array
+    private function prepareAndDeliverProductionMails(string $typeName, array $payload, array $rows, array $recipients): array
     {
-        $recipientsByUser = collect($recipients)->keyBy('user_id');
+        $recipientsByEmployee = collect($recipients)->keyBy('employee_id');
         $deliveries = [];
 
         foreach ($rows as $row) {
-            $recipient = $recipientsByUser->get($row['user_id']);
+            $recipient = $recipientsByEmployee->get($row['employee_id']);
 
             if (! $recipient) {
                 continue;
             }
 
             try {
-                $mail = $this->prepareTaskMail($typeName, $payload, $recipient);
-                $deliveries[] = $this->sendTestTaskMail($mail, (int) $row['delivery_id']);
+                $mail = $this->prepareProductionMail($typeName, $payload, $recipient);
+                $deliveries[] = $this->sendProductionMail($mail, (int) $row['delivery_id'], $recipient);
             } catch (\Throwable $e) {
-                Log::error('Task test mail preparation failed', [
+                Log::error('Task production mail preparation failed', [
                     'notification_type' => $typeName,
                     'notification_id' => $row['notification_id'],
-                    'user_id' => $row['user_id'],
+                    'employee_id' => $row['employee_id'],
                     'exception' => $e->getMessage(),
                 ]);
 
@@ -538,16 +505,12 @@ class TasksMailController extends Controller
     private const MAIL_SOFT = '#f8fafc';
 
     /**
-     * Assemble the view model for the restricted test mail.
-     *
-     * The notification recipient email is carried along as context only. It is
-     * never used as a delivery target: sendTestTaskMail() always delivers to
-     * the TEST_MAIL_TO constant.
+     * Assemble the view model for the production mail.
      *
      * One view model is built for every notification type and rendered by a
      * single layout, so the presentation can never drift between types.
      */
-    private function prepareTaskMail(string $typeName, array $payload, array $recipient): array
+    private function prepareProductionMail(string $typeName, array $payload, array $recipient): array
     {
         $data = $payload['data'];
         $presentation = $this->notificationPresentation($typeName);
@@ -776,7 +739,7 @@ class TasksMailController extends Controller
         $view = $this->notificationPresentation($mail['notification_type']);
         $accent = $view['accent'];
         $tint = $view['tint'];
-        $brand = self::TEST_MAIL_FROM_NAME;
+        $brand = Config::get('app.name', 'Artisan HRIS');
 
         $sections = '';
 
@@ -1021,9 +984,8 @@ class TasksMailController extends Controller
             . '<p style="margin:0 0 4px 0;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:18px;font-weight:bold;color:#92400e;">'
             . 'Development test mail</p>'
             . '<p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:18px;color:#92400e;">'
-            . 'This notification is recorded for the real recipient in the system, but the email itself is '
-            . 'delivered only to the restricted test mailbox <strong>' . e(self::TEST_MAIL_TO) . '</strong>. '
-            . 'It was sent from <strong>' . e(self::TEST_MAIL_FROM) . '</strong>.</p>'
+            . 'This notification is recorded for the real recipient in the system. '
+            . 'Test mail delivery is currently disabled.</p>'
             . '</td></tr></table></td></tr>';
     }
 
@@ -1080,12 +1042,10 @@ class TasksMailController extends Controller
     }
 
     /**
-     * Send the restricted development test mail.
+     * Send the production task assignment mail to the actual recipient.
      *
-     * The sender and the recipient are the TEST_MAIL_FROM / TEST_MAIL_TO
-     * constants. This method deliberately accepts no recipient or sender
-     * argument, so no request parameter, route segment or model attribute can
-     * redirect the delivery. No CC, no BCC and never more than one recipient.
+     * Uses the system sender (noreply@hr.artisanbn.com from MAIL_FROM_ADDRESS env)
+     * and delivers to the assigned employee's employees.Official_mail.
      *
      * Delivery tracking around the attempt:
      *   before  -> status pending, attempts 0, sent_at/delivered_at/failed_at NULL
@@ -1093,10 +1053,10 @@ class TasksMailController extends Controller
      *   success -> status success, delivered_at set
      *   failure -> status failed, failed_at set
      */
-    private function sendTestTaskMail(array $mail, int $deliveryId): array
+    private function sendProductionMail(array $mail, int $deliveryId, array $recipient): array
     {
         if (! self::MAIL_SENDING_ENABLED) {
-            Log::info('Task test mail skipped, MAIL_SENDING_ENABLED is false', [
+            Log::info('Task production mail skipped, MAIL_SENDING_ENABLED is false', [
                 'notification_type' => $mail['notification_type'],
                 'delivery_id' => $deliveryId,
             ]);
@@ -1112,16 +1072,15 @@ class TasksMailController extends Controller
         $this->markDeliveryAttempted($deliveryId);
 
         try {
-            Mail::html($this->renderTaskMailHtml($mail), function (Message $message) use ($mail) {
-                $message->to(self::TEST_MAIL_TO)
-                    ->from(self::TEST_MAIL_FROM, self::TEST_MAIL_FROM_NAME)
+            Mail::html($this->renderTaskMailHtml($mail), function (Message $message) use ($mail, $recipient) {
+                $message->to($recipient['email'], $recipient['employee_name'])
                     ->subject($mail['subject']);
             });
         } catch (\Throwable $e) {
             return $this->markDeliveryFailed($deliveryId, $e, $mail);
         }
 
-        return $this->markDeliverySucceeded($deliveryId, $mail);
+        return $this->markDeliverySucceeded($deliveryId, $mail, $recipient);
     }
 
     /**
@@ -1139,7 +1098,7 @@ class TasksMailController extends Controller
         ]);
     }
 
-    private function markDeliverySucceeded(int $deliveryId, array $mail): array
+    private function markDeliverySucceeded(int $deliveryId, array $mail, array $recipient = []): array
     {
         DB::table('notification_deliveries')->where('id', $deliveryId)->update([
             'status' => self::DELIVERY_STATUS_SUCCESS,
@@ -1148,11 +1107,11 @@ class TasksMailController extends Controller
             'updated_at' => now(),
         ]);
 
-        Log::info('Task test mail delivered', [
+        Log::info('Task production mail delivered', [
             'notification_type' => $mail['notification_type'],
             'delivery_id' => $deliveryId,
-            'from' => self::TEST_MAIL_FROM,
-            'to' => self::TEST_MAIL_TO,
+            'from' => Config::get('mail.from.address'),
+            'to' => $recipient['email'] ?? 'unknown',
             'notification_recipient_user_id' => $mail['notification_recipient_user_id'],
         ]);
 
@@ -1173,11 +1132,10 @@ class TasksMailController extends Controller
             'updated_at' => now(),
         ]);
 
-        Log::error('Task test mail delivery failed', [
+        Log::error('Task production mail delivery failed', [
             'notification_type' => $mail['notification_type'] ?? null,
             'delivery_id' => $deliveryId,
-            'from' => self::TEST_MAIL_FROM,
-            'to' => self::TEST_MAIL_TO,
+            'from' => Config::get('mail.from.address'),
             'exception' => $e->getMessage(),
         ]);
 
@@ -1262,9 +1220,10 @@ class TasksMailController extends Controller
     }
 
     /**
-     * Map employee ids to notification_recipients.user_id, which references
-     * users.id. users.EID is the foreign key to employees.id, so that is the
-     * link used here. Employees without a login are skipped and logged.
+     * Map employee ids to notification_recipients.user_id (which stores employees.id)
+     * and resolve recipient email from employees.Official_mail.
+     *
+     * Employees without an Official_mail are skipped and logged.
      */
     private function buildRecipientRows(array $employeeIds): array
     {
@@ -1272,32 +1231,40 @@ class TasksMailController extends Controller
             return [];
         }
 
-        $users = User::select('id', 'email', 'EID')
-            ->whereIn('EID', $employeeIds)
+        $employees = employee::select('id', 'Full_Name', 'Employee_Id', 'Official_mail')
+            ->whereIn('id', $employeeIds)
             ->get()
-            ->keyBy('EID');
+            ->keyBy('id');
 
         $rows = [];
 
         foreach ($employeeIds as $employeeId) {
-            $user = $users->get($employeeId);
+            $employee = $employees->get($employeeId);
 
-            if (! $user) {
-                Log::warning('Task notification recipient skipped, no linked user account', [
+            if (! $employee) {
+                Log::warning('Task notification recipient skipped, employee not found', [
                     'employee_id' => $employeeId,
                 ]);
 
                 continue;
             }
 
-            $employee = $this->employeeDirectory($employeeId);
+            $officialMail = $employee->Official_mail ?? null;
+
+            if (! $officialMail || ! filter_var($officialMail, FILTER_VALIDATE_EMAIL)) {
+                Log::warning('Task notification recipient skipped, no valid Official_mail', [
+                    'employee_id' => $employeeId,
+                ]);
+
+                continue;
+            }
 
             $rows[] = [
-                'user_id' => (int) $user->id,
+                'user_id' => (int) $employee->id,
                 'employee_id' => $employeeId,
-                'employee_name' => $employee ? $employee->Full_Name : null,
-                'employee_code' => $employee ? $employee->Employee_Id : null,
-                'email' => $user->email,
+                'employee_name' => $employee->Full_Name,
+                'employee_code' => $employee->Employee_Id,
+                'email' => $officialMail,
             ];
         }
 
@@ -1353,19 +1320,19 @@ class TasksMailController extends Controller
      */
     private function deliveryOutcomeMessage(bool $deliverTestMail, int $sentCount, int $failedCount): string
     {
-        if (! self::MAIL_SENDING_ENABLED) {
-            return 'Notification recorded. No email was sent or queued because MAIL_SENDING_ENABLED is false.';
+        if (! self::MAIL_SENDING_ENABLED && ! $deliverTestMail) {
+            return 'Notification recorded. No email was sent or queued.';
         }
 
         if (! $deliverTestMail) {
-            return 'Notification recorded. Test mail was not sent because this endpoint is triggered automatically during normal task usage.';
+            return 'Notification recorded. Mail was not sent because this endpoint is triggered automatically during normal task usage.';
         }
 
         if ($failedCount > 0) {
-            return 'Notification prepared. The restricted test mail was delivered for some recipients and failed for others.';
+            return 'Notification prepared. The mail was delivered for some recipients and failed for others.';
         }
 
-        return 'Notification prepared and the restricted test mail was delivered.';
+        return 'Notification prepared and the mail was delivered.';
     }
 
     private function skippedResponse(string $typeName, int $taskId, string $reason, string $message): JsonResponse
@@ -1381,9 +1348,7 @@ class TasksMailController extends Controller
                 'recipients' => [],
                 'mail' => [
                     'sending_enabled' => self::MAIL_SENDING_ENABLED,
-                    'restricted_to_test_recipient' => true,
-                    'from' => self::TEST_MAIL_FROM,
-                    'to' => self::TEST_MAIL_TO,
+                    'system_sender' => Config::get('mail.from.address'),
                     'sent' => 0,
                     'failed' => 0,
                     'queued' => false,

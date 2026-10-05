@@ -262,8 +262,6 @@ defineEmits(["close"]);
 
 const assigneeSearch = ref("");
 
-const notifying = ref(false);
-
 const assigneeIdsOnOpen = ref([]);
 
 const filteredEmployees = computed(() => {
@@ -360,34 +358,10 @@ watch(
     { immediate: true },
 );
 
-/*
- * Email notification for the newly assigned employees. It is raised only after
- * the assignment request has succeeded, it never carries a name or an email
- * address, and a failing notification is reported in the console only: the
- * assignment itself is already saved and must not be repeated because of it.
- */
-async function notifyNewAssignees(task, newlyAssigned) {
-    if (!task?.id || !newlyAssigned.length || notifying.value) {
-        return;
-    }
-
-    notifying.value = true;
-
-    try {
-        await api.post(`/planner/tasks/mail/${task.id}/assignees`, {
-            newly_assigned: newlyAssigned,
-        });
-    } catch (error) {
-        console.error("Task assignment notification failed.", error);
-    } finally {
-        notifying.value = false;
-    }
-}
-
 async function submitAssignment() {
     const task = props.task;
 
-    if (!task || notifying.value) {
+    if (!task) {
         return;
     }
 
@@ -411,7 +385,16 @@ async function submitAssignment() {
         return;
     }
 
-    await notifyNewAssignees(task, newlyAssigned);
+    // Call the mail endpoint to create notification and send emails immediately
+    if (newlyAssigned.length > 0 && task.id) {
+        try {
+            await api.post(`/planner/tasks/mail/${task.id}/assignees`, {
+                assignees: newlyAssigned,
+            });
+        } catch (error) {
+            console.error('Task assignment notification failed.', error);
+        }
+    }
 }
 </script>
 

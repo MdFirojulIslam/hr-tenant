@@ -27,6 +27,9 @@ Route::prefix('planner/tasks/notifications')->group(function () {
 | POST /planner/tasks/{id}/assignees succeeded, so only the employees that were
 | just added are reported as newly assigned. It inherits the existing
 | auth:sanctum group from routes/api.php and adds no middleware of its own.
+|
+| This creates the notification and immediately sends the task assignment email
+| to the assigned employees using their employees.Official_mail addresses.
 */
 Route::post('/planner/tasks/mail/{id}/assignees', [TasksMailController::class, 'mailTaskAssignees'])
     ->whereNumber('id');

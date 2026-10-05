@@ -132,10 +132,8 @@ export function usePlanner() {
         const res = await api.post(`/planner/tasks/${taskId}/assignees`, {
             assignees,
         });
-        const resmail = await api.post(
-            `/planner/tasks/mail/${taskId}/assignees`,
-            { assignees },
-        );
+        // Task assignment saved. The mailTaskAssignees endpoint is called automatically
+        // by the front-end after this, which creates notification and sends email immediately.
         return res.data?.data || [];
     }
 
