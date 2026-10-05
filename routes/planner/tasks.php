@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Route;
 | These routes inherit the existing auth:sanctum group from routes/api.php,
 | no extra middleware is introduced here.
 */
+
 Route::prefix('planner/tasks/notifications')->group(function () {
     Route::post('/task-create', [TasksMailController::class, 'notifyTaskCreate']);
     Route::post('/task-update', [TasksMailController::class, 'notifyTaskUpdate']);
@@ -29,7 +30,7 @@ Route::prefix('planner/tasks/notifications')->group(function () {
 | auth:sanctum group from routes/api.php and adds no middleware of its own.
 |
 | This creates the notification and immediately sends the task assignment email
-| to the assigned employees using their employees.Official_mail addresses.
+| to the assigned employees using their employees.Official_Email addresses.
 */
 Route::post('/planner/tasks/mail/{id}/assignees', [TasksMailController::class, 'mailTaskAssignees'])
     ->whereNumber('id');

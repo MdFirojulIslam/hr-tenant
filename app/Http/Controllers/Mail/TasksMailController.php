@@ -159,7 +159,7 @@ class TasksMailController extends Controller
      *
      * This endpoint creates the notification and immediately sends the
      * task assignment email to the assigned employees using their
-     * employees.Official_mail addresses. The system sender is
+     * employees.Official_Email addresses. The system sender is
      * noreply@hr.artisanbn.com (from MAIL_FROM_ADDRESS env).
      */
     public function mailTaskAssignees(Request $request, $id)
@@ -1045,7 +1045,7 @@ class TasksMailController extends Controller
      * Send the production task assignment mail to the actual recipient.
      *
      * Uses the system sender (noreply@hr.artisanbn.com from MAIL_FROM_ADDRESS env)
-     * and delivers to the assigned employee's employees.Official_mail.
+     * and delivers to the assigned employee's employees.Official_Email.
      *
      * Delivery tracking around the attempt:
      *   before  -> status pending, attempts 0, sent_at/delivered_at/failed_at NULL
@@ -1221,9 +1221,9 @@ class TasksMailController extends Controller
 
     /**
      * Map employee ids to notification_recipients.user_id (which stores employees.id)
-     * and resolve recipient email from employees.Official_mail.
+     * and resolve recipient email from employees.Official_Email.
      *
-     * Employees without an Official_mail are skipped and logged.
+     * Employees without an Official_Email are skipped and logged.
      */
     private function buildRecipientRows(array $employeeIds): array
     {
@@ -1231,7 +1231,7 @@ class TasksMailController extends Controller
             return [];
         }
 
-        $employees = employee::select('id', 'Full_Name', 'Employee_Id', 'Official_mail')
+        $employees = employee::select('id', 'Full_Name', 'Employee_Id', 'Official_Email')
             ->whereIn('id', $employeeIds)
             ->get()
             ->keyBy('id');
@@ -1249,10 +1249,10 @@ class TasksMailController extends Controller
                 continue;
             }
 
-            $officialMail = $employee->Official_mail ?? null;
+            $officialMail = $employee->Official_Email ?? null;
 
             if (! $officialMail || ! filter_var($officialMail, FILTER_VALIDATE_EMAIL)) {
-                Log::warning('Task notification recipient skipped, no valid Official_mail', [
+                Log::warning('Task notification recipient skipped, no valid Official_Email', [
                     'employee_id' => $employeeId,
                 ]);
 

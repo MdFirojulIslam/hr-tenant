@@ -147,57 +147,57 @@
     <!-- Body Content -->
     <div class="card-body">
       <div class="category-tag">Task Update</div>
-      <h1 class="main-title">You have been assigned to task: {{ $task_name ?? 'Hr profile module' }}</h1>
+      <h1 class="main-title">You have been assigned to task: {{ $task_name }}</h1>
 
-      <p class="greeting">Hello {{ $assignee_name ?? 'Tahmina Nasmeen Tumpa' }},</p>
-      <p class="message">{{ $assigned_by_name ?? 'Ferojul Islam' }} assigned you to the task "{{ $task_name ?? 'Hr profile module' }}".</p>
+      <p class="greeting">Hello {{ $assignee_name }},</p>
+      <p class="message">{{ $assigned_by_name }} assigned you to the task "{{ $task_name }}".</p>
 
       <!-- Metadata Table -->
       <table class="details-table">
         <tr>
           <td class="label-col">Task</td>
-          <td class="value-col">{{ $task_name ?? 'Hr profile module' }}</td>
+          <td class="value-col">{{ $task_name }}</td>
         </tr>
         <tr>
           <td class="label-col">Task ID</td>
-          <td class="value-col">#{{ $task_id ?? '1' }}</td>
+          <td class="value-col">#{{ $task_id }}</td>
         </tr>
         <tr>
           <td class="label-col">New Assignee(s)</td>
-          <td class="value-col">{{ $assignee_name ?? 'Tahmina Nasmeen Tumpa' }}</td>
+          <td class="value-col">{{ $assignee_name }}</td>
         </tr>
         <tr>
           <td class="label-col">Assigned By</td>
-          <td class="value-col">{{ $assigned_by_name ?? 'Ferojul Islam' }}</td>
+          <td class="value-col">{{ $assigned_by_name }}</td>
         </tr>
         <tr>
           <td class="label-col">Status</td>
-          <td class="value-col">{{ $status ?? 'Not started' }}</td>
+          <td class="value-col">{{ $status ?? '—' }}</td>
         </tr>
         <tr>
           <td class="label-col">Priority</td>
-          <td class="value-col">{{ $priority ?? 'Medium' }}</td>
+          <td class="value-col">{{ $priority ?? '—' }}</td>
         </tr>
         <tr>
           <td class="label-col">Start Date</td>
-          <td class="value-col">{{ $start_date ?? '2026-09-05' }}</td>
+          <td class="value-col">{{ $start_date ?? '—' }}</td>
         </tr>
         <tr>
           <td class="label-col">Due Date</td>
-          <td class="value-col">{{ $due_date ?? '2026-09-12' }}</td>
+          <td class="value-col">{{ $due_date ?? '—' }}</td>
         </tr>
         <tr>
           <td class="label-col">Assigned At</td>
-          <td class="value-col">{{ $assigned_at ?? '2026-09-30 11:37:44' }}</td>
+          <td class="value-col">{{ $assigned_at }}</td>
         </tr>
       </table>
 
       <!-- CTA Button -->
-      <a href="{{ $action_url ?? '#' }}" class="btn-action">Open task #{{ $task_id ?? '1' }}</a>
+      <a href="{{ $action_url }}" class="btn-action">Open task #{{ $task_id }}</a>
 
       <!-- Footer -->
       <p class="footer-text">
-        This is an automated Laravel notification (type: {{ $notification_type ?? 'task update' }}). Sent on {{ $assigned_at ?? '2026-09-30 11:37:44' }}.
+        This is an automated Laravel notification (type: {{ $notification_type ?? '—' }}). Sent on {{ $assigned_at }}.
       </p>
     </div>
   </div>

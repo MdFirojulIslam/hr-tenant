@@ -18,7 +18,7 @@ use Illuminate\Queue\SerializesModels;
  * resources/views/emails/task_assign.blade.php
  *
  * System sender: noreply@hr.artisanbn.com (from MAIL_FROM_ADDRESS env)
- * Recipient: employees.Official_mail of the assigned employee
+ * Recipient: employees.Official_Email of the assigned employee
  */
 class TaskAssignNotification extends Mailable
 {
@@ -40,7 +40,7 @@ class TaskAssignNotification extends Mailable
     public int $employeeId;
 
     /**
-     * Email of the assigned employee, resolved from employees.Official_mail.
+     * Email of the assigned employee, resolved from employees.Official_Email.
      */
     public string $recipientEmail;
 
@@ -66,7 +66,7 @@ class TaskAssignNotification extends Mailable
 
     /**
      * @param  int  $employeeId  employees.id of the assigned employee.
-     * @param  string  $recipientEmail  employees.Official_mail of the assigned employee.
+     * @param  string  $recipientEmail  employees.Official_Email of the assigned employee.
      * @param  string  $recipientName  Full name of the assigned employee.
      * @param  string  $taskName  Task name.
      * @param  int  $taskId  Task id.
@@ -152,7 +152,7 @@ class TaskAssignNotification extends Mailable
 
     public function subjectLine(): string
     {
-        return 'You have been assigned to task '.$this->taskName.' (#'.$this->taskId.')';
+        return 'You have been assigned to task ' . $this->taskName . ' (#' . $this->taskId . ')';
     }
 
     /**
