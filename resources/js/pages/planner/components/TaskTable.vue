@@ -226,14 +226,14 @@
                                     </select>
                                 </td>
                                 <td>
-                                    <span
+                                    <!-- <span
                                         class="badge"
                                         :class="statusBadge(task.status)"
                                     >
                                         {{ task.status }}
-                                    </span>
+                                    </span> -->
                                     <select
-                                        class="form-select form-select-sm status-select mt-1"
+                                        class="form-select form-select-sm"
                                         :value="task.status"
                                         @change="
                                             onFieldChange(
@@ -448,7 +448,7 @@ function priorityClass(priority) {
     position: relative;
     z-index: 2;
     padding: 9px 12px;
-    /* background-color: var(--pl-surface-alt); */
+    background-color: var(--pl-surface-alt);
     border-bottom: 1px solid var(--pl-border);
     font-size: 10.5px;
     font-weight: 700;
@@ -465,7 +465,7 @@ function priorityClass(priority) {
 
 .planner-table tbody tr td {
     padding: 8px 12px;
-    /* background-color: transparent; */
+    background-color: transparent;
     border-bottom: 1px solid var(--pl-border);
     vertical-align: middle;
     color: var(--pl-text-soft);
@@ -697,13 +697,14 @@ function priorityClass(priority) {
 /* --- Inline "+" affordance ------------------------------------------------ */
 .assign-mode .btn-add-inline {
     position: absolute;
-    top: 50%;
-    left: 20px;
+    /* top: 50%; */
+    top: 100%;
+    left: 30px;
     z-index: 5;
     display: none;
-    width: 22px;
-    height: 22px;
-    min-height: 22px;
+    width: 12px;
+    height: 10px;
+    min-height: 10px;
     padding: 0;
     transform: translateY(-50%);
     border: 1px solid var(--pl-border);

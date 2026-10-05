@@ -219,7 +219,7 @@
                             class="btn btn-sm btn-primary pl-assign-submit"
                             type="button"
                             :disabled="pickerSaving"
-                            @click="saveAssigneePicker"
+                            @click="submitAssignment"
                         >
                             <span
                                 v-if="pickerSaving"
@@ -247,7 +247,8 @@
 </template>
 
 <script setup>
-import { ref, computed } from "vue";
+import { ref, computed, watch } from "vue";
+import api from "@/api";
 
 const props = defineProps({
     task: { type: Object, default: null },
@@ -260,6 +261,10 @@ const props = defineProps({
 defineEmits(["close"]);
 
 const assigneeSearch = ref("");
+
+const notifying = ref(false);
+
+const assigneeIdsOnOpen = ref([]);
 
 const filteredEmployees = computed(() => {
     const q = assigneeSearch.value.trim().toLowerCase();
@@ -326,6 +331,87 @@ function toggleAssignment(emp) {
         employee: emp,
         read_status: false,
     });
+}
+
+function currentAssigneeIds() {
+    const task = props.task;
+
+    if (!task || !Array.isArray(task.assignees)) {
+        return [];
+    }
+
+    return task.assignees
+        .map((assignee) =>
+            Number(assignee.assigned_to || assignee.employee?.id),
+        )
+        .filter((empId) => Number.isInteger(empId) && empId > 0);
+}
+
+/*
+ * Employee ids that were already assigned when the picker was opened. Only the
+ * employees added after this baseline are reported as newly assigned, so an
+ * employee who was already on the task is never notified again.
+ */
+watch(
+    () => props.task,
+    () => {
+        assigneeIdsOnOpen.value = currentAssigneeIds();
+    },
+    { immediate: true },
+);
+
+/*
+ * Email notification for the newly assigned employees. It is raised only after
+ * the assignment request has succeeded, it never carries a name or an email
+ * address, and a failing notification is reported in the console only: the
+ * assignment itself is already saved and must not be repeated because of it.
+ */
+async function notifyNewAssignees(task, newlyAssigned) {
+    if (!task?.id || !newlyAssigned.length || notifying.value) {
+        return;
+    }
+
+    notifying.value = true;
+
+    try {
+        await api.post(`/planner/tasks/mail/${task.id}/assignees`, {
+            newly_assigned: newlyAssigned,
+        });
+    } catch (error) {
+        console.error("Task assignment notification failed.", error);
+    } finally {
+        notifying.value = false;
+    }
+}
+
+async function submitAssignment() {
+    const task = props.task;
+
+    if (!task || notifying.value) {
+        return;
+    }
+
+    const assigneesBeforeSave = task.assignees;
+    const newlyAssigned = currentAssigneeIds().filter(
+        (empId) => !assigneeIdsOnOpen.value.includes(empId),
+    );
+
+    try {
+        await props.saveAssigneePicker();
+    } catch (error) {
+        return;
+    }
+
+    /*
+     * The saved assignee list is only replaced when the assignment request
+     * succeeded, so an untouched list means nothing was persisted and no
+     * notification may be raised for it.
+     */
+    if (task.assignees === assigneesBeforeSave) {
+        return;
+    }
+
+    await notifyNewAssignees(task, newlyAssigned);
 }
 </script>
 

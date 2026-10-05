@@ -178,6 +178,13 @@ defineEmits([
     flex-shrink: 0;
 }
 
+.pl-seg {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
 /* --- Privacy toggles ------------------------------------------------------ */
 .pl-toggles {
     display: inline-flex;

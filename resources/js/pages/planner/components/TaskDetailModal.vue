@@ -7,7 +7,7 @@
         aria-modal="true"
         aria-labelledby="plannerTaskDetailTitle"
     >
-        <div class="modal-dialog modal-xl modal-dialog-centered">
+        <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content shadow">
                 <h2 id="plannerTaskDetailTitle" class="visually-hidden">
                     Task details &mdash;
@@ -31,7 +31,7 @@
                             ></textarea>
                         </div>
 
-                        <p class="pl-meta-line">
+                        <p class="pl-meta-line mt-3">
                             <i
                                 class="fa-regular fa-circle-info"
                                 aria-hidden="true"
@@ -58,8 +58,8 @@
                             <span v-else class="pl-meta-unread"> Unread </span>
                         </p>
 
-                        <div class="pl-chip-row">
-                            <span class="pl-label-pill">
+                        <div class="pl-chip-row mt-3">
+                            <!-- <span class="pl-label-pill">
                                 <i
                                     class="fa-solid fa-tag"
                                     aria-hidden="true"
@@ -67,7 +67,7 @@
                                 Add label
                             </span>
 
-                            <span class="pl-chip-sep" aria-hidden="true"></span>
+                            <span class="pl-chip-sep" aria-hidden="true"></span> -->
 
                             <span class="pl-assignee-box">
                                 <span class="pl-assignee-faces">
@@ -137,11 +137,7 @@
                 <!-- ================= BODY ================= -->
                 <div class="modal-body pl-dt-body">
                     <!-- ---------- Task details panel ---------- -->
-                    <div
-                        id="plPanelDetails"
-                        role="tabpanel"
-                        tabindex="0"
-                    >
+                    <div id="plPanelDetails" role="tabpanel" tabindex="0">
                         <div class="pl-prop-grid">
                             <!-- Status -->
                             <div class="pl-prop">
@@ -342,12 +338,14 @@
                             class="pl-section"
                             aria-labelledby="plChecklistTitle"
                         >
-                            <div class="pl-sec-head">
+                            <div
+                                class="d-flex justify-content-between pl-sec-head"
+                            >
                                 <h3 id="plChecklistTitle" class="pl-sec-title">
-                                    <i
+                                    <!-- <i
                                         class="fa-regular fa-square-check"
                                         aria-hidden="true"
-                                    ></i>
+                                    ></i> -->
                                     Checklist
                                     <span class="pl-section-count">
                                         ({{ detailChecklistCompleted }} of
@@ -376,23 +374,23 @@
                                 </div>
                             </div>
 
-                            <p
+                            <!-- <p
                                 v-if="!detailChecklists.length"
                                 class="pl-empty-hint"
                             >
-                                <span
+                            <span
                                     class="pl-empty-icon pl-hint-icon"
                                     aria-hidden="true"
                                 >
                                     <i class="fa-regular fa-square-check"></i>
                                 </span>
-                                <span>
+                            <span>
                                     No checklist items yet. Add the first step
                                     below.
                                 </span>
-                            </p>
+                            </p> -->
 
-                            <ul v-else class="pl-checklist">
+                            <ul class="pl-checklist">
                                 <li
                                     v-for="cl in detailChecklists"
                                     :key="cl.id"
@@ -473,13 +471,13 @@
                         >
                             <div class="pl-sec-head">
                                 <h3 id="plNotesTitle" class="pl-sec-title">
-                                    <i
+                                    <!-- <i
                                         class="fa-regular fa-note-sticky"
                                         aria-hidden="true"
-                                    ></i>
-Notes
-                            </h3>
-                        </div>
+                                    ></i> -->
+                                    Notes
+                                </h3>
+                            </div>
                             <textarea
                                 id="plannerDetailNotes"
                                 v-model="detailForm.notes"
@@ -734,7 +732,6 @@ const assigneeLabel = computed(() => {
 }
 
 .pl-assignee-faces,
-
 .pl-assignee-faces .avatar-chip + .avatar-chip {
     margin-left: -7px;
 }
@@ -1173,7 +1170,6 @@ const assigneeLabel = computed(() => {
         padding-left: 18px;
         padding-right: 18px;
     }
-
 }
 
 @media (max-width: 767.98px) {
@@ -1204,7 +1200,6 @@ const assigneeLabel = computed(() => {
     .task-detail-modal .modal-header,
     .task-detail-modal .modal-body,
     .task-detail-modal .modal-footer,
-
     .task-detail-modal .modal-header {
         padding-top: 14px;
     }

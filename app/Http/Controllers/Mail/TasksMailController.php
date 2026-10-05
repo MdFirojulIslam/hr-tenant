@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Mail;
 
 use App\Http\Controllers\Controller;
+use App\Mail\TaskAssignNotification;
 use App\Models\employee;
 use App\Models\Task;
 use App\Models\TasksAssignee;
@@ -25,11 +26,12 @@ class TasksMailController extends Controller
     /**
      * Master switch for the task mailing pipeline.
      *
-     * When enabled the controller still only ever performs the restricted
-     * development test mail defined by TEST_MAIL_FROM / TEST_MAIL_TO. It never
-     * delivers to an employee, supervisor, HR address or any other user.
+     * Delivery is OFF. While this is false no branch of this controller can
+     * reach the mail transport or the mail queue: sendTestTaskMail() returns
+     * before it touches Mail, and the assignee path never asks for a delivery
+     * at all. Flip it to true only when real delivery is intended.
      */
-    public const MAIL_SENDING_ENABLED = true;
+    public const MAIL_SENDING_ENABLED = false;
 
     /**
      * Restricted development test mail addresses.
@@ -89,11 +91,16 @@ class TasksMailController extends Controller
     {
         return response()->json([
             'success' => true,
-            'message' => 'Task mailing pipeline is running in restricted test mail mode.',
+            'message' => self::MAIL_SENDING_ENABLED
+                ? 'Task mailing pipeline is running in restricted test mail mode.'
+                : 'Task mailing pipeline is prepared only. No email is sent or queued.',
             'data' => [
                 'sending_enabled' => self::MAIL_SENDING_ENABLED,
                 'notification_types' => $this->notificationTypeNames(),
                 'delivery_channel' => self::DELIVERY_CHANNEL_MAIL,
+                'task_assignment_mailable' => TaskAssignNotification::class,
+                'task_assignment_view' => TaskAssignNotification::VIEW,
+                'task_assignment_delivery_enabled' => TaskAssignNotification::DELIVERY_ENABLED,
                 'test_mail_from' => self::TEST_MAIL_FROM,
                 'test_mail_to' => self::TEST_MAIL_TO,
                 'restricted_to_test_recipient' => true,
@@ -109,7 +116,7 @@ class TasksMailController extends Controller
         return $this->dispatchTaskNotification(
             $request,
             self::TYPE_TASK_CREATE,
-            fn (Task $task, int $actorEid, array $validated) => $this->buildTaskCreate($task, $actorEid, $validated)
+            fn(Task $task, int $actorEid, array $validated) => $this->buildTaskCreate($task, $actorEid, $validated)
         );
     }
 
@@ -121,7 +128,7 @@ class TasksMailController extends Controller
         return $this->dispatchTaskNotification(
             $request,
             self::TYPE_TASK_UPDATE,
-            fn (Task $task, int $actorEid, array $validated) => $this->buildTaskUpdate($task, $actorEid, $validated)
+            fn(Task $task, int $actorEid, array $validated) => $this->buildTaskUpdate($task, $actorEid, $validated)
         );
     }
 
@@ -133,7 +140,7 @@ class TasksMailController extends Controller
         return $this->dispatchTaskNotification(
             $request,
             self::TYPE_NEW_CHECKLIST,
-            fn (Task $task, int $actorEid, array $validated) => $this->buildNewChecklist($task, $actorEid, $validated)
+            fn(Task $task, int $actorEid, array $validated) => $this->buildNewChecklist($task, $actorEid, $validated)
         );
     }
 
@@ -145,7 +152,7 @@ class TasksMailController extends Controller
         return $this->dispatchTaskNotification(
             $request,
             self::TYPE_TASK_COMPLETE,
-            fn (Task $task, int $actorEid, array $validated) => $this->buildTaskComplete($task, $actorEid, $validated)
+            fn(Task $task, int $actorEid, array $validated) => $this->buildTaskComplete($task, $actorEid, $validated)
         );
     }
 
@@ -157,7 +164,7 @@ class TasksMailController extends Controller
         return $this->dispatchTaskNotification(
             $request,
             self::TYPE_UPDATED_PERFORMS,
-            fn (Task $task, int $actorEid, array $validated) => $this->buildUpdatedPerforms($task, $actorEid, $validated)
+            fn(Task $task, int $actorEid, array $validated) => $this->buildUpdatedPerforms($task, $actorEid, $validated)
         );
     }
 
@@ -168,13 +175,26 @@ class TasksMailController extends Controller
      * list has been persisted by TasksController::storeAssignees. The stored
      * assignee rows are therefore the source of truth for the recipients.
      *
-     * Because this endpoint fires on ordinary planner usage, it only records
-     * the notification, recipient and pending delivery rows. It deliberately
-     * does not send the test mail, so normal task usage can never produce
-     * unexpected mail. The five explicit notification endpoints are the
-     * intended way to exercise the delivery path.
+     * Two things happen here, and neither of them delivers mail:
+     *
+     *   1. prepareAssigneeTaskMails() builds one TaskAssignNotification per
+     *      assigned employee. Each mailable is bound to the existing
+     *      resources/views/emails/task_assign.blade.php template and carries
+     *      the email address of the assigned employee as its recipient.
+     *      The mailable itself refuses to send or queue (see
+     *      App\Mail\TaskAssignNotification), and this controller never calls
+     *      Mail::to(), Mail::send(), Mail::queue() or Mail::later().
+     *
+     *   2. the notification, recipient and pending delivery rows are recorded.
+     *
+     * Runtime behaviour therefore stays: task assignment -> no email sent.
      */
     public function mailTaskAssignees(Request $request, $id)
+    {
+        $notificationName = "";
+    }
+
+    public function testReserve(Request $request, $id)
     {
         $task = Task::with(['assignees', 'checklists', 'results'])->find($id);
 
@@ -182,12 +202,106 @@ class TasksMailController extends Controller
             return response()->json(['success' => false, 'message' => 'Task not found'], 404);
         }
 
-        return $this->dispatchTaskNotification(
+        $preparedMails = $this->prepareAssigneeTaskMails($task);
+
+        $response = $this->dispatchTaskNotification(
             $request->merge(['task_id' => (int) $task->id]),
             self::TYPE_TASK_UPDATE,
-            fn (Task $task, int $actorEid, array $validated) => $this->buildAssigneeChange($task, $actorEid, $validated),
+            fn(Task $task, int $actorEid, array $validated) => $this->buildAssigneeChange($task, $actorEid, $validated),
             false
         );
+
+        return $this->withPreparedTaskAssignMails($response, $preparedMails);
+    }
+
+    /**
+     * Build one TaskAssignNotification per employee that is currently assigned
+     * to the task.
+     *
+     * The recipients are resolved with buildRecipientRows(), the same helper the
+     * notification pipeline already uses, so the assigned employee's email comes
+     * from users.email through users.EID = employees.id. No new recipient query
+     * is introduced here.
+     *
+     * The returned array is metadata only: it reports which employee the mail
+     * was prepared for and which template it would use. Nothing is rendered to a
+     * recipient and no Mailable delivery method is invoked.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function prepareAssigneeTaskMails(Task $task): array
+    {
+        $task->loadMissing(['assignees', 'checklists', 'results']);
+
+        $employeeIds = $this->assigneeIds($task);
+
+        if (empty($employeeIds)) {
+            return [];
+        }
+
+        $actorEid = $this->currentEmployeeId();
+        $data = $this->buildTaskData($task, $actorEid, self::TYPE_TASK_UPDATE);
+        $assignedAt = $task->updated_at ? $task->updated_at->toDateTimeString() : now()->toDateTimeString();
+
+        $recipients = collect($this->buildRecipientRows($employeeIds))->keyBy('employee_id');
+        $prepared = [];
+
+        foreach ($employeeIds as $employeeId) {
+            $recipient = $recipients->get($employeeId);
+
+            if (! $recipient) {
+                continue;
+            }
+
+            // Constructed for representation only. Delivery stays disabled
+            // inside the mailable, and nothing below ever sends or queues it.
+            $mailable = new TaskAssignNotification(
+                employeeId: $employeeId,
+                recipientEmail: (string) ($recipient['email'] ?? ''),
+                recipientName: (string) ($recipient['employee_name'] ?? ''),
+                taskName: (string) ($data['task_name'] ?? ''),
+                taskId: (int) ($data['task_id'] ?? $task->id),
+                assignedByName: (string) ($data['assigned_by_name'] ?? ''),
+                status: (string) ($data['status'] ?? ''),
+                priority: (string) ($data['priority'] ?? ''),
+                startDate: (string) ($data['start_date'] ?? ''),
+                dueDate: (string) ($data['due_date'] ?? ''),
+                assignedAt: $assignedAt,
+                actionUrl: (string) ($this->taskActionUrl() ?? ''),
+            );
+
+            $prepared[] = [
+                'employee_id' => $employeeId,
+                'employee_name' => $mailable->recipientName,
+                'employee_code' => $recipient['employee_code'] ?? null,
+                'recipient_email_resolved' => $mailable->hasRecipientEmail(),
+                'mailable' => TaskAssignNotification::class,
+                'view' => $mailable::VIEW,
+                'subject' => $mailable->subjectLine(),
+                'delivery_enabled' => $mailable::DELIVERY_ENABLED,
+                'sent' => false,
+                'queued' => false,
+            ];
+        }
+
+        return $prepared;
+    }
+
+    /**
+     * Attach the prepared task assignment mail metadata to the notification
+     * response. The recipient addresses themselves are never returned to the
+     * caller, only whether one could be resolved.
+     */
+    private function withPreparedTaskAssignMails(JsonResponse $response, array $preparedMails): JsonResponse
+    {
+        $payload = $response->getData(true);
+
+        if (isset($payload['data']['mail']) && is_array($payload['data']['mail'])) {
+            $payload['data']['mail']['prepared'] = $preparedMails;
+            $payload['data']['mail']['prepared_count'] = count($preparedMails);
+        }
+
+        return response()->json($payload, $response->getStatusCode());
     }
 
     /**
@@ -446,7 +560,7 @@ class TasksMailController extends Controller
             'notification_recipient_employee_id' => $recipient['employee_id'],
             'notification_recipient_name' => $recipient['employee_name'],
             'notification_recipient_email' => $recipient['email'],
-            'subject' => '[Artisan HRIS] '.$presentation['subject'].': '.$taskName,
+            'subject' => '[Artisan HRIS] ' . $presentation['subject'] . ': ' . $taskName,
             'title' => $payload['title'],
             'body' => $payload['body'],
             'data' => $data,
@@ -545,7 +659,7 @@ class TasksMailController extends Controller
             unset($rows['Revised due date']);
         }
 
-        return array_filter($rows, fn ($value) => $value !== null && $value !== '' && $value !== 'N/A');
+        return array_filter($rows, fn($value) => $value !== null && $value !== '' && $value !== 'N/A');
     }
 
     /**
@@ -564,7 +678,7 @@ class TasksMailController extends Controller
             'Checklist status' => ($data['checklist_completed'] ?? false) ? 'Completed' : 'Outstanding',
         ];
 
-        return array_filter($rows, fn ($value) => $value !== null && $value !== '');
+        return array_filter($rows, fn($value) => $value !== null && $value !== '');
     }
 
     /**
@@ -579,7 +693,7 @@ class TasksMailController extends Controller
             'Completed at' => $this->displayDateTime($data['completed_at'] ?? null),
         ];
 
-        $rows = array_filter($rows, fn ($value) => $value !== null && $value !== '' && $value !== 'N/A');
+        $rows = array_filter($rows, fn($value) => $value !== null && $value !== '' && $value !== 'N/A');
 
         return count($rows) > 1 ? $rows : [];
     }
@@ -606,7 +720,7 @@ class TasksMailController extends Controller
                 'Performed by' => $data['performed_by_name'] ?? null,
                 'Performed at' => $this->displayDate($data['performed_at'] ?? null),
                 'Reported status' => $data['reported_status'] ?? null,
-            ], fn ($value) => $value !== null && $value !== ''),
+            ], fn($value) => $value !== null && $value !== ''),
         ];
     }
 
@@ -631,7 +745,7 @@ class TasksMailController extends Controller
         }
 
         return collect($assignees)
-            ->map(fn (array $assignee) => [
+            ->map(fn(array $assignee) => [
                 'name' => (string) ($assignee['employee_name'] ?? 'Unknown'),
                 'code' => (string) ($assignee['employee_code'] ?? ''),
             ])
@@ -651,7 +765,7 @@ class TasksMailController extends Controller
     {
         $base = rtrim((string) config('app.url'), '/');
 
-        return preg_match('#^https?://#i', $base) ? $base.'/planner/my-tasks' : null;
+        return preg_match('#^https?://#i', $base) ? $base . '/planner/my-tasks' : null;
     }
 
     /**
@@ -674,8 +788,8 @@ class TasksMailController extends Controller
             $sections .= $this->mailCard(
                 'Task description',
                 null,
-                '<p style="margin:0;font-size:14px;line-height:22px;color:'.self::MAIL_BODY.';">'
-                .nl2br(e($mail['description'])).'</p>'
+                '<p style="margin:0;font-size:14px;line-height:22px;color:' . self::MAIL_BODY . ';">'
+                    . nl2br(e($mail['description'])) . '</p>'
             );
         }
 
@@ -693,10 +807,10 @@ class TasksMailController extends Controller
                 'Performance',
                 null,
                 $this->mailProgressBar($performance['percent'], $accent)
-                .'<p style="margin:0 0 16px 0;font-size:14px;line-height:20px;color:'.self::MAIL_BODY.';">'
-                .e($performance['completed']).' of '.$performance['total'].' checklist items completed ('
-                .e($performance['percent']).'%).</p>'
-                .$this->mailRows($performance['rows'])
+                    . '<p style="margin:0 0 16px 0;font-size:14px;line-height:20px;color:' . self::MAIL_BODY . ';">'
+                    . e($performance['completed']) . ' of ' . $performance['total'] . ' checklist items completed ('
+                    . e($performance['percent']) . '%).</p>'
+                    . $this->mailRows($performance['rows'])
             );
         }
 
@@ -704,70 +818,70 @@ class TasksMailController extends Controller
             $items = '';
 
             foreach ($mail['assignees'] as $assignee) {
-                $code = $assignee['code'] !== '' ? ' <span style="color:'.self::MAIL_MUTED.';">('.$this->esc($assignee['code']).')</span>' : '';
-                $items .= '<li style="margin:0 0 6px 0;font-size:14px;line-height:20px;color:'.self::MAIL_BODY.';">'
-                .$this->esc($assignee['name']).$code.'</li>';
+                $code = $assignee['code'] !== '' ? ' <span style="color:' . self::MAIL_MUTED . ';">(' . $this->esc($assignee['code']) . ')</span>' : '';
+                $items .= '<li style="margin:0 0 6px 0;font-size:14px;line-height:20px;color:' . self::MAIL_BODY . ';">'
+                    . $this->esc($assignee['name']) . $code . '</li>';
             }
 
             $sections .= $this->mailCard(
                 'Assignees',
                 null,
-                '<ul style="margin:0;padding:0 0 0 18px;">'.$items.'</ul>'
+                '<ul style="margin:0;padding:0 0 0 18px;">' . $items . '</ul>'
             );
         }
 
         $action = $mail['action_url'] ? $this->mailButton('View Task', $mail['action_url'], $accent) : '';
 
         return $this->mailShell(
-            $this->mailPreheader($mail['title'].' - '.$mail['task_name'])
-            .$this->mailHeader($brand, $accent)
-            .$this->mailHero($mail, $view, $accent, $tint)
-            .'<tr><td style="padding:0 24px 24px 24px;">'.$sections.$action.'</td></tr>'
-            .$this->mailTestNotice()
-            .$this->mailFooter($brand),
-            $this->esc($mail['title'].' - '.$mail['task_name'])
+            $this->mailPreheader($mail['title'] . ' - ' . $mail['task_name'])
+                . $this->mailHeader($brand, $accent)
+                . $this->mailHero($mail, $view, $accent, $tint)
+                . '<tr><td style="padding:0 24px 24px 24px;">' . $sections . $action . '</td></tr>'
+                . $this->mailTestNotice()
+                . $this->mailFooter($brand),
+            $this->esc($mail['title'] . ' - ' . $mail['task_name'])
         );
     }
 
     private function mailShell(string $body, string $title): string
     {
         return '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">'
-        .'<html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head>'
-        .'<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />'
-        .'<meta name="viewport" content="width=device-width, initial-scale=1" />'
-        .'<meta name="color-scheme" content="light" />'
-        .'<title>'.$title.'</title>'
-        .'<!--[if mso]><style>body,table,td{font-family:Arial,sans-serif !important;}.wrap{width:600px !important;}</style><![endif]-->'
-        .'<style>'
-        .'@media only screen and (max-width:620px){'
-        .'.wrap{width:100% !important;}.pad{padding-left:16px !important;padding-right:16px !important;}'
-        .'.hero-title{font-size:20px !important;line-height:28px !important;}.stack{width:100% !important;display:block !important;}'
-        .'.btn{width:100% !important;display:block !important;box-sizing:border-box !important;}'
-        .'}'
-        .'</style></head>'
-        .'<body style="margin:0;padding:0;background-color:#eef2f7;'
-        .'-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;">'
-        .$body
-        .'</body></html>';
+            . '<html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head>'
+            . '<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />'
+            . '<meta name="viewport" content="width=device-width, initial-scale=1" />'
+            . '<meta name="color-scheme" content="light" />'
+            . '<title>' . $title . '</title>'
+            . '<!--[if mso]><style>body,table,td{font-family:Arial,sans-serif !important;}.wrap{width:600px !important;}</style><![endif]-->'
+            . '<style>'
+            . '@media only screen and (max-width:620px){'
+            . '.wrap{width:100% !important;}.pad{padding-left:16px !important;padding-right:16px !important;}'
+            . '.hero-title{font-size:20px !important;line-height:28px !important;}.stack{width:100% !important;display:block !important;}'
+            . '.btn{width:100% !important;display:block !important;box-sizing:border-box !important;}'
+            . '}'
+            . '</style></head>'
+            . '<body style="margin:0;padding:0;background-color:#eef2f7;'
+            . '-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;">'
+            . $body
+            . '</body></html>';
     }
 
     private function mailPreheader(string $text): string
     {
         return '<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;font-size:1px;line-height:1px;color:#eef2f7;">'
-        .$this->esc($text).'</div>';
+            . $this->esc($text) . '</div>';
     }
 
     private function mailHeader(string $brand, string $accent): string
     {
         return '<tr><td class="pad" style="padding:0;">'
-        .'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;background-color:#0f2942;border-radius:12px 12px 0 0;">'
-        .'<tr><td style="height:4px;font-size:0;line-height:0;background-color:'.$accent.';">&nbsp;</td></tr>'
-        .'<tr><td style="padding:26px 24px 24px 24px;">'
-        .'<p style="margin:0 0 6px 0;font-family:Arial,Helvetica,sans-serif;font-size:19px;line-height:24px;font-weight:bold;letter-spacing:0.4px;color:#ffffff;">'
-        .$this->esc($brand).'</p>'
-        .'<p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:18px;letter-spacing:1.4px;text-transform:uppercase;color:#93b4d6;">'
-        .'Task Notification</p>'
-        .'</td></tr></table></td></tr>';
+            . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;background-color:#0f2942;border-radius:12px 12px 0 0;">'
+            . '<tr><td style="height:4px;font-size:0;line-height:0;background-color:' . $accent . ';">&nbsp;</td></tr>'
+            . '<tr><td style="padding:26px 24px 24px 24px;">'
+            . '<p style="margin:0 0 6px 0;font-family:Arial,Helvetica,sans-serif;font-size:19px;line-height:24px;font-weight:bold;letter-spacing:0.4px;color:#ffffff;">'
+            . $this->esc($brand) . '</p>'
+            . '<p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:18px;letter-spacing:1.4px;text-transform:uppercase;color:#93b4d6;">'
+            . 'Task Notification</p>'
+            . '</td></tr></table></td></tr>';
     }
 
     private function mailHero(array $mail, array $view, string $accent, string $tint): string
@@ -779,29 +893,29 @@ class TasksMailController extends Controller
         // repeated when the notification title says something different.
         $heading = strcasecmp($title, $view['eyebrow']) === 0
             ? ''
-            : '<h1 class="hero-title" style="margin:0 0 8px 0;font-family:Arial,Helvetica,sans-serif;font-size:23px;line-height:30px;font-weight:bold;color:'.self::MAIL_INK.';">'
-            .$this->esc($title).'</h1>';
+            : '<h1 class="hero-title" style="margin:0 0 8px 0;font-family:Arial,Helvetica,sans-serif;font-size:23px;line-height:30px;font-weight:bold;color:' . self::MAIL_INK . ';">'
+            . $this->esc($title) . '</h1>';
 
         return '<tr><td class="pad" style="padding:0;">'
-        .'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;background-color:#ffffff;border-left:1px solid '.self::MAIL_LINE.';border-right:1px solid '.self::MAIL_LINE.';">'
-        .'<tr><td style="padding:24px;">'
-        .'<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 14px 0;"><tr>'
-        .'<td style="background-color:'.$tint.';border:1px solid '.$accent.';border-radius:20px;padding:5px 12px;">'
-        .'<span style="font-family:Arial,Helvetica,sans-serif;font-size:11px;line-height:14px;font-weight:bold;letter-spacing:1px;text-transform:uppercase;color:'.$accent.';">'
-        .$this->esc($view['eyebrow']).'</span></td></tr></table>'
-        .$heading
-        .'<p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:23px;color:'.self::MAIL_BODY.';">'
-        .$this->esc($view['headline']).'</p>'
-        .'<p style="margin:12px 0 0 0;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:22px;color:'.self::MAIL_BODY.';">'
-        .$this->esc($mail['body']).'</p>'
-        .($status !== '' ? '<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:16px 0 0 0;"><tr>'.$this->mailStatusBadge($status).'</tr></table>' : '')
-        .'</td></tr></table></td></tr>'
-        .'<tr><td class="pad" style="padding:20px 24px 4px 24px;">'
-        .'<p style="margin:0 0 4px 0;font-family:Arial,Helvetica,sans-serif;font-size:11px;line-height:16px;letter-spacing:1.2px;text-transform:uppercase;color:'.self::MAIL_MUTED.';">'
-        .'Task</p>'
-        .'<p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:19px;line-height:26px;font-weight:bold;color:'.self::MAIL_INK.';">'
-        .$this->esc($mail['task_name']).'</p>'
-        .'</td></tr>';
+            . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;background-color:#ffffff;border-left:1px solid ' . self::MAIL_LINE . ';border-right:1px solid ' . self::MAIL_LINE . ';">'
+            . '<tr><td style="padding:24px;">'
+            . '<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 14px 0;"><tr>'
+            . '<td style="background-color:' . $tint . ';border:1px solid ' . $accent . ';border-radius:20px;padding:5px 12px;">'
+            . '<span style="font-family:Arial,Helvetica,sans-serif;font-size:11px;line-height:14px;font-weight:bold;letter-spacing:1px;text-transform:uppercase;color:' . $accent . ';">'
+            . $this->esc($view['eyebrow']) . '</span></td></tr></table>'
+            . $heading
+            . '<p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:23px;color:' . self::MAIL_BODY . ';">'
+            . $this->esc($view['headline']) . '</p>'
+            . '<p style="margin:12px 0 0 0;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:22px;color:' . self::MAIL_BODY . ';">'
+            . $this->esc($mail['body']) . '</p>'
+            . ($status !== '' ? '<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:16px 0 0 0;"><tr>' . $this->mailStatusBadge($status) . '</tr></table>' : '')
+            . '</td></tr></table></td></tr>'
+            . '<tr><td class="pad" style="padding:20px 24px 4px 24px;">'
+            . '<p style="margin:0 0 4px 0;font-family:Arial,Helvetica,sans-serif;font-size:11px;line-height:16px;letter-spacing:1.2px;text-transform:uppercase;color:' . self::MAIL_MUTED . ';">'
+            . 'Task</p>'
+            . '<p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:19px;line-height:26px;font-weight:bold;color:' . self::MAIL_INK . ';">'
+            . $this->esc($mail['task_name']) . '</p>'
+            . '</td></tr>';
     }
 
     /**
@@ -811,9 +925,9 @@ class TasksMailController extends Controller
     {
         $tone = $this->statusTone($status);
 
-        return '<td style="background-color:'.$tone['bg'].';border:1px solid '.$tone['bd'].';border-radius:6px;padding:6px 12px;">'
-        .'<span style="font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:16px;font-weight:bold;letter-spacing:0.6px;text-transform:uppercase;color:'.$tone['fg'].'">'
-        .$this->esc($status).'</span></td>';
+        return '<td style="background-color:' . $tone['bg'] . ';border:1px solid ' . $tone['bd'] . ';border-radius:6px;padding:6px 12px;">'
+            . '<span style="font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:16px;font-weight:bold;letter-spacing:0.6px;text-transform:uppercase;color:' . $tone['fg'] . '">'
+            . $this->esc($status) . '</span></td>';
     }
 
     private function statusTone(?string $status): array
@@ -831,16 +945,16 @@ class TasksMailController extends Controller
         $heading = $label;
 
         if ($title) {
-            $heading = $label.' - '.$title;
+            $heading = $label . ' - ' . $title;
         }
 
         return '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;margin:0 0 16px 0;'
-        .'background-color:'.self::MAIL_SOFT.';border:1px solid '.self::MAIL_LINE.';border-radius:10px;">'
-        .'<tr><td style="padding:18px 20px;">'
-        .'<p style="margin:0 0 12px 0;font-family:Arial,Helvetica,sans-serif;font-size:11px;line-height:16px;letter-spacing:1.2px;text-transform:uppercase;color:'.self::MAIL_MUTED.';">'
-        .$this->esc($heading).'</p>'
-        .$inner
-        .'</td></tr></table>';
+            . 'background-color:' . self::MAIL_SOFT . ';border:1px solid ' . self::MAIL_LINE . ';border-radius:10px;">'
+            . '<tr><td style="padding:18px 20px;">'
+            . '<p style="margin:0 0 12px 0;font-family:Arial,Helvetica,sans-serif;font-size:11px;line-height:16px;letter-spacing:1.2px;text-transform:uppercase;color:' . self::MAIL_MUTED . ';">'
+            . $this->esc($heading) . '</p>'
+            . $inner
+            . '</td></tr></table>';
     }
 
     /**
@@ -852,14 +966,14 @@ class TasksMailController extends Controller
 
         foreach ($rows as $label => $value) {
             $html .= '<tr>'
-            .'<td class="stack" width="42%" valign="top" style="padding:7px 12px 7px 0;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:19px;color:'.self::MAIL_MUTED.';">'
-            .$this->esc($label).'</td>'
-            .'<td class="stack" valign="top" style="padding:7px 0;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:19px;font-weight:bold;color:'.self::MAIL_INK.';">'
-            .$this->esc($value).'</td>'
-            .'</tr>';
+                . '<td class="stack" width="42%" valign="top" style="padding:7px 12px 7px 0;font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:19px;color:' . self::MAIL_MUTED . ';">'
+                . $this->esc($label) . '</td>'
+                . '<td class="stack" valign="top" style="padding:7px 0;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:19px;font-weight:bold;color:' . self::MAIL_INK . ';">'
+                . $this->esc($value) . '</td>'
+                . '</tr>';
         }
 
-        return $html.'</table>';
+        return $html . '</table>';
     }
 
     private function mailProgressBar(int $percent, string $accent): string
@@ -868,10 +982,10 @@ class TasksMailController extends Controller
         $rest = 100 - $percent;
 
         return '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse;margin:0 0 16px 0;">'
-        .'<tr>'
-        .'<td width="'.$percent.'%" height="8" style="height:8px;font-size:0;line-height:0;background-color:'.$accent.';">&nbsp;</td>'
-        .'<td width="'.$rest.'%" height="8" style="height:8px;font-size:0;line-height:0;background-color:'.self::MAIL_LINE.';">&nbsp;</td>'
-        .'</tr></table>';
+            . '<tr>'
+            . '<td width="' . $percent . '%" height="8" style="height:8px;font-size:0;line-height:0;background-color:' . $accent . ';">&nbsp;</td>'
+            . '<td width="' . $rest . '%" height="8" style="height:8px;font-size:0;line-height:0;background-color:' . self::MAIL_LINE . ';">&nbsp;</td>'
+            . '</tr></table>';
     }
 
     /**
@@ -883,16 +997,16 @@ class TasksMailController extends Controller
         $safe = $this->esc($url);
 
         return '<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin:4px 0 0 0;">'
-        .'<tr><td style="border-radius:8px;background-color:'.$accent.';">'
-        .'<a class="btn" href="'.$safe.'" target="_blank" style="display:inline-block;padding:13px 26px;font-family:Arial,Helvetica,sans-serif;'
-        .'font-size:15px;line-height:18px;font-weight:bold;color:#ffffff;text-decoration:none;border-radius:8px;">'
-        .$this->esc($label).'</a>'
-        .'</td></tr></table>'
-        .'<div style="display:none;mso-hide:all;">'
-        .'<v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="'.$safe.'" '
-        .'style="height:46px;v-text-anchor:middle;width:180px;" arcsize="17%" strokecolor="'.$accent.'" fillcolor="'.$accent.'">'
-        .'<w:anchorlock/><center style="color:#ffffff;font-family:Arial,sans-serif;font-size:15px;font-weight:bold;">'
-        .$this->esc($label).'</center></v:roundrect></div>';
+            . '<tr><td style="border-radius:8px;background-color:' . $accent . ';">'
+            . '<a class="btn" href="' . $safe . '" target="_blank" style="display:inline-block;padding:13px 26px;font-family:Arial,Helvetica,sans-serif;'
+            . 'font-size:15px;line-height:18px;font-weight:bold;color:#ffffff;text-decoration:none;border-radius:8px;">'
+            . $this->esc($label) . '</a>'
+            . '</td></tr></table>'
+            . '<div style="display:none;mso-hide:all;">'
+            . '<v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="' . $safe . '" '
+            . 'style="height:46px;v-text-anchor:middle;width:180px;" arcsize="17%" strokecolor="' . $accent . '" fillcolor="' . $accent . '">'
+            . '<w:anchorlock/><center style="color:#ffffff;font-family:Arial,sans-serif;font-size:15px;font-weight:bold;">'
+            . $this->esc($label) . '</center></v:roundrect></div>';
     }
 
     /**
@@ -902,33 +1016,33 @@ class TasksMailController extends Controller
     private function mailTestNotice(): string
     {
         return '<tr><td class="pad" style="padding:0 24px 24px 24px;">'
-        .'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;background-color:#fffbeb;border:1px solid #fde68a;border-radius:10px;">'
-        .'<tr><td style="padding:14px 18px;">'
-        .'<p style="margin:0 0 4px 0;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:18px;font-weight:bold;color:#92400e;">'
-        .'Development test mail</p>'
-        .'<p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:18px;color:#92400e;">'
-        .'This notification is recorded for the real recipient in the system, but the email itself is '
-        .'delivered only to the restricted test mailbox <strong>'.e(self::TEST_MAIL_TO).'</strong>. '
-        .'It was sent from <strong>'.e(self::TEST_MAIL_FROM).'</strong>.</p>'
-        .'</td></tr></table></td></tr>';
+            . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;background-color:#fffbeb;border:1px solid #fde68a;border-radius:10px;">'
+            . '<tr><td style="padding:14px 18px;">'
+            . '<p style="margin:0 0 4px 0;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:18px;font-weight:bold;color:#92400e;">'
+            . 'Development test mail</p>'
+            . '<p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:18px;color:#92400e;">'
+            . 'This notification is recorded for the real recipient in the system, but the email itself is '
+            . 'delivered only to the restricted test mailbox <strong>' . e(self::TEST_MAIL_TO) . '</strong>. '
+            . 'It was sent from <strong>' . e(self::TEST_MAIL_FROM) . '</strong>.</p>'
+            . '</td></tr></table></td></tr>';
     }
 
     private function mailFooter(string $brand): string
     {
         return '<tr><td class="pad" style="padding:0;">'
-        .'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;background-color:#0f2942;border-radius:0 0 12px 12px;">'
-        .'<tr><td style="padding:22px 24px;">'
-        .'<p style="margin:0 0 6px 0;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:20px;font-weight:bold;color:#ffffff;">'
-        .$this->esc($brand).'</p>'
-        .'<p style="margin:0 0 4px 0;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:18px;color:#c3d5e6;">'
-        .'This is an automated notification from the '.e($brand).' system.</p>'
-        .'<p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:18px;color:#c3d5e6;">'
-        .'Please do not reply to this email.</p>'
-        .'</td></tr></table></td></tr>'
-        .'<tr><td class="pad" style="padding:16px 24px 0 24px;">'
-        .'<p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:11px;line-height:17px;color:#94a3b8;">'
-        .'Delivery channel: '.e(self::DELIVERY_CHANNEL_MAIL).' &middot; Prepared at '.e(now()->toDateTimeString()).'</p>'
-        .'</td></tr>';
+            . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;background-color:#0f2942;border-radius:0 0 12px 12px;">'
+            . '<tr><td style="padding:22px 24px;">'
+            . '<p style="margin:0 0 6px 0;font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:20px;font-weight:bold;color:#ffffff;">'
+            . $this->esc($brand) . '</p>'
+            . '<p style="margin:0 0 4px 0;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:18px;color:#c3d5e6;">'
+            . 'This is an automated notification from the ' . e($brand) . ' system.</p>'
+            . '<p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:18px;color:#c3d5e6;">'
+            . 'Please do not reply to this email.</p>'
+            . '</td></tr></table></td></tr>'
+            . '<tr><td class="pad" style="padding:16px 24px 0 24px;">'
+            . '<p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:11px;line-height:17px;color:#94a3b8;">'
+            . 'Delivery channel: ' . e(self::DELIVERY_CHANNEL_MAIL) . ' &middot; Prepared at ' . e(now()->toDateTimeString()) . '</p>'
+            . '</td></tr>';
     }
 
     private function esc($value): string
@@ -1137,11 +1251,11 @@ class TasksMailController extends Controller
     {
         $ids = array_values(array_unique(array_filter(
             array_map('intval', $employeeIds),
-            fn ($id) => $id > 0
+            fn($id) => $id > 0
         )));
 
         if ($actorEid) {
-            $ids = array_values(array_filter($ids, fn ($id) => $id !== $actorEid));
+            $ids = array_values(array_filter($ids, fn($id) => $id !== $actorEid));
         }
 
         return $ids;
@@ -1209,7 +1323,7 @@ class TasksMailController extends Controller
             if ($driver === 'mysql' || $driver === 'mariadb') {
                 $query->whereRaw('JSON_UNQUOTE(JSON_EXTRACT(notifications.data, "$.task_id")) = ?', [$taskId]);
             } else {
-                $query->where('notifications.data', 'like', '%"task_id":'.$taskId.'%');
+                $query->where('notifications.data', 'like', '%"task_id":' . $taskId . '%');
             }
 
             return ! $query->exists();
@@ -1239,6 +1353,10 @@ class TasksMailController extends Controller
      */
     private function deliveryOutcomeMessage(bool $deliverTestMail, int $sentCount, int $failedCount): string
     {
+        if (! self::MAIL_SENDING_ENABLED) {
+            return 'Notification recorded. No email was sent or queued because MAIL_SENDING_ENABLED is false.';
+        }
+
         if (! $deliverTestMail) {
             return 'Notification recorded. Test mail was not sent because this endpoint is triggered automatically during normal task usage.';
         }
@@ -1285,7 +1403,7 @@ class TasksMailController extends Controller
         return [
             'recipients' => $this->assigneeIds($task),
             'title' => 'Task Created',
-            'body' => 'A new task "'.$task->task_name.'" (#'.$task->id.') has been assigned to you by '.$actorName.'.',
+            'body' => 'A new task "' . $task->task_name . '" (#' . $task->id . ') has been assigned to you by ' . $actorName . '.',
             'data' => $data,
         ];
     }
@@ -1299,10 +1417,10 @@ class TasksMailController extends Controller
         $data['changed_fields'] = array_values($changed);
         $data['trigger'] = 'task_updated';
 
-        $body = 'The task "'.$task->task_name.'" (#'.$task->id.') has been updated by '.$actorName.'.';
+        $body = 'The task "' . $task->task_name . '" (#' . $task->id . ') has been updated by ' . $actorName . '.';
 
         if (! empty($changed)) {
-            $body .= ' Changed: '.$this->joinNames($changed).'.';
+            $body .= ' Changed: ' . $this->joinNames($changed) . '.';
         }
 
         return [
@@ -1324,7 +1442,7 @@ class TasksMailController extends Controller
         return [
             'recipients' => $this->assigneeIds($task),
             'title' => 'Task Assignment Updated',
-            'body' => 'The assignee list of the task "'.$task->task_name.'" (#'.$task->id.') was updated by '.$actorName.'. You are currently assigned to it.',
+            'body' => 'The assignee list of the task "' . $task->task_name . '" (#' . $task->id . ') was updated by ' . $actorName . '. You are currently assigned to it.',
             'data' => $data,
         ];
     }
@@ -1348,7 +1466,7 @@ class TasksMailController extends Controller
         return [
             'recipients' => $this->stakeholderEmployeeIds($task),
             'title' => 'New Checklist Item Added',
-            'body' => 'A new checklist item "'.$checklist->checklist_name.'" was added to the task "'.$task->task_name.'" (#'.$task->id.') by '.$actorName.'.',
+            'body' => 'A new checklist item "' . $checklist->checklist_name . '" was added to the task "' . $task->task_name . '" (#' . $task->id . ') by ' . $actorName . '.',
             'data' => $data,
         ];
     }
@@ -1365,7 +1483,7 @@ class TasksMailController extends Controller
         $data['result_id'] = $result ? (int) $result->id : null;
         $data['trigger'] = 'task_completed';
 
-        $body = 'The task "'.$task->task_name.'" (#'.$task->id.') was marked as '.$task->status.' by '.$actorName.'.';
+        $body = 'The task "' . $task->task_name . '" (#' . $task->id . ') was marked as ' . $task->status . ' by ' . $actorName . '.';
 
         if ($task->status !== Task::STATUS_COMPLETED) {
             Log::info('Task completion notification stored while the task is not completed yet', [
@@ -1373,7 +1491,7 @@ class TasksMailController extends Controller
                 'status' => $task->status,
             ]);
 
-            $body .= ' The current stored status is still "'.$task->status.'".';
+            $body .= ' The current stored status is still "' . $task->status . '".';
         }
 
         return [
@@ -1410,7 +1528,7 @@ class TasksMailController extends Controller
         return [
             'recipients' => $this->stakeholderEmployeeIds($task),
             'title' => 'Task Progress Updated',
-            'body' => 'The progress of the task "'.$task->task_name.'" (#'.$task->id.') was updated by '.$actorName.'. Checklist items completed: '.$data['checklist_completed'].' of '.$data['checklist_total'].'. Current status: '.$task->status.'.',
+            'body' => 'The progress of the task "' . $task->task_name . '" (#' . $task->id . ') was updated by ' . $actorName . '. Checklist items completed: ' . $data['checklist_completed'] . ' of ' . $data['checklist_total'] . '. Current status: ' . $task->status . '.',
             'data' => $data,
         ];
     }
@@ -1459,8 +1577,8 @@ class TasksMailController extends Controller
     private function assigneeIds(Task $task): array
     {
         return $task->assignees
-            ->map(fn (TasksAssignee $assignee) => (int) $assignee->assigned_to)
-            ->filter(fn ($id) => $id > 0)
+            ->map(fn(TasksAssignee $assignee) => (int) $assignee->assigned_to)
+            ->filter(fn($id) => $id > 0)
             ->unique()
             ->values()
             ->all();

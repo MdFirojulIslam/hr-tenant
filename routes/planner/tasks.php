@@ -22,11 +22,14 @@ Route::prefix('planner/tasks/notifications')->group(function () {
 });
 
 /*
-| Assignee mailing hook, already called by the planner front-end
-| (resources/js/pages/planner/composables/usePlanner.js) right after
-| POST /planner/tasks/{id}/assignees.
+| Assignee mailing hook. Called by the planner assignee picker
+| (resources/js/pages/planner/components/TaskAssigneeModal.vue) right after
+| POST /planner/tasks/{id}/assignees succeeded, so only the employees that were
+| just added are reported as newly assigned. It inherits the existing
+| auth:sanctum group from routes/api.php and adds no middleware of its own.
 */
-Route::post('/planner/tasks/mail/{id}/assignees', [TasksMailController::class, 'mailTaskAssignees']);
+Route::post('/planner/tasks/mail/{id}/assignees', [TasksMailController::class, 'mailTaskAssignees'])
+    ->whereNumber('id');
 
 Route::get('/planner/tasks/employees', [TasksController::class, 'employees']);
 

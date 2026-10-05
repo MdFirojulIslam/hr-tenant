@@ -219,6 +219,7 @@ const detailChecklists = ref([]);
 const newChecklistName = ref("");
 
 const assigneePickerTask = ref(null);
+const assigneeIdsBeforeEdit = ref([]);
 const pickerSaving = ref(false);
 
 const isAdmin = computed(() =>
@@ -423,7 +424,18 @@ function confirmDelete(task) {
     });
 }
 
+function assigneeEmployeeId(assignee) {
+    return Number(assignee?.assigned_to || assignee?.employee?.id);
+}
+
 function openAssigneePicker(task) {
+    /*
+     * The picker edits task.assignees in place, so the employees it removes can
+     * only be known from the list captured here, before the picker is opened.
+     */
+    assigneeIdsBeforeEdit.value = (task.assignees || [])
+        .map(assigneeEmployeeId)
+        .filter((empId) => Number.isInteger(empId) && empId > 0);
     assigneePickerTask.value = task;
 }
 
@@ -435,12 +447,23 @@ async function saveAssigneePicker() {
         await persistNewTask(task);
     }
 
-    const ids = task.assignees.map((a) =>
-        Number(a.assigned_to || a.employee?.id),
+    const ids = task.assignees.map(assigneeEmployeeId);
+    const removedIds = assigneeIdsBeforeEdit.value.filter(
+        (empId) => !ids.includes(empId),
     );
     pickerSaving.value = true;
     try {
-        const updated = await saveAssignees(task.id, ids);
+        /*
+         * A removed employee is unassigned through the single-assignee remove
+         * endpoint: the set endpoint validates its "assignees" list as
+         * required, so the empty list of a task whose last assignee was removed
+         * is rejected and the removal could never be persisted through it.
+         */
+        for (const empId of removedIds) {
+            await removeAssignee(task.id, empId);
+        }
+
+        const updated = ids.length ? await saveAssignees(task.id, ids) : [];
         task.assignees = updated.map((u) => ({
             id: u.id,
             assigned_to: u.assigned_to,
@@ -449,6 +472,9 @@ async function saveAssigneePicker() {
             is_current_user: u.is_current_user,
         }));
         applyPickerUpdates(task);
+        if (detailTask.value && detailTask.value.id === task.id) {
+            detailForm.assignees = [...task.assignees];
+        }
         Swal.fire({
             toast: true,
             position: "top-end",

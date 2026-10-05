@@ -73,7 +73,7 @@
                                         class="mt-2"
                                     >
                                         <div
-                                            class="d-flex align-items-center small text-muted pl-checklist-head"
+                                            class="d-flex align-items-center small text-muted pl-checklist-head gap-2"
                                         >
                                             <i
                                                 class="fa-regular fa-square-check me-1"
@@ -237,7 +237,7 @@
             </div>
         </div>
 
-        <div v-if="mode === 'assign'" class="d-flex justify-content-end mt-3">
+        <!-- <div v-if="mode === 'assign'" class="d-flex justify-content-end mt-3">
             <button
                 class="btn btn-primary btn-sm pl-add-task"
                 type="button"
@@ -245,7 +245,7 @@
             >
                 <i class="fa-solid fa-plus" aria-hidden="true"></i>Add new task
             </button>
-        </div>
+        </div> -->
     </div>
 </template>
 
@@ -417,6 +417,7 @@ function toggleChecklistVisibility(task) {
 /* --- Checklist ------------------------------------------------------------ */
 .pl-checklist-head {
     gap: 0;
+    margin-left: 9px;
     font-size: 0.75rem;
 }
 
