@@ -81,7 +81,7 @@ const editLeaveStatus = async (id, status) => {
             employeesByDept.value = [];
             earnedLeave.value = "";
 
-            // await api.get(`/hr-approval/${id}`);
+            await api.get(`/hr-approval/${id}`);
             window.location.reload();
         }
     } catch (err) {

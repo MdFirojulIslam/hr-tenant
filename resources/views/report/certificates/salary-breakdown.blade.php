@@ -122,10 +122,10 @@
         <div>
             <p class="signature-padding">
                 ______________________<br>
-                <strong>Md. Hasan Miah</strong><br>
+                <strong>Tanjimatul Alam Iqra</strong><br>
             <div class="department-padding">
-                Assistant Manager, Credit Control & Revenue<br>
-                Account & Finance
+                Executive, Human Resource Management<br>
+                Human Resource
             </div>
             </p>
         </div>

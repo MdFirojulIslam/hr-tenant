@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Mobile;
 
 use App\Http\Controllers\Controller;
+use App\Models\Task;
 use App\Models\TaskBoard;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -18,8 +19,9 @@ class MobileTaskBoardController extends Controller
     {
         $employeeId = Auth::user()->EID;
 
-        $query = TaskBoard::with([
-            'assigner:id,Full_Name,Employee_Id',
+        $query = Task::with([
+            'assignees:task_id,Full_Name,Employee_Id',
+            'employee:id,Full_Name,Employee_Id',
         ])->where('eid', $employeeId);
 
         if ($request->filled('status')) {
@@ -28,9 +30,9 @@ class MobileTaskBoardController extends Controller
 
         $scope = $request->query('scope');
         if ($scope === 'assigned') {
-            $query->where('status', TaskBoard::STATUS_ASSIGNED);
+            $query->where('status', Task::STATUS_NOT_STARTED);
         } elseif ($scope === 'history') {
-            $query->whereIn('status', [TaskBoard::STATUS_COMPLETE, TaskBoard::STATUS_INCOMPLETE]);
+            $query->whereIn('status', [Task::STATUS_NOT_STARTED, Task::STATUS_IN_PROGRESS]);
         }
 
         if ($scope === 'history') {
@@ -44,7 +46,7 @@ class MobileTaskBoardController extends Controller
 
         return response()->json([
             'success' => true,
-            'data' => $rows->map(fn (TaskBoard $row) => $this->formatRow($row)),
+            'data' => $rows->map(fn(Task $row) => $this->formatRow($row)),
         ]);
     }
 

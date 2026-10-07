@@ -83,7 +83,7 @@ class NavigationSeeder extends Seeder
             ['id' => '69', 'name' => 'Outlet Visit Setup', 'url' => '/outlet-visit/setup', 'icon' => 'NULL', 'page' => 'OutletVisitSetup', 'path' => './pages/outletVisit/outletVisitSetup.vue', 'parent_id' => '68', 'active' => '1'],
             ['id' => '70', 'name' => 'Outlet Visit', 'url' => '/workstation/outlet-visit', 'icon' => 'NULL', 'page' => 'OutletVisit', 'path' => 'NULL', 'parent_id' => '68', 'active' => '1'],
             ['id' => '71', 'name' => 'MoM', 'url' => '/workstation/mom', 'icon' => 'fa-solid fa-clipboard-list', 'page' => 'MinutesOfMeeting', 'path' => 'NULL', 'parent_id' => '34', 'active' => '1'],
-            ['id' => '72', 'name' => 'Task Board', 'url' => '/workstation/task-board', 'icon' => 'fa-solid fa-list-check', 'page' => 'TaskBoard', 'path' => './pages/workstation/taskBoard.vue', 'parent_id' => '34', 'active' => '1'],
+            ['id' => '72', 'name' => 'Task Board', 'url' => '/workstation/task-board', 'icon' => 'fa-solid fa-list-check', 'page' => 'TaskBoard', 'path' => './pages/workstation/taskBoard.vue', 'parent_id' => '34', 'active' => '0'],
             ['id' => '73', 'name' => 'Task Board', 'url' => '/workstation/task-board-mobile', 'icon' => 'NULL', 'page' => 'TaskBoardMobile', 'path' => 'NULL', 'parent_id' => '34', 'active' => '1'],
             ['id' => '74', 'name' => 'Event Setup', 'url' => '/setup/event-setup', 'icon' => 'NULL', 'page' => 'EventSetup', 'path' => './pages/setup/event/eventSetup.vue', 'parent_id' => '6', 'active' => '1'],
             ['id' => '75', 'name' => 'Events', 'url' => '/workstation/events', 'icon' => 'NULL', 'page' => 'Events', 'path' => 'NULL', 'parent_id' => '34', 'active' => '1'],
