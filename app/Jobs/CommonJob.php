@@ -26,7 +26,7 @@ class CommonJob implements ShouldQueue
      */
     public function handle(): void
     {
-        FetchZKTecoAttendanceJob::dispatch();
-        FetchAttendanceJob::dispatch();
+        // FetchZKTecoAttendanceJob::dispatch();
+        // FetchAttendanceJob::dispatch();
     }
 }
