@@ -97,6 +97,7 @@ class NavigationSeeder extends Seeder
             ['id' => '83', 'name' => 'My Tasks', 'url' => '/planner/my-tasks', 'icon' => 'NULL', 'page' => 'MyTasks', 'path' => './pages/planner/myTasks.vue', 'parent_id' => '81', 'active' => '1'],
             ['id' => '84', 'name' => 'Employee HR Event', 'url' => '/employee-hr-event', 'icon' => 'fa-solid fa-store', 'page' => 'NULL', 'path' => 'NULL', 'parent_id' => '0', 'active' => '1'],
             ['id' => '85', 'name' => 'HR Event Setup', 'url' => '/employee-hr-event/hr-event-setup', 'icon' => 'NULL', 'page' => 'HrEventSetup', 'path' => './pages/hrEvent/hrEventSetup.vue', 'parent_id' => '84', 'active' => '1'],
+            ['id' => '86', 'name' => 'Attendance KPI', 'url' => '/attendance/attendance-kpi', 'icon' => 'NULL', 'page' => 'AttendanceKpi', 'path' => './pages/attendance/attendanceKpi.vue', 'parent_id' => '9', 'active' => '1'],
         ];
 
         foreach ($navigations as $item) {

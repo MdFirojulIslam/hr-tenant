@@ -517,6 +517,99 @@ class AttendenceController extends Controller
         return 'A';
     }
 
+
+    public function attendanceKpi(Request $request)
+    {
+        $month = (int) $request->query('month');
+        $year  = (int) $request->query('year');
+
+        if ($month < 1 || $month > 12) {
+            $month = (int) now()->month;
+        }
+        if ($year < 1) {
+            $year = (int) now()->year;
+        }
+
+        $startDate = Carbon::create($year, $month, 1)->startOfMonth()->toDateString();
+        $endDate   = Carbon::create($year, $month, 1)->endOfMonth()->toDateString();
+
+        $bucketExpr = "
+            CASE
+                WHEN attendance_summaries.status IN ('Holiday', 'Friday')
+                     OR DAYOFWEEK(attendance_summaries.date) = 6 THEN 'H'
+                WHEN attendance_summaries.status IN ('Present', 'Manual', 'Home') THEN 'P'
+                WHEN attendance_summaries.status = 'Late' THEN 'L'
+                WHEN attendance_summaries.status = 'Early Leave' THEN 'E'
+                WHEN attendance_summaries.status = 'On Leave' THEN 'O'
+                ELSE 'A'
+            END
+        ";
+
+        $query = DB::table('attendance_summaries')
+            ->join('employees', 'employees.id', '=', 'attendance_summaries.employee_id')
+            ->join('departments', 'departments.id', '=', 'attendance_summaries.department_id')
+            ->whereBetween('attendance_summaries.date', [$startDate, $endDate]);
+
+        if ($request->filled('department_id')) {
+            $query->where('attendance_summaries.department_id', $request->query('department_id'));
+        }
+
+        if ($request->filled('employee_id')) {
+            $query->where('attendance_summaries.employee_id', $request->query('employee_id'));
+        }
+
+        $rows = $query
+            ->select(
+                'attendance_summaries.employee_id',
+                'employees.Full_Name as employee_name',
+                'employees.Employee_Id as employee_code',
+                'departments.Name as department_name',
+                DB::raw("SUM(CASE WHEN $bucketExpr = 'P' THEN 1 ELSE 0 END) as present"),
+                DB::raw("SUM(CASE WHEN $bucketExpr = 'L' THEN 1 ELSE 0 END) as late"),
+                DB::raw("SUM(CASE WHEN $bucketExpr = 'E' THEN 1 ELSE 0 END) as early_leave"),
+                DB::raw("SUM(CASE WHEN $bucketExpr = 'O' THEN 1 ELSE 0 END) as on_leave"),
+                DB::raw("SUM(CASE WHEN $bucketExpr = 'A' THEN 1 ELSE 0 END) as absent"),
+                DB::raw("SUM(CASE WHEN $bucketExpr = 'H' THEN 1 ELSE 0 END) as holidays"),
+                DB::raw("SUM(CASE WHEN $bucketExpr = 'H' THEN 0 ELSE 1 END) as total_work_days"),
+                DB::raw("SUM(CASE WHEN $bucketExpr = 'P' THEN 1 WHEN $bucketExpr = 'L' THEN 0.5 WHEN $bucketExpr = 'E' THEN 0.5 WHEN $bucketExpr = 'O' THEN 1 ELSE 0 END) as total_marks")
+            )
+            ->groupBy(
+                'attendance_summaries.employee_id',
+                'employees.Full_Name',
+                'employees.Employee_Id',
+                'departments.Name'
+            )
+            ->orderBy('departments.Name')
+            ->orderBy('employees.Full_Name')
+            ->get();
+
+        $data = $rows->map(function ($row) {
+            return [
+                'employee_id' => (int) $row->employee_id,
+                'employee_name' => $row->employee_name,
+                'employee_code' => $row->employee_code,
+                'department_name' => $row->department_name,
+                'present' => (int) $row->present,
+                'late' => (int) $row->late,
+                'early_leave' => (int) $row->early_leave,
+                'on_leave' => (int) $row->on_leave,
+                'absent' => (int) $row->absent,
+                'holidays' => (int) $row->holidays,
+                'total_work_days' => (int) $row->total_work_days,
+                'total_marks' => (float) $row->total_marks,
+            ];
+        })->values();
+
+        return response()->json([
+            'success' => true,
+            'period' => [
+                'month' => $month,
+                'year' => $year,
+            ],
+            'data' => $data,
+        ]);
+    }
+
     // public function fetchAttendence()
     // {
     //     /* -----------------------------------------------------------

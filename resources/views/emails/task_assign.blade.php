@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Laravel - Task Notification</title>
+  <title> Task Notification</title>
   <style>
     * {
       box-sizing: border-box;
@@ -141,7 +141,7 @@
   <div class="email-card">
     <!-- Header -->
     <div class="card-header">
-      Laravel — Task Notification
+      Task Notification
     </div>
 
     <!-- Body Content -->

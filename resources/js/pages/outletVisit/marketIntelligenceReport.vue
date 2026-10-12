@@ -42,7 +42,9 @@ const isValidCoordinate = (value) => {
     if (parts.length !== 2) return false;
     const lat = Number(parts[0]);
     const lng = Number(parts[1]);
-    return Number.isFinite(lat) && Number.isFinite(lng) && (lat !== 0 || lng !== 0);
+    return (
+        Number.isFinite(lat) && Number.isFinite(lng) && (lat !== 0 || lng !== 0)
+    );
 };
 
 const parseCoordinates = (coordStr) => {
@@ -151,7 +153,9 @@ const allSizes = ref([]);
 
 const selectedBrand = computed({
     get() {
-        return allBrands.value.find((b) => b.id === selectedBrandId.value) || null;
+        return (
+            allBrands.value.find((b) => b.id === selectedBrandId.value) || null
+        );
     },
     set(value) {
         selectedBrandId.value = value ? value.id : null;
@@ -211,9 +215,7 @@ const filteredReport = computed(() => {
     }
 
     if (brandId !== null) {
-        data = data.filter(
-            (row) => Number(row.brand_id) === Number(brandId),
-        );
+        data = data.filter((row) => Number(row.brand_id) === Number(brandId));
     }
 
     if (sizeVal && sizeVal !== "") {
@@ -290,8 +292,7 @@ const downloadReport = async () => {
         const url = URL.createObjectURL(blob);
         const link = document.createElement("a");
         link.href = url;
-        link.download =
-            "market_intelligence_report_" + dateStamp() + ".csv";
+        link.download = "market_intelligence_report_" + dateStamp() + ".csv";
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
@@ -334,15 +335,17 @@ const imageUrl = (row) => {
                         <div
                             class="icon-shape bg-success-subtle text-success rounded-3 p-3 d-flex align-items-center justify-content-center"
                         >
-                            <i class="fa-solid fa-magnifying-glass-chart fs-4"></i>
+                            <i
+                                class="fa-solid fa-magnifying-glass-chart fs-4"
+                            ></i>
                         </div>
                         <div>
                             <h4 class="mb-1 font-weight-bold text-dark">
                                 Market Intelligence Report
                             </h4>
                             <p class="text-muted small mb-0">
-                                Track and manage market intelligence data
-                                across outlets, brands, and regions.
+                                Track and manage market intelligence data across
+                                outlets, brands, and regions.
                             </p>
                         </div>
                     </div>
@@ -462,8 +465,9 @@ const imageUrl = (row) => {
                             <th scope="col">Division</th>
                             <th scope="col">District</th>
                             <th scope="col">Country of Origin</th>
-                            <th scope="col">TP</th>
-                            <th scope="col">MRP</th>
+                            <th class="text-center" scope="col">TP</th>
+                            <th class="text-center" scope="col">MRP</th>
+                            <th class="text-center" scope="col">Submitted</th>
                             <th scope="col" class="text-center">Image</th>
                         </tr>
                     </thead>
@@ -477,10 +481,7 @@ const imageUrl = (row) => {
                                         <div
                                             class="spinner-border text-success mb-2"
                                             role="status"
-                                            style="
-                                                width: 2rem;
-                                                height: 2rem;
-                                            "
+                                            style="width: 2rem; height: 2rem"
                                         ></div>
                                         <span class="text-muted small"
                                             >Fetching report data...</span
@@ -489,9 +490,7 @@ const imageUrl = (row) => {
                                 </td>
                             </tr>
                         </template>
-                        <template
-                            v-else-if="filteredReport.length === 0"
-                        >
+                        <template v-else-if="filteredReport.length === 0">
                             <tr>
                                 <td colspan="14" class="text-center py-5">
                                     <div class="empty-state text-muted">
@@ -499,8 +498,8 @@ const imageUrl = (row) => {
                                             class="fa-regular fa-folder-open display-6 mb-2 text-secondary opacity-50"
                                         ></i>
                                         <p class="mb-0 small fw-medium">
-                                            No market intelligence records
-                                            found for the selected filters.
+                                            No market intelligence records found
+                                            for the selected filters.
                                         </p>
                                     </div>
                                 </td>
@@ -556,11 +555,22 @@ const imageUrl = (row) => {
                                 <td>{{ row.division || "-" }}</td>
                                 <td>{{ row.district || "-" }}</td>
                                 <td>{{ row.country_of_origin || "-" }}</td>
-                                <td class="text-end">
-                                    {{ row.tp ? Number(row.tp).toFixed(2) : "0.00" }}
+                                <td class="text-center">
+                                    {{
+                                        row.tp
+                                            ? Number(row.tp).toFixed(2)
+                                            : "0.00"
+                                    }}
                                 </td>
-                                <td class="text-end">
-                                    {{ row.mrp ? Number(row.mrp).toFixed(2) : "0.00" }}
+                                <td class="text-center">
+                                    {{
+                                        row.mrp
+                                            ? Number(row.mrp).toFixed(2)
+                                            : "0.00"
+                                    }}
+                                </td>
+                                <td class="text-center">
+                                    {{ row.created_at }}
                                 </td>
                                 <td class="text-center">
                                     <img
@@ -644,10 +654,7 @@ const imageUrl = (row) => {
                         id="mi-map-container"
                         class="map-modal-canvas"
                     ></div>
-                    <div
-                        v-if="selectedMapLocation"
-                        class="map-modal-details"
-                    >
+                    <div v-if="selectedMapLocation" class="map-modal-details">
                         <span>
                             Latitude:
                             <strong>{{
@@ -662,9 +669,7 @@ const imageUrl = (row) => {
                         </span>
                         <span class="ms-3">
                             Outlet:
-                            <strong>{{
-                                selectedMapLocation.name
-                            }}</strong>
+                            <strong>{{ selectedMapLocation.name }}</strong>
                         </span>
                     </div>
                     <div class="map-modal-footer">

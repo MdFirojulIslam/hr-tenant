@@ -23,3 +23,5 @@ Route::post('/manual-attendance', [AttendenceController::class, 'manualAttendanc
 
 //App Attendance
 Route::post('/app-attendance', [AppAttendanceController::class, 'insertAppAttendance']);
+
+Route::get('/attendance-kpi', [AttendenceController::class, 'attendanceKpi']);

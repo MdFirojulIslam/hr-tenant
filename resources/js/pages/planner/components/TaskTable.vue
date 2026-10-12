@@ -17,7 +17,7 @@
                                     aria-label="Select task"
                                 />
                             </th>
-                            <th style="min-width: 200px">Task Name</th>
+                            <th style="min-width: 250px">Task Name</th>
                             <th style="min-width: 120px">Assign To</th>
                             <th style="min-width: 130px">Start Date</th>
                             <th style="min-width: 130px">Due Date</th>
@@ -28,7 +28,7 @@
                             <th
                                 :style="
                                     mode === 'assign'
-                                        ? 'min-width: 180px'
+                                        ? 'min-width: 200px'
                                         : 'min-width: 150px'
                                 "
                             >
@@ -124,7 +124,10 @@
                                         :value="task.task_name"
                                         placeholder="Task name"
                                         @blur="onNameBlur(task)"
-                                        @input="onNameInput(task, $event)"
+                                        @input="
+                                            onNameInput(task, $event);
+                                            autoResize($event);
+                                        "
                                     ></textarea>
                                 </td>
                                 <td>
@@ -234,6 +237,7 @@
                                     </span> -->
                                     <select
                                         class="form-select form-select-sm"
+                                        :class="statusClass(task.status)"
                                         :value="task.status"
                                         @change="
                                             onFieldChange(
@@ -308,7 +312,10 @@
                                         :value="task.notes"
                                         placeholder="Add notes..."
                                         @blur="onNotesBlur(task)"
-                                        @input="onNotesInput(task, $event)"
+                                        @input="
+                                            onNotesInput(task, $event);
+                                            autoResize($event);
+                                        "
                                     ></textarea>
                                 </td>
                                 <td>
@@ -378,7 +385,7 @@
 </template>
 
 <script setup>
-import { ref } from "vue";
+import { ref, nextTick, watch } from "vue";
 
 const props = defineProps({
     mode: { type: String, required: true },
@@ -409,11 +416,48 @@ function statusBadge(status) {
     return "bg-secondary";
 }
 
+function statusClass(status) {
+    if (status === "Completed") {
+        return "status-completed";
+    }
+
+    if (status === "In progress") {
+        return "status-in-progress";
+    }
+
+    return "";
+}
+
 function priorityClass(priority) {
     if (priority === "Urgent") return "border-danger text-danger";
     if (priority === "Important") return "border-warning text-warning";
     return "";
 }
+
+function autoResizeTextarea(textarea) {
+    if (!textarea) return;
+
+    textarea.style.height = "auto";
+    textarea.style.height = `${textarea.scrollHeight}px`;
+}
+
+function autoResize(event) {
+    autoResizeTextarea(event.target);
+}
+
+watch(
+    () => props.tasks,
+    async () => {
+        await nextTick();
+
+        const textareas = document.querySelectorAll(".planner-inline-input");
+
+        textareas.forEach((textarea) => {
+            autoResizeTextarea(textarea);
+        });
+    },
+    { deep: true, immediate: true },
+);
 </script>
 
 <style scoped>
@@ -535,10 +579,29 @@ function priorityClass(priority) {
 }
 
 /* --- Inline editable fields ----------------------------------------------- */
-.planner-inline-input {
+/* .planner-inline-input {
     min-height: 32px;
     padding: 4px 8px;
     resize: none;
+    background-color: transparent;
+    background-clip: padding-box;
+    border: 1px solid transparent;
+    border-radius: var(--pl-radius-sm);
+    color: var(--pl-text);
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.45;
+    box-shadow: none;
+    transition: var(--pl-ease);
+} */
+
+.planner-inline-input {
+    min-height: 32px;
+    height: auto;
+    padding: 6px 8px;
+    resize: none;
+    overflow: hidden;
+
     background-color: transparent;
     background-clip: padding-box;
     border: 1px solid transparent;
@@ -766,6 +829,30 @@ function priorityClass(priority) {
 .add-task-bottom .btn:focus-visible {
     outline: none;
     box-shadow: inset 0 0 0 2px var(--pl-accent-border);
+}
+
+.planner-table .form-select.status-completed {
+    border-color: var(--pl-success-border) !important;
+    background-color: var(--pl-success-soft) !important;
+    color: var(--pl-success-text) !important;
+    font-weight: 500;
+}
+
+.planner-table .form-select.status-completed:focus {
+    border-color: var(--pl-success-text) !important;
+    box-shadow: var(--pl-ring) !important;
+}
+
+.planner-table .form-select.status-in-progress {
+    border-color: var(--pl-warning-border) !important;
+    background-color: var(--pl-warning-soft) !important;
+    color: var(--pl-warning-text) !important;
+    font-weight: 500;
+}
+
+.planner-table .form-select.status-in-progress:focus {
+    border-color: var(--pl-warning-text) !important;
+    box-shadow: var(--pl-ring) !important;
 }
 
 /* --- Responsive ----------------------------------------------------------- */

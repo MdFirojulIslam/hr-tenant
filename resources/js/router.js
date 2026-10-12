@@ -744,6 +744,15 @@ const routes = [
             pageId: 85,
         },
     },
+    {
+        path: "/attendance/attendance-kpi",
+        name: "AttendanceKpi",
+        component: () => import("./pages/attendance/attendanceKpi.vue"),
+        meta: {
+            requireAuth: true,
+            pageId: 86,
+        },
+    },
 ];
 
 const router = createRouter({

@@ -981,12 +981,18 @@ class TasksMailController extends Controller
         return '<tr><td class="pad" style="padding:0 24px 24px 24px;">'
             . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;background-color:#fffbeb;border:1px solid #fde68a;border-radius:10px;">'
             . '<tr><td style="padding:14px 18px;">'
-            . '<p style="margin:0 0 4px 0;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:18px;font-weight:bold;color:#92400e;">'
-            . 'Development test mail</p>'
-            . '<p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:18px;color:#92400e;">'
-            . 'This notification is recorded for the real recipient in the system. '
-            . 'Test mail delivery is currently disabled.</p>'
+            . '<p style="margin:0 0 4px 0;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:18px;font-weight:bold;color:#92400e;"></p>'
+            . '<p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:18px;color:#92400e;"> </p>'
             . '</td></tr></table></td></tr>';
+        // return '<tr><td class="pad" style="padding:0 24px 24px 24px;">'
+        //     . '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="width:100%;background-color:#fffbeb;border:1px solid #fde68a;border-radius:10px;">'
+        //     . '<tr><td style="padding:14px 18px;">'
+        //     . '<p style="margin:0 0 4px 0;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:18px;font-weight:bold;color:#92400e;">'
+        //     . 'Development test mail</p>'
+        //     . '<p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:12px;line-height:18px;color:#92400e;">'
+        //     . 'This notification is recorded for the real recipient in the system. '
+        //     . 'Test mail delivery is currently disabled.</p>'
+        //     . '</td></tr></table></td></tr>';
     }
 
     private function mailFooter(string $brand): string

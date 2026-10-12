@@ -964,6 +964,7 @@ class DmsDistributionInfoController extends Controller
                 'location_coordinate' => $row->location_coordinate ?? null,
                 'division'            => $row->division ?? '-',
                 'district'            => $row->district ?? '-',
+                'created_at'            => $row->created_at ?? '-',
                 'country_of_origin'   => $row->country_of_origin ?? '-',
                 'tp'                  => $row->tp !== null ? (float) $row->tp : 0,
                 'mrp'                 => $row->mrp !== null ? (float) $row->mrp : 0,
@@ -1024,6 +1025,7 @@ class DmsDistributionInfoController extends Controller
             'Country of Origin',
             'TP',
             'MRP',
+            'Submitted'
         ];
 
         $callback = function () use ($report, $headers) {
@@ -1045,6 +1047,7 @@ class DmsDistributionInfoController extends Controller
                     $row['country_of_origin'],
                     $row['tp'],
                     $row['mrp'],
+                    $row['created_at'],
                 ]);
             }
 
