@@ -7,6 +7,9 @@ import app from "./layouts/app.vue";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "bootstrap";
 import router from "./router.js";
+import PrimeVue from "primevue/config";
+import Aura from "@primeuix/themes/aura";
+import "primeicons/primeicons.css";
 
 const tokenExpiration = parseInt(
     localStorage.getItem("tokenExpiration") || 0,
@@ -19,4 +22,15 @@ if (tokenExpiration) {
     }
 }
 
-createApp(app).use(router).use(store).mount("#app");
+createApp(app)
+    .use(router)
+    .use(store)
+    .use(PrimeVue, {
+        theme: {
+            preset: Aura,
+            options: {
+                darkModeSelector: ".app-dark",
+            },
+        },
+    })
+    .mount("#app");

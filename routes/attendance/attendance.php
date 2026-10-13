@@ -20,7 +20,6 @@ Route::get('/daily-attendance-sync', [AttendenceController::class, 'dailyAttenda
 Route::get('/fetch-zkt-user', [AttendenceController::class, 'fetchZktUser']);
 Route::post('/manual-attendance', [AttendenceController::class, 'manualAttendance']);
 
-
 //App Attendance
 Route::post('/app-attendance', [AppAttendanceController::class, 'insertAppAttendance']);
 

@@ -5,6 +5,9 @@ import dashboardChart from "./commonComponent/dashboardChart.vue";
 import dailyStandup from "./commonComponent/dailyStandup.vue";
 import Multiselect from "vue-multiselect";
 import "vue-multiselect/dist/vue-multiselect.min.css";
+import Card from "primevue/card";
+import Tag from "primevue/tag";
+import ProgressBar from "primevue/progressbar";
 
 // Dynamic Data State
 const dataMode = ref("all");
@@ -113,18 +116,24 @@ onMounted(() => {
 
 <template>
     <main class="dashboard-wrapper">
-        <div class="container-fluid px-4 py-3">
+        <div class="dashboard-inner">
             <!-- Header Section -->
-            <header
-                class="dashboard-header d-flex align-items-center justify-content-between mb-4"
-            >
-                <div class="d-flex align-items-center gap-1">
-                    <!-- <div class="icon-badge">
-                        <i class="fa-solid fa-gauge-high dash-icon"></i>
-                    </div> -->
-                    <div>
-                        <h1 class="dashboard-title">Dashboard overview</h1>
+            <header class="dashboard-header">
+                <div class="header-main">
+                    <div class="header-icon">
+                        <i class="pi pi-th-large"></i>
                     </div>
+                    <div class="header-text">
+                        <h1 class="dashboard-title">Dashboard overview</h1>
+                        <p class="dashboard-subtitle">
+                            Real-time workforce, attendance &amp; compliance
+                            insights
+                        </p>
+                    </div>
+                </div>
+                <div class="header-aside" v-if="currentDate">
+                    <i class="pi pi-calendar"></i>
+                    <span>{{ currentDate }}</span>
                 </div>
             </header>
 
@@ -174,397 +183,271 @@ onMounted(() => {
             </section> -->
 
             <!-- Metrics Grid -->
-            <section class="metrics-grid mb-4">
-                <!-- Card 1: Total Employees -->
-                <!-- <div class="metric-card">
-                    <div class="metric-header">
-                        <span class="metric-title">Total Employees</span>
-                        <i class="fa-solid fa-users metric-icon"></i>
-                    </div>
-                    <div class="metric-body">
-                        <div class="primary-stat">
+            <section class="metrics-grid" aria-label="Key metrics">
+                <!-- Total Employees -->
+                <Card class="metric-card">
+                    <template #content>
+                        <!-- <div class="metric-top">
+                            <span class="metric-icon icon-primary">
+                                <i class="pi pi-users"></i>
+                            </span>
+                        </div> -->
+                        <div class="metric-value">
                             {{ activeAttendanceData.active_employee || 0 }}
                         </div>
-                        <div class="sub-stat-group mt-2">
-                            <span class="lob-badge">
-                                <strong>{{
-                                    activeAttendanceData.gulshan_office_total_employee ||
-                                    0
-                                }}</strong>
-                                <small>G</small>
-                            </span>
-                            <span class="lob-badge">
-                                <strong>{{
-                                    activeAttendanceData.warehouse_total_employee ||
-                                    0
-                                }}</strong>
-                                <small>W</small>
-                            </span>
-                            <span class="lob-badge">
-                                <strong>{{
-                                    activeAttendanceData.field_force_total_employee ||
-                                    0
-                                }}</strong>
-                                <small>F</small>
-                            </span>
+                        <div class="metric-footer">
+                            <span class="metric-title">Total employees</span>
                         </div>
-                    </div>
-                </div> -->
+                    </template>
+                </Card>
 
-                <div class="metric-card">
-                    <i class="fa-solid fa-users metric-card-icon"></i>
-                    <div class="primary-stat">
-                        {{ activeAttendanceData.active_employee || 0 }}
-                    </div>
-                    <div class="metric-footer">
-                        <span class="metric-title">Total employees</span>
-                    </div>
-                </div>
-
-                <div class="metric-card">
-                    <i class="fa-solid fa-sitemap metric-card-icon"></i>
-                    <div class="primary-stat">
-                        {{ activeAttendanceData.department_total || 0 }}
-                    </div>
-                    <div class="metric-footer">
-                        <span class="metric-title">Departments</span>
-                    </div>
-                </div>
-
-                <div class="metric-card">
-                    <i class="fa-solid fa-user-check metric-card-icon"></i>
-                    <div class="primary-stat">
-                        {{ activeAttendanceData.total_present || 0 }}
-                    </div>
-                    <div class="metric-footer">
-                        <span class="metric-title">Present attendance</span>
-                        <span
-                            class="metric-change"
-                            v-if="activeAttendanceData.avg_present != null"
-                        >
-                            {{ activeAttendanceData.avg_present }}%
-                        </span>
-                    </div>
-                </div>
-
-                <div class="metric-card">
-                    <i class="fa-solid fa-user-xmark metric-card-icon"></i>
-                    <div class="primary-stat">
-                        {{ activeAttendanceData.total_absent || 0 }}
-                    </div>
-                    <div class="metric-footer">
-                        <span class="metric-title">Absent attendance</span>
-                        <span
-                            class="metric-change"
-                            v-if="activeAttendanceData.avg_absent != null"
-                        >
-                            {{ activeAttendanceData.avg_absent }}%
-                        </span>
-                    </div>
-                </div>
-
-                <!-- Card 2: Attendance Split -->
-                <!-- <div class="metric-card">
-                    <div class="metric-header">
-                        <span class="metric-title">Attendance</span>
-                        <i
-                            class="fa-solid fa-user-check metric-icon text-success"
-                        ></i>
-                    </div>
-                    <div class="metric-body">
-                        <div class="stat-row">
-                            <span class="stat-label text-success"
-                                ><i class="fa-solid fa-circle me-1 small"></i>
-                                Present</span
-                            >
-                            <span class="stat-value">
-                                {{ activeAttendanceData.total_present || 0 }}
-                                <small class="text-muted"
-                                    >({{
-                                        activeAttendanceData.avg_present || 0
-                                    }}%)</small
-                                >
+                <!-- Departments -->
+                <Card class="metric-card">
+                    <template #content>
+                        <!-- <div class="metric-top">
+                            <span class="metric-icon icon-violet">
+                                <i class="pi pi-sitemap"></i>
                             </span>
-                        </div>
-                        <div class="stat-row mt-2">
-                            <span class="stat-label text-danger"
-                                ><i class="fa-solid fa-circle me-1 small"></i>
-                                Absent</span
-                            >
-                            <span class="stat-value">
-                                {{ activeAttendanceData.total_absent || 0 }}
-                                <small class="text-muted"
-                                    >({{
-                                        activeAttendanceData.avg_absent || 0
-                                    }}%)</small
-                                >
-                            </span>
-                        </div>
-                    </div>
-                </div> -->
-
-                <div class="metric-card">
-                    <i class="fa-solid fa-user-clock metric-card-icon"></i>
-                    <div class="primary-stat">
-                        {{ activeAttendanceData.total_late || 0 }}
-                    </div>
-                    <div class="metric-footer">
-                        <span class="metric-title">Late arrivals</span>
-                        <span
-                            class="metric-change"
-                            v-if="activeAttendanceData.avg_late != null"
-                        >
-                            {{ activeAttendanceData.avg_late }}%
-                        </span>
-                    </div>
-                </div>
-
-                <div class="metric-card">
-                    <i class="fa-solid fa-business-time metric-card-icon"></i>
-                    <div class="primary-stat">
-                        {{ activeAttendanceData.average_work_hours || 0 }}
-                    </div>
-                    <div class="metric-footer">
-                        <span class="metric-title">Avg. work hours</span>
-                    </div>
-                </div>
-
-                <!-- Card 3: Working Hours & Late -->
-                <!-- <div class="metric-card">
-                    <div class="metric-header">
-                        <span class="metric-title">Work Hours & Late</span>
-                        <i
-                            class="fa-solid fa-clock metric-icon text-warning"
-                        ></i>
-                    </div>
-                    <div class="metric-body">
-                        <div class="stat-row">
-                            <span class="stat-label">Late Arrivals</span>
-                            <span class="stat-value text-warning">
-                                {{ activeAttendanceData.total_late || 0 }}
-                                <small class="text-muted"
-                                    >({{
-                                        activeAttendanceData.avg_late || 0
-                                    }}%)</small
-                                >
-                            </span>
-                        </div>
-                        <div class="stat-row mt-2">
-                            <span class="stat-label">Avg. Work Hours</span>
-                            <span class="stat-value">
-                                {{
-                                    activeAttendanceData.average_work_hours || 0
-                                }}
-                                hrs
-                            </span>
-                        </div>
-                    </div>
-                </div> -->
-
-                <div class="metric-card">
-                    <i class="fa-solid fa-plane-departure metric-card-icon"></i>
-                    <div class="primary-stat">
-                        {{ activeAttendanceData.total_leave || 0 }}
-                    </div>
-                    <div class="metric-footer">
-                        <span class="metric-title">On leave</span>
-                    </div>
-                </div>
-
-                <div class="metric-card">
-                    <i class="fa-solid fa-hourglass-half metric-card-icon"></i>
-                    <div class="primary-stat">
-                        {{ activeAttendanceData.total_pending_leave || 0 }}
-                    </div>
-                    <div class="metric-footer">
-                        <span class="metric-title">Pending leave</span>
-                    </div>
-                </div>
-
-                <div class="metric-card">
-                    <i class="fa-solid fa-cake-candles metric-card-icon"></i>
-                    <div class="primary-stat">
-                        {{ activeAttendanceData.averageAge || 0 }}
-                    </div>
-                    <div class="metric-footer">
-                        <span class="metric-title">Average age (years)</span>
-                    </div>
-                </div>
-
-                <!-- Card 4: Leave Summary -->
-                <!-- <div class="metric-card">
-                    <div class="metric-header">
-                        <span class="metric-title">Leave Status</span>
-                        <i class="fa-solid fa-plane-departure metric-icon"></i>
-                    </div>
-                    <div class="metric-body">
-                        <div class="stat-row">
-                            <span class="stat-label">Approved</span>
-                            <span class="stat-value text-success">
-                                {{ activeAttendanceData.total_leave || 0 }}
-                            </span>
-                        </div>
-                        <div class="stat-row mt-2">
-                            <span class="stat-label">Pending</span>
-                            <span class="stat-value text-warning">
-                                {{
-                                    activeAttendanceData.total_pending_leave ||
-                                    0
-                                }}
-                            </span>
-                        </div>
-                    </div>
-                </div> -->
-
-                <div class="metric-card">
-                    <i class="fa-solid fa-award metric-card-icon"></i>
-                    <div class="primary-stat">
-                        {{ activeAttendanceData.averageTenure || 0 }}
-                    </div>
-                    <div class="metric-footer">
-                        <span class="metric-title">Average tenure (years)</span>
-                    </div>
-                </div>
-
-                <!-- Card 5: Average Tenure -->
-                <!-- <div class="metric-card">
-                    <div class="metric-header">
-                        <span class="metric-title">Average Tenure</span>
-                        <i class="fa-solid fa-award metric-icon"></i>
-                    </div>
-                    <div class="metric-body">
-                        <div class="primary-stat">
-                            {{ activeAttendanceData.averageTenure || 0 }}
-                            <small class="unit">Years</small>
-                        </div>
-                    </div>
-                </div> -->
-
-                <div class="metric-card">
-                    <i class="fa-solid fa-receipt metric-card-icon"></i>
-                    <div class="primary-stat">
-                        {{ activeAttendanceData.total_expense || 0 }} TK.
-                    </div>
-                    <div class="metric-footer">
-                        <span class="metric-title">TA/DA (MTD)</span>
-                    </div>
-                </div>
-
-                <!-- Card 6: TA/DA Expense -->
-                <!-- <div class="metric-card">
-                    <div class="metric-header">
-                        <span class="metric-title">TA/DA (MTD)</span>
-                        <i class="fa-solid fa-receipt metric-icon"></i>
-                    </div>
-                    <div class="metric-body">
-                        <div class="primary-stat highlight-currency">
-                            {{ activeAttendanceData.total_expense || 0 }}
-                            <small class="unit">BDT</small>
-                        </div>
-                    </div>
-                </div> -->
-
-                <!-- Card 7: Department Count -->
-                <!-- <div class="metric-card">
-                    <div class="metric-header">
-                        <span class="metric-title">Departments</span>
-                        <i class="fa-solid fa-sitemap metric-icon"></i>
-                    </div>
-                    <div class="metric-body">
-                        <div class="primary-stat">
+                        </div> -->
+                        <div class="metric-value">
                             {{ activeAttendanceData.department_total || 0 }}
                         </div>
-                    </div>
-                </div> -->
-
-                <!-- Card 8: Average Age -->
-                <!-- <div class="metric-card">
-                    <div class="metric-header">
-                        <span class="metric-title">Average Age</span>
-                        <i class="fa-solid fa-cake-candles metric-icon"></i>
-                    </div>
-                    <div class="metric-body">
-                        <div class="primary-stat">
-                            {{ activeAttendanceData.averageAge || 0 }}
-                            <small class="unit">Years</small>
+                        <div class="metric-footer">
+                            <span class="metric-title">Departments</span>
                         </div>
-                    </div>
-                </div> -->
+                    </template>
+                </Card>
 
-                <div class="metric-card">
-                    <i class="fa-solid fa-file-shield metric-card-icon"></i>
-                    <div class="primary-stat">
-                        {{ activeAttendanceData.active_employee || 0 }}
-                        /
-                        {{
-                            activeAttendanceData.totalEmployeeDocumentation || 0
-                        }}
-                    </div>
-                    <div class="metric-footer">
-                        <span class="metric-title">Document Compliance</span>
-                        <span
-                            class="metric-change"
+                <!-- Present attendance -->
+                <Card class="metric-card">
+                    <template #content>
+                        <!-- <div class="metric-top">
+                            <span class="metric-icon icon-success">
+                                <i class="pi pi-check-circle"></i>
+                            </span>
+                        </div> -->
+                        <div class="metric-value">
+                            {{ activeAttendanceData.total_present || 0 }}
+                        </div>
+                        <div class="metric-footer">
+                            <span class="metric-title">Present attendance</span>
+                            <Tag
+                                v-if="activeAttendanceData.avg_present != null"
+                                :value="activeAttendanceData.avg_present + '%'"
+                                severity="success"
+                                rounded
+                            />
+                        </div>
+                    </template>
+                </Card>
+
+                <!-- Absent attendance -->
+                <Card class="metric-card">
+                    <template #content>
+                        <!-- <div class="metric-top">
+                            <span class="metric-icon icon-danger">
+                                <i class="pi pi-times-circle"></i>
+                            </span>
+                        </div> -->
+                        <div class="metric-value">
+                            {{ activeAttendanceData.total_absent || 0 }}
+                        </div>
+                        <div class="metric-footer">
+                            <span class="metric-title">Absent attendance</span>
+                            <Tag
+                                v-if="activeAttendanceData.avg_absent != null"
+                                :value="activeAttendanceData.avg_absent + '%'"
+                                severity="danger"
+                                rounded
+                            />
+                        </div>
+                    </template>
+                </Card>
+
+                <!-- Late arrivals -->
+                <Card class="metric-card">
+                    <template #content>
+                        <!-- <div class="metric-top">
+                            <span class="metric-icon icon-warn">
+                                <i class="pi pi-clock"></i>
+                            </span>
+                        </div> -->
+                        <div class="metric-value">
+                            {{ activeAttendanceData.total_late || 0 }}
+                        </div>
+                        <div class="metric-footer">
+                            <span class="metric-title">Late arrivals</span>
+                            <Tag
+                                v-if="activeAttendanceData.avg_late != null"
+                                :value="activeAttendanceData.avg_late + '%'"
+                                severity="warn"
+                                rounded
+                            />
+                        </div>
+                    </template>
+                </Card>
+
+                <!-- Avg. work hours -->
+                <Card class="metric-card">
+                    <template #content>
+                        <!-- <div class="metric-top">
+                            <span class="metric-icon icon-info">
+                                <i class="pi pi-stopwatch"></i>
+                            </span>
+                        </div> -->
+                        <div class="metric-value">
+                            {{ activeAttendanceData.average_work_hours || 0 }}
+                        </div>
+                        <div class="metric-footer">
+                            <span class="metric-title">Avg. work hours</span>
+                        </div>
+                    </template>
+                </Card>
+
+                <!-- On leave -->
+                <Card class="metric-card">
+                    <template #content>
+                        <!-- <div class="metric-top">
+                            <span class="metric-icon icon-info">
+                                <i class="pi pi-send"></i>
+                            </span>
+                        </div> -->
+                        <div class="metric-value">
+                            {{ activeAttendanceData.total_leave || 0 }}
+                        </div>
+                        <div class="metric-footer">
+                            <span class="metric-title">On leave</span>
+                        </div>
+                    </template>
+                </Card>
+
+                <!-- Pending leave -->
+                <Card class="metric-card">
+                    <template #content>
+                        <!-- <div class="metric-top">
+                            <span class="metric-icon icon-warn">
+                                <i class="pi pi-hourglass"></i>
+                            </span>
+                        </div> -->
+                        <div class="metric-value">
+                            {{ activeAttendanceData.total_pending_leave || 0 }}
+                        </div>
+                        <div class="metric-footer">
+                            <span class="metric-title">Pending leave</span>
+                        </div>
+                    </template>
+                </Card>
+
+                <!-- Average age -->
+                <Card class="metric-card">
+                    <template #content>
+                        <!-- <div class="metric-top">
+                            <span class="metric-icon icon-primary">
+                                <i class="pi pi-user"></i>
+                            </span>
+                        </div> -->
+                        <div class="metric-value">
+                            {{ activeAttendanceData.averageAge || 0 }}
+                        </div>
+                        <div class="metric-footer">
+                            <span class="metric-title"
+                                >Average age (years)</span
+                            >
+                        </div>
+                    </template>
+                </Card>
+
+                <!-- Average tenure -->
+                <Card class="metric-card">
+                    <template #content>
+                        <!-- <div class="metric-top">
+                            <span class="metric-icon icon-violet">
+                                <i class="pi pi-star"></i>
+                            </span>
+                        </div> -->
+                        <div class="metric-value">
+                            {{ activeAttendanceData.averageTenure || 0 }}
+                        </div>
+                        <div class="metric-footer">
+                            <span class="metric-title"
+                                >Average tenure (years)</span
+                            >
+                        </div>
+                    </template>
+                </Card>
+
+                <!-- TA/DA MTD -->
+                <Card class="metric-card">
+                    <template #content>
+                        <!-- <div class="metric-top">
+                            <span class="metric-icon icon-success">
+                                <i class="pi pi-wallet"></i>
+                            </span>
+                        </div> -->
+                        <div class="metric-value">
+                            {{ activeAttendanceData.total_expense || 0
+                            }}<small class="metric-unit"> TK.</small>
+                        </div>
+                        <div class="metric-footer">
+                            <span class="metric-title">TA/DA (MTD)</span>
+                        </div>
+                    </template>
+                </Card>
+
+                <!-- Document Compliance -->
+                <Card class="metric-card">
+                    <template #content>
+                        <!-- <div class="metric-top">
+                            <span class="metric-icon icon-info">
+                                <i class="pi pi-file-check"></i>
+                            </span>
+                        </div> -->
+                        <div class="metric-value metric-value-sm">
+                            {{ activeAttendanceData.active_employee || 0 }}
+                            <span class="metric-divider">/</span>
+                            {{
+                                activeAttendanceData.totalEmployeeDocumentation ||
+                                0
+                            }}
+                        </div>
+                        <div class="metric-footer compliance-footer">
+                            <span class="metric-title"
+                                >Document Compliance</span
+                            >
+                            <span
+                                class="metric-tag"
+                                v-if="
+                                    activeAttendanceData.averagePercentageOfDocumentation !=
+                                    null
+                                "
+                            >
+                                {{
+                                    activeAttendanceData.averagePercentageOfDocumentation
+                                }}%
+                            </span>
+                        </div>
+                        <ProgressBar
                             v-if="
                                 activeAttendanceData.averagePercentageOfDocumentation !=
                                 null
                             "
-                        >
-                            {{
-                                activeAttendanceData.averagePercentageOfDocumentation
-                            }}%
-                        </span>
-                    </div>
-                </div>
-
-                <!-- <div class="metric-card">
-                    <div class="metric-header">
-                        <span class="metric-title">
-                            <i
-                                class="fa-solid fa-file-shield metric-icon me-2"
-                            ></i>
-                            Document Compliance
-                        </span>
-                    </div>
-                    <div class="metric-body">
-                        <div class="stat-row">
-                            <span class="stat-label">
-                                <i
-                                    class="fa-solid fa-user-check text-muted me-1"
-                                ></i>
-                                Compliant Employees
-                            </span>
-                            <span class="stat-value text-success">
-                                {{ activeAttendanceData.active_employee || 0 }}
-                                /
-                                {{
-                                    activeAttendanceData.totalEmployeeDocumentation ||
-                                    0
-                                }}
-                            </span>
-                        </div>
-                        <div class="stat-row mt-2">
-                            <span class="stat-label">
-                                <i
-                                    class="fa-solid fa-chart-line text-muted me-1"
-                                ></i>
-                                Completion Rate
-                            </span>
-                            <span class="stat-value text-warning">
-                                {{
-                                    activeAttendanceData.averagePercentageOfDocumentation ||
-                                    0
-                                }}%
-                            </span>
-                        </div>
-                    </div>
-                </div> -->
+                            :value="
+                                Number(
+                                    activeAttendanceData.averagePercentageOfDocumentation,
+                                ) || 0
+                            "
+                            :showValue="false"
+                            class="compliance-progress"
+                        />
+                    </template>
+                </Card>
             </section>
 
             <!-- Secondary Analytics / Charts Section -->
-            <section class="chart-section">
+            <section class="panel-section">
                 <dailyStandup />
             </section>
-            <section class="chart-section mt-3">
+            <section class="panel-section">
                 <dashboardChart :dashData="dashCount" />
             </section>
         </div>
@@ -573,157 +456,190 @@ onMounted(() => {
 
 <style scoped>
 .dashboard-wrapper {
-    background-color: #f8fafc;
+    background-color: var(--p-surface-50, #f8fafc);
     min-height: 100vh;
     font-family:
         "Inter",
         system-ui,
         -apple-system,
+        "Segoe UI",
         sans-serif;
-    color: #0f172a;
+    color: var(--p-text-color, #0f172a);
+}
+
+.dashboard-inner {
+    max-width: 1440px;
+    margin: 0 auto;
+    padding: 1.25rem 1.25rem 2rem;
 }
 
 /* Header */
-/* .icon-badge {
-    width: 35px;
-    height: 35px;
-    background: #aeb5be67;
-    color: #4c72c4c0;
-    border-radius: 10px;
+.dashboard-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.5rem;
+}
+
+.header-main {
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+}
+
+.header-icon {
+    width: 46px;
+    height: 46px;
+    border-radius: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 1.25rem;
-} */
-.dash-icon {
-    width: 25px;
-    height: 25px;
-    color: #2a65e6c0;
+    color: var(--p-primary-color, #6366f1);
+    background: color-mix(
+        in srgb,
+        var(--p-primary-color, #6366f1) 12%,
+        transparent
+    );
+    flex-shrink: 0;
 }
 
 .dashboard-title {
-    font-family: "Inter", sans-serif;
-    font-size: 32px;
-    font-weight: 300;
-    letter-spacing: 0.5px;
-    margin-left: 5px;
+    font-size: 1.75rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
     line-height: 1.2;
+    margin: 0;
+    color: var(--p-text-color, #0f172a);
 }
 
 .dashboard-subtitle {
+    margin: 0.2rem 0 0;
     font-size: 0.875rem;
+    color: var(--p-text-muted-color, #64748b);
 }
 
-/* Filter Controls Card */
-.filter-card {
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-radius: 12px;
-    padding: 1rem;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-}
-
-.control-box {
-    background: #f8fafc;
-    border: 1px solid #cbd5e1;
-    border-radius: 8px;
+.header-aside {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
     padding: 0.5rem 0.875rem;
-    cursor: pointer;
-    transition: border-color 0.2s ease;
-    min-height: 46px;
-}
-
-.control-box:hover {
-    border-color: #2563eb;
-}
-
-.control-label {
-    font-size: 0.75rem;
+    border-radius: 999px;
+    background: var(--p-surface-0, #ffffff);
+    border: 1px solid var(--p-content-border-color, #e2e8f0);
+    color: var(--p-text-muted-color, #64748b);
+    font-size: 0.8125rem;
     font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: #64748b;
+    box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
 }
 
-.control-value {
-    font-size: 0.925rem;
-    font-weight: 600;
-    color: #0f172a;
-}
-
-.calendar-trigger {
-    position: relative;
-    color: #64748b;
-    font-size: 1.25rem;
-}
-
-.hidden-date-input {
-    opacity: 0;
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    cursor: pointer;
-}
-
-.multiselect-wrapper {
-    padding: 0.25rem 0.5rem;
-    cursor: default;
-}
-
-/* Multiselect Custom Overrides */
-:deep(.multiselect__tags) {
-    border: none !important;
-    background: transparent !important;
-    padding-left: 0 !important;
-    min-height: 28px !important;
-}
-
-:deep(.multiselect__single) {
-    background: transparent !important;
-    font-size: 0.925rem !important;
-    font-weight: 600 !important;
-    color: #0f172a !important;
-    padding-left: 0 !important;
+.header-aside i {
+    color: var(--p-primary-color, #6366f1);
 }
 
 /* Metrics Grid */
 .metrics-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
     gap: 1rem;
+    margin-bottom: 1.5rem;
 }
 
 .metric-card {
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-radius: 12px;
-    padding: 1.125rem;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    min-height: 80px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    border-radius: var(--p-content-border-radius, 12px);
     transition:
-        transform 0.15s ease,
-        box-shadow 0.15s ease;
+        transform 0.16s ease,
+        box-shadow 0.16s ease;
+    border: 0.9px solid rgb(207, 207, 207);
 }
 
 .metric-card:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 10px 24px -12px rgba(15, 23, 42, 0.22);
 }
 
-.metric-card-icon {
-    font-size: 1.125rem;
-    color: #94a3b8;
+.metric-card :deep(.p-card-body) {
+    padding: 1.125rem 1.125rem 1rem;
+}
+
+.metric-card :deep(.p-card-content) {
+    padding: 0;
+}
+
+.metric-top {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
     margin-bottom: 0.75rem;
-    align-self: flex-start;
 }
 
-.metric-body {
-    flex: 1;
+.metric-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.0625rem;
+}
+
+.icon-primary {
+    color: #6366f1;
+    background: rgba(99, 102, 241, 0.12);
+}
+
+.icon-violet {
+    color: #8b5cf6;
+    background: rgba(139, 92, 246, 0.12);
+}
+
+.icon-success {
+    color: #10b981;
+    background: rgba(16, 185, 129, 0.12);
+}
+
+.icon-danger {
+    color: #ef4444;
+    background: rgba(239, 68, 68, 0.12);
+}
+
+.icon-warn {
+    color: #f59e0b;
+    background: rgba(245, 158, 11, 0.14);
+}
+
+.icon-info {
+    color: #0ea5e9;
+    background: rgba(14, 165, 233, 0.12);
+}
+
+.metric-value {
+    font-size: 1.875rem;
+    font-weight: 700;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    color: var(--p-text-color, #0f172a);
+    display: flex;
+    align-items: baseline;
+    gap: 0.25rem;
+}
+
+.metric-value-sm {
+    font-size: 1.5rem;
+}
+
+.metric-unit {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--p-text-muted-color, #64748b);
+}
+
+.metric-divider {
+    color: var(--p-text-muted-color, #94a3b8);
+    font-weight: 400;
+    margin: 0 0.1rem;
 }
 
 .metric-footer {
@@ -731,108 +647,69 @@ onMounted(() => {
     align-items: center;
     justify-content: space-between;
     gap: 0.5rem;
-    margin-top: 0.875rem;
+    margin-top: 0.75rem;
 }
 
-.metric-change {
+.metric-title {
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--p-text-muted-color, #64748b);
+    line-height: 1.35;
+}
+
+.metric-tag {
     font-size: 0.75rem;
-    font-family: "Inter", sans-serif;
     font-weight: 600;
-    color: #040405;
-    background: #f1f5f9;
+    color: var(--p-text-color, #0f172a);
+    background: var(--p-surface-100, #f1f5f9);
     border-radius: 999px;
     padding: 0.15rem 0.5rem;
     white-space: nowrap;
 }
 
-.metric-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 0.75rem;
+.compliance-footer {
+    margin-bottom: 0.5rem;
 }
 
-/* .metric-title {
-    font-size: 12px;
-    font-weight: 500;
-    letter-spacing: 0.6px;
-    font-family: sans-serif;
-} */
-
-.metric-title {
-    font-family: "Inter", sans-serif;
-    font-size: 13px;
-    font-weight: 500;
-    letter-spacing: 0.1px;
-    line-height: 1.4;
+.compliance-progress {
+    height: 6px;
 }
 
-.metric-icon {
-    font-size: 1rem;
-    color: #94a3b8;
+.compliance-progress :deep(.p-progressbar) {
+    height: 6px;
+    border-radius: 999px;
 }
 
-.primary-stat {
-    flex: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 2rem;
-    font-weight: 700;
-    color: #0f172a;
-    line-height: 1.1;
-    text-align: center;
+/* Panels */
+.panel-section {
+    margin-top: 1rem;
 }
 
-.primary-stat .unit {
-    font-size: 0.875rem;
-    font-weight: 500;
-    color: #64748b;
-}
+@media (max-width: 575.98px) {
+    .dashboard-inner {
+        padding: 1rem 0.875rem 1.5rem;
+    }
 
-.highlight-currency {
-    color: #2563eb;
-}
+    .dashboard-title {
+        font-size: 1.4rem;
+    }
 
-.stat-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 0.875rem;
-}
+    .header-icon {
+        width: 40px;
+        height: 40px;
+    }
 
-.stat-label {
-    color: #64748b;
-    font-weight: 500;
-}
+    .metrics-grid {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 0.75rem;
+    }
 
-.stat-value {
-    font-weight: 700;
-    color: #0f172a;
-}
+    .metric-value {
+        font-size: 1.5rem;
+    }
 
-/* Location Badges (LOB) */
-.sub-stat-group {
-    display: flex;
-    gap: 0.35rem;
-}
-
-.lob-badge {
-    background: #f1f5f9;
-    border: 1px solid #cbd5e1;
-    border-radius: 6px;
-    padding: 0.2rem 0.4rem;
-    font-size: 0.75rem;
-    display: flex;
-    align-items: center;
-    gap: 0.25rem;
-}
-
-.lob-badge small {
-    font-weight: 700;
-    color: #2563eb;
-    background: #dbeafe;
-    padding: 0 0.25rem;
-    border-radius: 3px;
+    .metric-card :deep(.p-card-body) {
+        padding: 0.875rem;
+    }
 }
 </style>
