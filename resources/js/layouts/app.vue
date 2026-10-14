@@ -3,10 +3,13 @@ import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 import { useStore } from "vuex";
 import SideBar from "./Sidebar.vue";
-import NavBar from "./Navbar.vue";
 
 const store = useStore();
 const route = useRoute();
+
+const toggleSidebar = () => {
+    store.commit("TOGGLE_SIDEBAR");
+};
 
 // Single source of truth for the breakpoint that separates the in-flow
 // desktop sidebar from the off-canvas mobile/tablet sidebar. Must stay in
@@ -80,10 +83,27 @@ onUnmounted(() => {
                 @click="closeSidebar"
             ></div>
 
-            <!-- Content Area (Minimal Header + Body) -->
+            <!-- Content Area (Body only; the Navbar has been removed) -->
             <div id="layoutSidenav_content">
-                <!-- Minimal Top Header -->
-                <NavBar v-if="$store.getters.getToken !== 0"></NavBar>
+                <!-- Mobile-only sidebar opener. Hidden on the Dashboard, whose
+                     own header provides the toggle. -->
+                <div
+                    v-if="
+                        $store.getters.getToken !== 0 &&
+                        !isDesktop &&
+                        route.name !== 'Dashboard'
+                    "
+                    class="mobile-nav-fallback"
+                >
+                    <button
+                        class="nav-toggle"
+                        type="button"
+                        @click="toggleSidebar"
+                        aria-label="Toggle navigation"
+                    >
+                        <i class="fas fa-bars"></i>
+                    </button>
+                </div>
 
                 <!-- Main Body (Scrollable Area) -->
                 <main class="main">
@@ -132,6 +152,34 @@ onUnmounted(() => {
     flex: 1;
     min-height: 0;
     overflow-y: auto;
+}
+
+/* Slim mobile-only fallback for opening the off-canvas sidebar on pages
+   that do not provide their own header toggle. */
+.mobile-nav-fallback {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+    padding: 8px 12px 0;
+}
+
+.mobile-nav-fallback .nav-toggle {
+    background: transparent;
+    border: none;
+    color: #33444a;
+    font-size: 19px;
+    line-height: 1;
+    padding: 8px 10px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition:
+        background-color 0.15s ease-in-out,
+        color 0.15s ease-in-out;
+}
+
+.mobile-nav-fallback .nav-toggle:hover {
+    background-color: #f3f6f5;
+    color: #0e8a5f;
 }
 
 /* Mobile / tablet: off-canvas sidebar with a dismissible backdrop. */

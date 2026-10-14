@@ -1,16 +1,9 @@
 <template>
     <footer class="footer">
         <div class="footer-inner">
-            <span class="footer-text">All Rights Reserved</span>
-            <span class="footer-brand">
-                <img
-                    src="/public/storage/uploads/1718087744_artisan.png"
-                    class="footer-logo"
-                    alt="Logo"
-                />
-                <span class="footer-brand-name">Artisan IT</span>
-            </span>
-            <span class="footer-text">© {{ new Date().getFullYear() }}</span>
+            All Rights Reserved ·
+            <b class="footer-brand-name">Artisan IT</b>
+            © {{ new Date().getFullYear() }}
         </div>
     </footer>
 </template>
@@ -22,45 +15,19 @@
     flex-shrink: 0;
     margin-top: auto;
     width: 100%;
-    background-color: #f8f8f8;
-    border-top: 1px solid #e5e5e5;
-    padding: 8px 12px;
-    font-family: "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
-    color: #616161;
+    background-color: transparent;
+    padding: 18px 8px 0 8px;
+    font-size: 11px;
+    color: #5b6b70;
+    font-family: "Plus Jakarta Sans", system-ui, sans-serif;
 }
 
 .footer-inner {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: center;
-    gap: 4px 6px;
-    line-height: 1.2;
-}
-
-.footer-text {
-    font-size: 11px;
-    color: #616161;
-    white-space: nowrap;
-}
-
-.footer-brand {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-}
-
-.footer-logo {
-    height: 24px;
-    width: 24px;
-    object-fit: contain;
-    flex-shrink: 0;
+    line-height: 1.3;
 }
 
 .footer-brand-name {
-    font-size: 12px;
-    font-weight: 600;
-    color: #616161;
-    white-space: nowrap;
+    font-weight: 700;
+    color: #1b2a2f;
 }
 </style>

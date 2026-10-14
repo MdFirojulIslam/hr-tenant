@@ -126,7 +126,7 @@ watch(
             xaxis: {
                 categories: departmentNames,
             },
-            colors: ["#1d6460"],
+            colors: ["#0E8A5F"],
         };
 
         //Set Dept Wise Leave
@@ -140,13 +140,15 @@ watch(
             xaxis: {
                 categories: deptNames,
             },
-            colors: ["#1d6460"],
+            colors: ["#0E8A5F"],
         };
 
-        // Set Expense Area Chart
+        // Set Expense (Month Wise TA/DA) Area Chart.
+        // Values are shown directly on each point (no hover required), with
+        // formatted axis labels, bright accent colouring and a rich tooltip.
         expenseSeries.value = [
             {
-                name: "Employees",
+                name: "TA/DA",
                 data: expense_data,
             },
         ];
@@ -155,36 +157,89 @@ watch(
                 toolbar: { show: false },
                 fontFamily: "inherit",
             },
-            dataLabels: { enabled: false },
+            // Shown immediately on top of every data point.
+            dataLabels: {
+                enabled: true,
+                offsetY: -6,
+                formatter: (val) => {
+                    const n = Number(val) || 0;
+                    return n >= 1000 ? (n / 1000).toFixed(1) + "k" : n;
+                },
+                style: {
+                    fontSize: "11px",
+                    fontWeight: 700,
+                    colors: ["#0E8A5F"],
+                },
+                background: {
+                    enabled: true,
+                    foreColor: "#ffffff",
+                    borderRadius: 4,
+                    padding: 4,
+                    borderWidth: 0,
+                    opacity: 0.9,
+                },
+            },
             stroke: {
                 curve: "smooth",
                 width: 3,
+            },
+            markers: {
+                size: 5,
+                colors: ["#ffffff"],
+                strokeColors: "#0E8A5F",
+                strokeWidth: 3,
+                hover: { size: 7 },
             },
             fill: {
                 type: "gradient",
                 gradient: {
                     shadeIntensity: 1,
-                    opacityFrom: 0.45,
-                    opacityTo: 0.05,
+                    opacityFrom: 0.5,
+                    opacityTo: 0.08,
                     stops: [0, 100],
                 },
             },
             grid: {
-                borderColor: "#e2e8f0",
+                borderColor: "#e3e9e7",
                 strokeDashArray: 4,
+                padding: { top: 18 },
             },
             xaxis: {
                 categories: expense_months,
                 axisBorder: { show: false },
                 axisTicks: { show: false },
+                labels: {
+                    style: {
+                        colors: "#5b6b70",
+                        fontSize: "11px",
+                        fontWeight: 600,
+                    },
+                },
             },
-            colors: ["#10b981"],
+            yaxis: {
+                labels: {
+                    style: { colors: "#5b6b70", fontSize: "11px" },
+                    formatter: (val) => {
+                        const n = Number(val) || 0;
+                        return n >= 1000 ? (n / 1000).toFixed(0) + "k" : n;
+                    },
+                },
+            },
+            tooltip: {
+                y: {
+                    formatter: (val) =>
+                        (Number(val) || 0).toLocaleString() + " TK.",
+                },
+            },
+            colors: ["#0E8A5F"],
         };
 
-        // Bar Area Chart
+        // Bar Chart (Employee Turnover Rate).
+        // Values are labelled on top of every bar and rendered immediately
+        // (no hover) using the chart's single primary colour.
         barSeries.value = [
             {
-                name: "Employees",
+                name: "Turnover",
                 data: turnover_rate,
             },
         ];
@@ -198,19 +253,50 @@ watch(
                     borderRadius: 6,
                     columnWidth: "42%",
                     borderRadiusApplication: "end",
+                    // Anchor each label to the top endpoint of its own bar
+                    // (default is 'center', which floats mid-bar).
+                    dataLabels: { position: "top" },
                 },
             },
-            dataLabels: { enabled: false },
+            dataLabels: {
+                enabled: true,
+                // Small, consistent gap above the bar's endpoint.
+                offsetY: -20,
+                formatter: (val) => (Number(val) || 0) + "%",
+                style: {
+                    fontSize: "11px",
+                    fontWeight: 700,
+                    colors: ["#33444a"],
+                },
+            },
             grid: {
-                borderColor: "#e2e8f0",
+                borderColor: "#e3e9e7",
                 strokeDashArray: 4,
+                padding: { top: 22 },
             },
             xaxis: {
                 categories: turnover_year,
                 axisBorder: { show: false },
                 axisTicks: { show: false },
+                labels: {
+                    style: {
+                        colors: "#5b6b70",
+                        fontSize: "11px",
+                        fontWeight: 600,
+                    },
+                },
             },
-            colors: ["#6366f1"],
+            yaxis: {
+                labels: {
+                    style: { colors: "#5b6b70", fontSize: "11px" },
+                    formatter: (val) => (Number(val) || 0) + "%",
+                },
+            },
+            legend: { show: false },
+            tooltip: {
+                y: { formatter: (val) => (Number(val) || 0) + "%" },
+            },
+            colors: ["rgba(99, 102, 241, 0.85)"],
         };
 
         // Set Pie Chart
@@ -281,15 +367,18 @@ watch(
 .chart-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 1rem;
+    gap: 14px;
+    font-family: "Plus Jakarta Sans", system-ui, sans-serif;
 }
 
 .chart-card {
-    border-radius: var(--p-content-border-radius, 12px);
+    border-radius: 14px;
+    border: 1px solid #e3e9e7;
+    background: #ffffff;
 }
 
 .chart-card :deep(.p-card-body) {
-    padding: 1.25rem;
+    padding: 20px;
 }
 
 .chart-card :deep(.p-card-title) {
@@ -318,13 +407,13 @@ watch(
 }
 
 .icon-indigo {
-    color: #6366f1;
-    background: rgba(99, 102, 241, 0.12);
+    color: #2f6fde;
+    background: #e1ecfd;
 }
 
 .icon-green {
-    color: #10b981;
-    background: rgba(16, 185, 129, 0.12);
+    color: #0e8a5f;
+    background: #dff3ea;
 }
 
 .chart-card-heading {
@@ -335,16 +424,17 @@ watch(
 
 .chart-card-title {
     margin: 0;
-    font-size: 1rem;
-    font-weight: 600;
-    color: var(--p-text-color, #0f172a);
+    font-family: "Plus Jakarta Sans", system-ui, sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    color: #1b2a2f;
     line-height: 1.3;
 }
 
 .chart-card-sub {
     margin: 0.1rem 0 0;
-    font-size: 0.75rem;
-    color: var(--p-text-muted-color, #64748b);
+    font-size: 12px;
+    color: #5b6b70;
 }
 
 .chart-body {

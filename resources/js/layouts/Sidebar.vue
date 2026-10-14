@@ -27,6 +27,13 @@ const toggleMenu = (id) => {
     }
 };
 
+// Only render an icon when the database actually provides one. Folder/child
+// rows store the literal string "NULL" when they have no icon.
+const hasIcon = (icon) =>
+    typeof icon === "string" &&
+    icon.trim() !== "" &&
+    icon.trim().toUpperCase() !== "NULL";
+
 const filterActiveNodes = (nodes) => {
     return nodes
         .filter((node) => node.active === 1 && node.id !== 1)
@@ -85,13 +92,12 @@ onMounted(() => getData());
                 <span class="identity-designation">{{ user?.des_name }}</span>
             </div>
 
-            <!-- Profile Section -->
+            <!-- Navigation -->
             <div class="sb-sidenav-menu">
-                <!-- Nav Links -->
-                <div class="nav mt-4 flex-column">
+                <div class="nav mt-2 flex-column">
                     <div v-if="dashboard">
                         <Router-Link
-                            class="nav-link"
+                            class="nav-link nav-link-primary"
                             :to="{ name: 'Dashboard' }"
                             active-class="active"
                         >
@@ -104,7 +110,7 @@ onMounted(() => getData());
 
                     <div>
                         <Router-Link
-                            class="nav-link"
+                            class="nav-link nav-link-primary"
                             :to="{ name: 'Profile' }"
                             active-class="active"
                         >
@@ -115,23 +121,32 @@ onMounted(() => getData());
                         </Router-Link>
                     </div>
 
-                    <div v-for="nav in nav_tree" :key="nav.id">
+                    <div
+                        class="nav-group"
+                        v-for="nav in nav_tree"
+                        :key="nav.id"
+                    >
                         <a
-                            class="nav-link"
-                            :class="{ collapsed: !openMenus.includes(nav.id) }"
+                            class="nav-link nav-group-header"
+                            :class="{
+                                'group-open': openMenus.includes(nav.id),
+                            }"
                             href="javascript:void(0)"
                             @click="toggleMenu(nav.id)"
                         >
-                            <div class="sb-nav-link-icon">
-                                <i :class="nav.icon + ''"></i>
-                            </div>
-                            <span class="menu-names">{{ nav.name }}</span>
-                            <div
-                                class="sb-sidenav-collapse-arrow"
+                            <span class="group-label">
+                                <span
+                                    v-if="hasIcon(nav.icon)"
+                                    class="sb-nav-link-icon"
+                                >
+                                    <i :class="nav.icon"></i>
+                                </span>
+                                <span class="menu-names">{{ nav.name }}</span>
+                            </span>
+                            <i
+                                class="fas fa-angle-down sb-sidenav-collapse-arrow"
                                 v-if="nav.children && nav.children.length"
-                            >
-                                <i class="fas fa-angle-down"></i>
-                            </div>
+                            ></i>
                         </a>
 
                         <div
@@ -146,10 +161,16 @@ onMounted(() => getData());
                             >
                                 <RouterLink
                                     v-if="$router.hasRoute(child.page)"
-                                    class="nav-link"
+                                    class="nav-link child-link"
                                     active-class="active"
                                     :to="{ name: child.page }"
                                 >
+                                    <span
+                                        v-if="hasIcon(child.icon)"
+                                        class="sb-nav-link-icon"
+                                    >
+                                        <i :class="child.icon"></i>
+                                    </span>
                                     <span class="child-names">
                                         {{ child.name }}
                                     </span>
@@ -167,14 +188,17 @@ onMounted(() => getData());
         </nav>
     </div>
 </template>
+
 <style scoped>
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap");
+
 /* Sidebar container */
 #layoutSidenav_nav {
     height: 100%;
     display: flex;
     flex-direction: column;
-    font-family: "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
-    color: #242424;
+    font-family: "Plus Jakarta Sans", system-ui, sans-serif;
+    color: #1b2a2f;
 }
 
 /* Reset the legacy SB Admin flex-basis / transform so the sidebar rail
@@ -186,11 +210,15 @@ onMounted(() => getData());
 }
 
 .sidebar-design {
-    width: 260px;
+    width: 264px;
     height: 100%;
-    background-color: #f8f8f8;
+    background-color: #ffffff;
+    border-right: 1px solid #e3e9e7;
     display: flex;
     flex-direction: column;
+    gap: 6px;
+    padding: 20px 14px 24px 14px;
+    box-sizing: border-box;
     transition: width 0.15s ease-in-out;
 }
 
@@ -198,25 +226,25 @@ onMounted(() => getData());
 .sidebar-header {
     display: flex;
     align-items: center;
-    gap: 8px;
-    padding: 12px 16px;
-    border-bottom: 1px solid #e5e5e5;
+    gap: 10px;
+    padding: 2px 8px 16px 8px;
     flex-shrink: 0;
 }
 
 .sidebar-logo {
-    height: 32px;
-    width: 32px;
+    height: 30px;
+    width: 30px;
     object-fit: contain;
+    border-radius: 8px;
     flex-shrink: 0;
 }
 
 .sidebar-title {
     flex: 1;
-    color: #242424;
-    font-size: 16px;
-    font-weight: 600;
-    letter-spacing: 0.5px;
+    color: #1b2a2f;
+    font-size: 15px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
     white-space: nowrap;
     overflow: hidden;
 }
@@ -224,64 +252,50 @@ onMounted(() => getData());
 .sidebar-toggle {
     background: transparent;
     border: none;
-    color: #242424;
-    font-size: 16px;
-    padding: 4px 6px;
-    border-radius: 4px;
+    color: #5b6b70;
+    font-size: 15px;
+    padding: 6px 8px;
+    border-radius: 8px;
     cursor: pointer;
     flex-shrink: 0;
-    transition: background-color 0.15s ease-in-out;
+    transition:
+        background-color 0.15s ease-in-out,
+        color 0.15s ease-in-out;
 }
 
 .sidebar-toggle:hover {
-    background-color: #f0f0f0;
+    background-color: #f3f6f5;
+    color: #0e8a5f;
 }
 
 /* Employee identity */
 .sidebar-identity {
     display: flex;
     flex-direction: column;
-    padding: 12px 16px;
-    border-bottom: 1px solid #e5e5e5;
+    gap: 2px;
+    padding: 12px;
+    background-color: #f3f6f5;
+    border-radius: 12px;
+    margin-bottom: 8px;
     flex-shrink: 0;
 }
 
 .identity-name {
-    color: #242424;
-    font-size: 14px;
-    font-weight: 600;
+    color: #1b2a2f;
+    font-size: 13px;
+    font-weight: 700;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
 .identity-designation {
-    color: #616161;
-    font-size: 12px;
+    color: #5b6b70;
+    font-size: 11px;
     font-weight: 400;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-}
-
-/* Desktop: collapsed icon rail */
-@media (min-width: 992px) {
-    #layoutSidenav_nav.sidebar-collapsed .sidebar-design {
-        width: 56px;
-    }
-
-    #layoutSidenav_nav.sidebar-collapsed .sidebar-header {
-        flex-direction: column;
-        gap: 6px;
-        padding: 12px 8px;
-    }
-
-    #layoutSidenav_nav.sidebar-collapsed .sidebar-title,
-    #layoutSidenav_nav.sidebar-collapsed .sidebar-identity,
-    #layoutSidenav_nav.sidebar-collapsed .sb-sidenav-menu,
-    #layoutSidenav_nav.sidebar-collapsed :deep(.footer) {
-        display: none;
-    }
 }
 
 .sb-sidenav-menu {
@@ -292,7 +306,7 @@ onMounted(() => getData());
 }
 
 .sb-sidenav-menu::-webkit-scrollbar {
-    width: 8px;
+    width: 6px;
 }
 
 .sb-sidenav-menu::-webkit-scrollbar-track {
@@ -300,122 +314,185 @@ onMounted(() => getData());
 }
 
 .sb-sidenav-menu::-webkit-scrollbar-thumb {
-    background: #d1d1d1;
-    border-radius: 4px;
+    background: #d5dfdc;
+    border-radius: 999px;
 }
 
 .sb-sidenav-menu::-webkit-scrollbar-thumb:hover {
-    background: #b3b3b3;
+    background: #c2cfcb;
 }
 
-/* Main navigation text */
-.menu-names {
-    color: #242424;
-    font-size: 14px;
-    font-weight: 500;
+/* Base navigation item.
+   Prefixed with #layoutSidenav_nav so these beat the global SB Admin
+   selectors (.sb-sidenav .sb-sidenav-menu .nav .nav-link) without !important
+   everywhere. */
+#layoutSidenav_nav :deep(.nav-link) {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 12px;
+    border-radius: 10px;
+    background-color: transparent;
+    color: #33444a;
+    font-size: 13px;
+    font-weight: 600;
     letter-spacing: 0;
+    text-decoration: none !important;
+    cursor: pointer;
+    border: none;
+    transition:
+        background-color 0.15s ease-in-out,
+        color 0.15s ease-in-out;
 }
 
-/* Child navigation text */
-.child-names {
-    color: #242424;
-    font-size: 14px;
-    font-weight: 400;
-    letter-spacing: 0;
+/* Gap between items */
+#layoutSidenav_nav :deep(.sb-sidenav-menu > .nav.flex-column) {
+    gap: 2px;
+}
+
+/* Icon-to-text gap (reset the legacy SB Admin margin-right) */
+#layoutSidenav_nav :deep(.sb-nav-link-icon) {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    color: inherit;
+    font-size: 15px;
+    margin-right: 0;
+    flex-shrink: 0;
+}
+
+/* Hover state */
+#layoutSidenav_nav :deep(.nav-link:hover) {
+    background-color: #f3f6f5;
+    color: #1b2a2f;
+}
+
+/* Active / selected state */
+#layoutSidenav_nav :deep(.nav-link.active) {
+    background-color: #ddf1e8;
+    color: #096645;
+    font-weight: 700;
+}
+
+/* Group headers (database icon treatment) */
+.nav-group {
+    margin-top: 6px;
+}
+
+#layoutSidenav_nav :deep(.nav-group-header) {
+    justify-content: space-between;
+    color: #1b2a2f;
+    font-weight: 700;
+    font-size: 13px;
+}
+
+.group-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+}
+
+/* Brand accent for the group's database icon. */
+.group-label .sb-nav-link-icon {
+    color: #0e8a5f;
 }
 
 /* Collapse arrow */
-:deep(.sb-sidenav-collapse-arrow) {
-    color: #616161;
+#layoutSidenav_nav :deep(.sb-sidenav-collapse-arrow) {
+    color: #5b6b70;
     font-size: 12px;
     transition: transform 0.2s ease;
 }
 
-/* Base navigation item */
-:deep(.nav-link) {
-    border-radius: 4px !important;
-    background-color: transparent !important;
-    color: #242424 !important;
-    cursor: pointer;
-    text-decoration: none !important;
-    transition:
-        background-color 0.15s ease-in-out,
-        color 0.15s ease-in-out !important;
+#layoutSidenav_nav :deep(.nav-group-header.group-open .sb-sidenav-collapse-arrow) {
+    transform: rotate(180deg);
 }
 
-/* Main navigation items */
-:deep(.sb-sidenav-menu > .nav > div > .nav-link) {
-    display: flex !important;
-    align-items: center !important;
-    min-height: 36px !important;
-    padding: 0 12px !important;
-    margin: 0 !important;
-    font-size: 14px !important;
-    font-weight: 500 !important;
-}
-
-/* Gap between main navigation items */
-:deep(.sb-sidenav-menu > .nav.flex-column) {
-    gap: 4px !important;
-}
-
-/* Icon-to-text gap */
-:deep(.sb-nav-link-icon) {
-    display: inline-flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    width: 16px;
-    margin-right: 8px !important;
-    color: #242424;
-    font-size: 15px;
-}
-
-/* Hover state */
-:deep(.nav-link:hover) {
-    background-color: #f0f0f0 !important;
-    color: #242424 !important;
-}
-
-/* Active / selected state */
-:deep(.nav-link.active) {
-    background-color: #e6e6e6 !important;
-    color: #242424 !important;
-}
-
-/* Parent to child list spacing */
-:deep(.collapse-menu) {
+/* Child list indentation with guide border */
+#layoutSidenav_nav :deep(.collapse-menu) {
     display: flex;
     flex-direction: column;
     gap: 2px;
-    margin-top: 4px;
+    margin-top: 2px;
 }
 
-/* Child list indentation */
-:deep(.sb-sidenav-menu-nested) {
+#layoutSidenav_nav :deep(.sb-sidenav-menu-nested) {
     display: flex;
     flex-direction: column;
-    margin-left: 0 !important;
-    padding-left: 24px !important;
-    padding-right: 12px !important;
+    margin-left: 18px;
+    padding-left: 12px;
+    border-left: 1px solid #e3e9e7;
 }
 
 /* Child navigation items */
-:deep(.sb-sidenav-menu-nested .nav-link) {
-    display: flex !important;
-    align-items: center !important;
-    min-height: 32px !important;
-    padding: 0 12px !important;
-    font-size: 14px !important;
-    font-weight: 400 !important;
+#layoutSidenav_nav :deep(.sb-sidenav-menu-nested .nav-link) {
+    padding: 6px 12px;
+    font-size: 12.5px;
+    font-weight: 400;
+    color: #4a5c62;
+    border-radius: 6px;
 }
 
+#layoutSidenav_nav :deep(.sb-sidenav-menu-nested .nav-link:hover) {
+    background-color: #f3f6f5;
+    color: #1b2a2f;
+}
+
+#layoutSidenav_nav :deep(.sb-sidenav-menu-nested .nav-link.active) {
+    color: #0e8a5f;
+    font-weight: 700;
+    background-color: #f3f6f5;
+}
+
+/* Desktop: collapsed icon rail */
+@media (min-width: 992px) {
+    #layoutSidenav_nav.sidebar-collapsed .sidebar-design {
+        width: 72px;
+        padding: 20px 12px;
+    }
+
+    #layoutSidenav_nav.sidebar-collapsed .sidebar-header {
+        flex-direction: column;
+        gap: 10px;
+        padding: 2px 0 12px 0;
+    }
+
+    #layoutSidenav_nav.sidebar-collapsed .sidebar-title,
+    #layoutSidenav_nav.sidebar-collapsed .sidebar-identity,
+    #layoutSidenav_nav.sidebar-collapsed :deep(.footer) {
+        display: none;
+    }
+
+    #layoutSidenav_nav.sidebar-collapsed :deep(.nav-link) {
+        justify-content: center;
+        padding: 9px 0;
+        gap: 0;
+    }
+
+    #layoutSidenav_nav.sidebar-collapsed .menu-names {
+        display: none;
+    }
+
+    #layoutSidenav_nav.sidebar-collapsed :deep(.sb-sidenav-collapse-arrow),
+    #layoutSidenav_nav.sidebar-collapsed :deep(.collapse-menu) {
+        display: none !important;
+    }
+
+    #layoutSidenav_nav.sidebar-collapsed .nav-group {
+        margin-top: 2px;
+    }
+}
+
+/* Mobile / tablet: off-canvas drawer */
 @media (max-width: 991.98px) {
     #layoutSidenav #layoutSidenav_nav {
         position: fixed;
         top: 0;
         left: 0;
         height: 100vh;
-        width: min(260px, 86vw);
+        width: min(264px, 86vw);
         z-index: 1050;
         transform: translateX(-100%);
         transition: transform 0.2s ease-in-out;
@@ -426,7 +503,7 @@ onMounted(() => getData());
     #layoutSidenav #layoutSidenav_nav.sidebar-open {
         transform: translateX(0);
         pointer-events: auto;
-        box-shadow: 0 0 16px rgba(0, 0, 0, 0.2);
+        box-shadow: 0 0 24px rgba(27, 42, 47, 0.18);
     }
 
     .sidebar-design {

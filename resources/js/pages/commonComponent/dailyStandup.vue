@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, onBeforeUnmount } from "vue";
+import { ref, computed, onMounted, onBeforeUnmount } from "vue";
 import { useRouter } from "vue-router";
 import api from "@/api";
 
@@ -81,10 +81,10 @@ const fetchStandup = async () => {
     }
 };
 
+// Table shows only today and the previous day (no future/tomorrow column).
 const dayCards = [
     { key: "yesterday", label: "Yesterday" },
     { key: "today", label: "Today" },
-    { key: "tomorrow", label: "Tomorrow" },
 ];
 
 // Late employees modal
@@ -146,6 +146,103 @@ const handleKeydown = (e) => {
     }
 };
 
+// Presentation-only helpers (reference palette). No data/logic change.
+const dayDotColors = {
+    present: "#0E8A5F",
+    late: "#C0392B",
+    on_leave: "#C27C0E",
+    schedule_outlet_visited: "#2F6FDE",
+    random_outlet_visit: "#1A9BB5",
+    meeting_minutes: "#5B6B70",
+};
+
+const standupRows = [
+    {
+        key: "present",
+        label: "Present attendance",
+        dot: dayDotColors.present,
+        cell: (day) => ({
+            value: `${formatNumber(day?.present?.count)} of ${formatNumber(day?.present?.total)}`,
+            pct: `${day?.present?.percentage || 0}%`,
+            pctClass: "pct-success",
+        }),
+    },
+    {
+        key: "late",
+        label: "Late attendance",
+        dot: dayDotColors.late,
+        cell: (day, cardKey) => ({
+            value: `${formatNumber(day?.late?.count)} of ${formatNumber(day?.present?.count)}`,
+            pct: `${day?.late?.percentage || 0}%`,
+            pctClass: "pct-danger",
+            clickable: true,
+            onClick: () => openLateModal(cardKey),
+        }),
+    },
+    {
+        key: "on_leave",
+        label: "On leave",
+        dot: dayDotColors.on_leave,
+        onHover: true,
+        cell: (day) => ({
+            value: formatNumber(day?.on_leave?.count),
+            pct: `${day?.on_leave?.percentage || 0}%`,
+            pctClass: "pct-warning",
+            hoverable: (day?.on_leave?.count || 0) > 0,
+        }),
+    },
+    {
+        key: "schedule_outlet_visited",
+        label: "Scheduled outlet visited",
+        dot: dayDotColors.schedule_outlet_visited,
+        cell: (day) => ({
+            value: `${formatNumber(day?.schedule_outlet_visited?.visited)} of ${formatNumber(day?.schedule_outlet_visited?.scheduled)}`,
+            pct: `${day?.schedule_outlet_visited?.percentage || 0}%`,
+            pctClass: "pct-primary",
+            clickable: true,
+            onClick: () => navigateTo("OutletVisitReport"),
+        }),
+    },
+    {
+        key: "random_outlet_visit",
+        label: "Random outlet visit",
+        dot: dayDotColors.random_outlet_visit,
+        cell: (day) => ({
+            value: `${formatNumber(day?.random_outlet_visit?.count)} by ${formatNumber(day?.random_outlet_visit?.employees)}`,
+            pct: `${formatNumber(day?.random_outlet_visit?.towns)} towns`,
+            pctClass: "pct-muted",
+            clickable: true,
+            onClick: () => navigateTo("RandomOutletVisitReport"),
+        }),
+    },
+    {
+        key: "meeting_minutes",
+        label: "Meeting minutes",
+        dot: dayDotColors.meeting_minutes,
+        cell: (day) => ({
+            value: formatNumber(day?.meeting_minutes?.meetings),
+            pct: `${formatNumber(day?.meeting_minutes?.persons)} persons`,
+            pctClass: "pct-muted",
+            clickable: true,
+            onClick: () => navigateTo("MeetingMinutesReport"),
+        }),
+    },
+];
+
+const standupMatrix = computed(() =>
+    standupRows.map((row) => ({
+        ...row,
+        cells: dayCards.map((card) =>
+            row.cell(standupData.value[card.key], card.key),
+        ),
+    })),
+);
+
+const todayStandup = computed(() => standupData.value.today || {});
+
+const progressWidth = (percentage) =>
+    `${Math.min(Number(percentage) || 0, 100)}%`;
+
 onMounted(() => {
     fetchStandup();
     document.addEventListener("keydown", handleKeydown);
@@ -158,14 +255,7 @@ onBeforeUnmount(() => {
 
 <template>
     <div class="daily-standup-content">
-        <div class="d-flex align-items-center justify-content-between mb-2">
-            <div class="d-flex align-items-center">
-                <!-- <div class="icon-badge">
-                    <i class="fa-solid fa-sun"></i>
-                </div> -->
-                <h2 class="standup-title ms-2">Daily Standup Notes</h2>
-            </div>
-        </div>
+        <div class="section-label">Daily standup · yesterday vs. today</div>
 
         <div v-if="loading" class="standup-loading">
             <div
@@ -179,237 +269,165 @@ onBeforeUnmount(() => {
             Unable to load Daily Standup data. Please try again later.
         </div>
 
-        <div v-else class="row g-3">
-            <div
-                v-for="card in dayCards"
-                :key="card.key"
-                class="col-12 col-md-4"
-            >
-                <div class="standup-card">
-                    <div class="standup-card-header">
-                        <span class="standup-day-label">{{ card.label }}</span>
-                        <span class="standup-date-label">{{
-                            formatDateLabel(dates[card.key])
-                        }}</span>
-                    </div>
-
-                    <div class="standup-metrics">
-                        <!-- Present -->
-                        <div class="standup-metric">
-                            <div class="metric-row">
-                                <span class="metric-name col-5">
-                                    <i
-                                        class="fa-solid fa-circle small text-success me-1"
-                                    ></i>
-                                    Present attendance
-                                </span>
-                                <span class="metric-count col-4">
-                                    {{
-                                        formatNumber(
-                                            standupData[card.key]?.present
-                                                ?.count,
-                                        )
-                                    }}
-                                    of
-                                    {{
-                                        formatNumber(
-                                            standupData[card.key]?.present
-                                                ?.total,
-                                        )
-                                    }}
-                                </span>
-                                <span class="metric-pct text-success col-3"
-                                    >{{
-                                        standupData[card.key]?.present
-                                            ?.percentage || 0
-                                    }}%</span
+        <div v-else class="standup-grid">
+            <!-- Comparison table: yesterday / today / tomorrow -->
+            <div class="standup-card standup-table-card">
+                <div class="standup-table-wrap">
+                    <table class="standup-table">
+                        <thead>
+                            <tr>
+                                <th class="col-metric">Metric</th>
+                                <th
+                                    v-for="card in dayCards"
+                                    :key="card.key"
+                                    class="col-day"
                                 >
-                            </div>
-                        </div>
-
-                        <!-- Late -->
-                        <div class="standup-metric">
-                            <div class="metric-row">
-                                <span class="metric-name col-5">
-                                    <i
-                                        class="fa-solid fa-circle small text-danger me-1"
-                                    ></i>
-                                    Late attendance
-                                </span>
-                                <span
-                                    class="metric-count col-4 metric-clickable"
-                                    @click="openLateModal(card.key)"
-                                >
-                                    {{
-                                        formatNumber(
-                                            standupData[card.key]?.late?.count,
-                                        )
-                                    }}
-                                    of
-                                    {{
-                                        formatNumber(
-                                            standupData[card.key]?.present
-                                                ?.count,
-                                        )
-                                    }}
-                                </span>
-                                <span class="metric-pct text-danger col-3"
-                                    >{{
-                                        standupData[card.key]?.late
-                                            ?.percentage || 0
-                                    }}%</span
-                                >
-                            </div>
-                        </div>
-
-                        <!-- On Leave -->
-                        <div class="standup-metric">
-                            <div class="metric-row">
-                                <span class="metric-name col-5">
-                                    <i
-                                        class="fa-solid fa-circle small text-warning me-1"
-                                    ></i>
-                                    On Leave
-                                </span>
-                                <span
-                                    class="metric-count col-4"
+                                    {{ card.label }} ·
+                                    {{ formatDateLabel(dates[card.key]) }}
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="row in standupMatrix" :key="row.key">
+                                <td class="metric-name">
+                                    <span
+                                        class="metric-dot"
+                                        :style="{ background: row.dot }"
+                                    ></span>
+                                    {{ row.label }}
+                                </td>
+                                <td
+                                    v-for="(cell, i) in row.cells"
+                                    :key="dayCards[i].key"
+                                    class="metric-day-cell"
                                     :class="{
-                                        'metric-hoverable':
-                                            standupData[card.key]?.on_leave
-                                                ?.count > 0,
+                                        'metric-clickable': cell.clickable,
                                     }"
+                                    @click="cell.clickable && cell.onClick()"
                                     @mouseenter="
-                                        showLeaveHover($event, card.key)
+                                        row.onHover && cell.hoverable
+                                            ? showLeaveHover(
+                                                  $event,
+                                                  dayCards[i].key,
+                                              )
+                                            : null
                                     "
-                                    @mouseleave="hideLeaveHover"
-                                >
-                                    {{
-                                        formatNumber(
-                                            standupData[card.key]?.on_leave
-                                                ?.count,
-                                        )
-                                    }}
-                                </span>
-                                <span class="metric-pct text-warning col-3"
-                                    >{{
-                                        standupData[card.key]?.on_leave
-                                            ?.percentage || 0
-                                    }}%</span
-                                >
-                            </div>
-                        </div>
-
-                        <!-- Schedule Outlet Visited -->
-                        <div class="standup-metric">
-                            <div class="metric-row">
-                                <span class="metric-name col-5">
-                                    <i
-                                        class="fa-solid fa-store me-1 text-primary"
-                                    ></i>
-                                    Schedule Outlet Visited
-                                </span>
-                                <span
-                                    class="metric-count col-4 metric-clickable"
-                                    @click="navigateTo('OutletVisitReport')"
-                                >
-                                    {{
-                                        formatNumber(
-                                            standupData[card.key]
-                                                ?.schedule_outlet_visited
-                                                ?.visited,
-                                        )
-                                    }}
-                                    of
-                                    {{
-                                        formatNumber(
-                                            standupData[card.key]
-                                                ?.schedule_outlet_visited
-                                                ?.scheduled,
-                                        )
-                                    }}
-                                </span>
-                                <span class="metric-pct text-primary col-3"
-                                    >{{
-                                        standupData[card.key]
-                                            ?.schedule_outlet_visited
-                                            ?.percentage || 0
-                                    }}%</span
-                                >
-                            </div>
-                        </div>
-
-                        <!-- Random Outlet Visit -->
-                        <div class="standup-metric">
-                            <div class="metric-row">
-                                <span class="metric-name col-5">
-                                    <i
-                                        class="fa-solid fa-location-dot me-1 text-info"
-                                    ></i>
-                                    Random Outlet Visit
-                                </span>
-                                <span
-                                    class="metric-count col-4 metric-clickable"
-                                    @click="
-                                        navigateTo('RandomOutletVisitReport')
+                                    @mouseleave="
+                                        row.onHover ? hideLeaveHover() : null
                                     "
                                 >
-                                    {{
-                                        formatNumber(
-                                            standupData[card.key]
-                                                ?.random_outlet_visit?.count,
-                                        )
-                                    }}
-                                    by
-                                    {{
-                                        formatNumber(
-                                            standupData[card.key]
-                                                ?.random_outlet_visit
-                                                ?.employees,
-                                        )
-                                    }}
-                                </span>
-                                <span class="metric-pct text-muted col-3">
-                                    {{
-                                        formatNumber(
-                                            standupData[card.key]
-                                                ?.random_outlet_visit?.towns,
-                                        )
-                                    }}
-                                    Towns
-                                </span>
-                            </div>
-                        </div>
+                                    <b>{{ cell.value }}</b>
+                                    <span
+                                        class="metric-pct"
+                                        :class="cell.pctClass"
+                                        >{{ cell.pct }}</span
+                                    >
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
 
-                        <!-- Meeting Minutes -->
-                        <div class="standup-metric">
-                            <div class="metric-row">
-                                <span class="metric-name col-5">
-                                    <i
-                                        class="fa-solid fa-file-lines me-1 text-secondary"
-                                    ></i>
-                                    Meeting Minutes
-                                </span>
-                                <span
-                                    class="metric-count col-4 metric-clickable"
-                                    @click="navigateTo('MeetingMinutesReport')"
-                                >
-                                    {{
-                                        formatNumber(
-                                            standupData[card.key]
-                                                ?.meeting_minutes?.meetings,
-                                        )
-                                    }}
-                                </span>
-                                <span class="metric-pct text-muted col-3">
-                                    {{
-                                        formatNumber(
-                                            standupData[card.key]
-                                                ?.meeting_minutes?.persons,
-                                        )
-                                    }}
-                                    Persons
-                                </span>
-                            </div>
+            <!-- Field activity today -->
+            <div class="standup-card field-activity-card">
+                <div class="field-activity-title">Field activity today</div>
+
+                <div class="field-progress">
+                    <div class="field-progress-head">
+                        <span>Scheduled outlets visited</span>
+                        <span>
+                            {{
+                                formatNumber(
+                                    todayStandup.schedule_outlet_visited
+                                        ?.visited,
+                                )
+                            }}
+                            of
+                            {{
+                                formatNumber(
+                                    todayStandup.schedule_outlet_visited
+                                        ?.scheduled,
+                                )
+                            }}
+                        </span>
+                    </div>
+                    <div class="field-progress-track">
+                        <div
+                            class="field-progress-fill"
+                            :style="{
+                                width: progressWidth(
+                                    todayStandup.schedule_outlet_visited
+                                        ?.percentage,
+                                ),
+                                background: '#2F6FDE',
+                            }"
+                        ></div>
+                    </div>
+                </div>
+
+                <div class="field-progress">
+                    <div class="field-progress-head">
+                        <span>Present attendance</span>
+                        <span>
+                            {{ formatNumber(todayStandup.present?.count) }} of
+                            {{ formatNumber(todayStandup.present?.total) }}
+                        </span>
+                    </div>
+                    <div class="field-progress-track">
+                        <div
+                            class="field-progress-fill"
+                            :style="{
+                                width: progressWidth(
+                                    todayStandup.present?.percentage,
+                                ),
+                                background: '#0E8A5F',
+                            }"
+                        ></div>
+                    </div>
+                </div>
+
+                <div class="field-stats">
+                    <div
+                        class="field-stat metric-clickable"
+                        @click="navigateTo('RandomOutletVisitReport')"
+                    >
+                        <div class="field-stat-value">
+                            {{
+                                formatNumber(
+                                    todayStandup.random_outlet_visit?.count,
+                                )
+                            }}
+                        </div>
+                        <div class="field-stat-sub">
+                            Random outlet visits by
+                            {{
+                                formatNumber(
+                                    todayStandup.random_outlet_visit?.employees,
+                                )
+                            }}
+                            people ·
+                            {{
+                                formatNumber(
+                                    todayStandup.random_outlet_visit?.towns,
+                                )
+                            }}
+                            towns
+                        </div>
+                    </div>
+                    <div
+                        class="field-stat metric-clickable"
+                        @click="navigateTo('MeetingMinutesReport')"
+                    >
+                        <div class="field-stat-value">
+                            {{
+                                formatNumber(
+                                    todayStandup.meeting_minutes?.meetings,
+                                )
+                            }}
+                        </div>
+                        <div class="field-stat-sub">
+                            Meeting minutes filed today
                         </div>
                     </div>
                 </div>
@@ -517,167 +535,215 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .daily-standup-content {
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-radius: 12px;
-    padding: 1.25rem;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-    font-family:
-        "Inter",
-        system-ui,
-        -apple-system,
-        sans-serif;
-}
-
-.icon-badge {
-    width: 40px;
-    height: 40px;
-    background: #eff6ff;
-    color: #2563eb;
-    border-radius: 10px;
     display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.125rem;
-    flex-shrink: 0;
+    flex-direction: column;
+    gap: 12px;
+    font-family: "Plus Jakarta Sans", system-ui, sans-serif;
 }
 
-.standup-title {
-    font-family: "Inter", sans-serif;
-    font-size: 1.25rem;
+.section-label {
+    font-size: 13px;
     font-weight: 700;
-    color: #0f172a;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #5b6b70;
+}
+
+/* Two-card row: comparison table + field activity */
+.standup-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    align-items: stretch;
 }
 
 .standup-card {
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    border-radius: 12px;
-    padding: 1rem 1.125rem;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-}
-
-.standup-card-header {
-    font-family: "Inter", sans-serif;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding-bottom: 0.35rem;
-    margin-bottom: 0.75rem;
-    border-bottom: 1px solid #e2e8f0;
-}
-
-.standup-day-label {
-    font-family: "Inter", sans-serif;
-    font-size: 0.875rem;
-    font-weight: 700;
-    color: #0f172a;
-}
-
-.standup-date-label {
-    font-family: "Inter", sans-serif;
-    font-size: 0.75rem;
-    font-weight: 600;
-    color: #2563eb;
-    background: #dbeafe;
-    padding: 0.2rem 0.5rem;
-    border-radius: 6px;
-    white-space: nowrap;
-}
-
-.standup-metrics {
-    font-family: "Inter", sans-serif;
-    display: flex;
-    flex-direction: column;
-    gap: 0.85rem;
-}
-
-.standup-metric {
-    font-family: "Inter", sans-serif;
-    padding-bottom: 0.85rem;
-    border-bottom: 1px dashed #e2e8f0;
-}
-
-.standup-metric:last-child {
-    font-family: "Inter", sans-serif;
-    border-bottom: none;
-    padding-bottom: 0;
-}
-
-.metric-row {
-    font-family: "Inter", sans-serif;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.5rem;
-    width: 100%;
-}
-
-.metric-name {
-    font-size: 0.8rem;
-    font-family: "Inter", sans-serif;
-    font-weight: 600;
-    color: #64748b;
-    display: flex;
-    align-items: center;
+    background: #ffffff;
+    border: 1px solid #e3e9e7;
+    border-radius: 14px;
+    padding: 20px;
+    box-sizing: border-box;
     min-width: 0;
 }
 
-.metric-name i {
-    font-size: 0.6rem;
+.standup-table-card {
+    flex: 3 1 460px;
+}
+
+.field-activity-card {
+    flex: 2 1 320px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+/* Comparison table */
+.standup-table-wrap {
+    overflow-x: auto;
+}
+
+.standup-table {
+    width: 100%;
+    min-width: 420px;
+    border-collapse: collapse;
+    font-size: 12.5px;
+}
+
+.standup-table thead th {
+    text-align: left;
+    color: #5b6b70;
+    font-size: 11.5px;
+    font-weight: 700;
+    padding: 8px 6px;
+    border-bottom: 1px solid #e3e9e7;
+    white-space: nowrap;
+}
+
+.standup-table .col-metric {
+    width: 34%;
+}
+
+.standup-table tbody td {
+    padding: 11px 6px;
+    border-bottom: 1px solid #eef2f1;
+    vertical-align: middle;
+}
+
+.standup-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.metric-name {
+    font-weight: 600;
+    color: #1b2a2f;
+    white-space: nowrap;
+}
+
+.metric-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-right: 8px;
+    vertical-align: middle;
+}
+
+.metric-day-cell {
+    color: #1b2a2f;
+    white-space: nowrap;
+}
+
+.metric-day-cell b {
+    font-weight: 700;
 }
 
 .metric-pct {
-    font-family: "Inter", sans-serif;
-    font-size: 0.8rem;
-    font-weight: 600;
-    white-space: nowrap;
-    text-align: right;
+    font-weight: 700;
+    margin-left: 6px;
 }
 
-.metric-count {
-    font-size: 12px;
-    font-weight: 600;
-    line-height: 0;
-    font-variant-numeric: tabular-nums;
-    text-align: center;
+.pct-success {
+    color: #075c41;
+}
+
+.pct-danger {
+    color: #8e2418;
+}
+
+.pct-warning {
+    color: #7a4b00;
+}
+
+.pct-primary {
+    color: #1a4aa3;
+}
+
+.pct-muted {
+    color: #5b6b70;
 }
 
 .metric-clickable {
     cursor: pointer;
-    transition:
-        color 0.15s ease,
-        text-decoration 0.15s ease;
+    transition: color 0.15s ease;
 }
 
 .metric-clickable:hover {
-    color: #2563eb;
-    text-decoration: underline;
+    color: #0e8a5f;
 }
 
-.metric-hoverable {
-    cursor: default;
+/* Field activity today */
+.field-activity-title {
+    font-weight: 700;
+    font-size: 15px;
+    color: #1b2a2f;
 }
 
+.field-progress-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: #1b2a2f;
+}
+
+.field-progress-track {
+    height: 8px;
+    border-radius: 999px;
+    background: #e3e9e7;
+    margin-top: 5px;
+    overflow: hidden;
+}
+
+.field-progress-fill {
+    height: 100%;
+    border-radius: 999px;
+    transition: width 0.3s ease;
+}
+
+.field-stats {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.field-stat {
+    flex: 1 1 120px;
+    padding: 12px;
+    background: #f3f6f5;
+    border-radius: 12px;
+}
+
+.field-stat-value {
+    font-size: 22px;
+    font-weight: 800;
+    color: #1b2a2f;
+}
+
+.field-stat-sub {
+    font-size: 11.5px;
+    color: #5b6b70;
+    margin-top: 2px;
+}
+
+/* Loading / error */
 .standup-loading,
 .standup-error {
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 2rem;
-    color: #64748b;
+    color: #5b6b70;
     font-size: 0.875rem;
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    border-radius: 12px;
+    background: #f3f6f5;
+    border: 1px solid #e3e9e7;
+    border-radius: 14px;
 }
 
 .standup-error {
-    color: #b91c1c;
-    background: #fef2f2;
-    border-color: #fecaca;
+    color: #c0392b;
+    background: #fbe3e0;
+    border-color: #fbe3e0;
 }
 
 /* Late Employees Modal */
@@ -709,13 +775,13 @@ onBeforeUnmount(() => {
     align-items: center;
     justify-content: space-between;
     padding: 1rem 1.25rem;
-    border-bottom: 1px solid #e2e8f0;
+    border-bottom: 1px solid #e3e9e7;
 }
 
 .standup-modal-title {
     font-size: 1rem;
     font-weight: 700;
-    color: #0f172a;
+    color: #1b2a2f;
     margin: 0;
     display: flex;
     align-items: center;
@@ -725,7 +791,7 @@ onBeforeUnmount(() => {
     background: none;
     border: none;
     font-size: 1.25rem;
-    color: #64748b;
+    color: #5b6b70;
     cursor: pointer;
     padding: 0.25rem;
     line-height: 1;
@@ -736,17 +802,17 @@ onBeforeUnmount(() => {
 }
 
 .standup-modal-close:hover {
-    background: #f1f5f9;
-    color: #0f172a;
+    background: #f3f6f5;
+    color: #1b2a2f;
 }
 
 .standup-modal-date {
     padding: 0.5rem 1.25rem;
     font-size: 0.8rem;
     font-weight: 600;
-    color: #2563eb;
-    background: #f0f7ff;
-    border-bottom: 1px solid #e2e8f0;
+    color: #0e8a5f;
+    background: #ddf1e8;
+    border-bottom: 1px solid #e3e9e7;
 }
 
 .standup-modal-body {
@@ -758,23 +824,23 @@ onBeforeUnmount(() => {
 .standup-modal-empty {
     text-align: center;
     padding: 2rem;
-    color: #94a3b8;
+    color: #5b6b70;
     font-size: 0.875rem;
 }
 
 .standup-modal-table th {
     font-size: 0.75rem;
     font-weight: 600;
-    color: #64748b;
+    color: #5b6b70;
     text-transform: uppercase;
     letter-spacing: 0.03em;
-    border-bottom: 2px solid #e2e8f0;
+    border-bottom: 2px solid #e3e9e7;
     padding: 0.5rem 0.5rem;
 }
 
 .standup-modal-table td {
     font-size: 0.85rem;
-    color: #334155;
+    color: #33444a;
     padding: 0.6rem 0.5rem;
     vertical-align: middle;
 }
@@ -784,8 +850,8 @@ onBeforeUnmount(() => {
     align-items: center;
     justify-content: space-between;
     padding: 0.75rem 1.25rem;
-    border-top: 1px solid #e2e8f0;
-    background: #f8fafc;
+    border-top: 1px solid #e3e9e7;
+    background: #f3f6f5;
 }
 
 /* Leave Tooltip */
@@ -833,5 +899,15 @@ onBeforeUnmount(() => {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+@media (max-width: 575.98px) {
+    .standup-card {
+        padding: 16px;
+    }
+
+    .standup-table .col-metric {
+        width: 40%;
+    }
 }
 </style>

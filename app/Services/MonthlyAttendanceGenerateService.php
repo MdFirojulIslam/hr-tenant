@@ -17,6 +17,48 @@ class MonthlyAttendanceGenerateService
     $startOfMonth = now()->startOfMonth()->toDateString();
     $endOfMonth = now()->endOfMonth()->toDateString();
 
+    // January
+    // $startOfMonth = now()->startOfYear()->startOfMonth()->toDateString();
+    // $endOfMonth = now()->startOfYear()->endOfMonth()->toDateString();
+
+    // February
+    // $startOfMonth = now()->startOfYear()->month(2)->startOfMonth()->toDateString();
+    // $endOfMonth = now()->startOfYear()->month(2)->endOfMonth()->toDateString();
+
+    // March
+    // $startOfMonth = now()->startOfYear()->month(3)->startOfMonth()->toDateString();
+    // $endOfMonth = now()->startOfYear()->month(3)->endOfMonth()->toDateString();
+
+    // April
+    // $startOfMonth = now()->startOfYear()->month(4)->startOfMonth()->toDateString();
+    // $endOfMonth = now()->startOfYear()->month(4)->endOfMonth()->toDateString();
+
+    // May
+    // $startOfMonth = now()->startOfYear()->month(5)->startOfMonth()->toDateString();
+    // $endOfMonth = now()->startOfYear()->month(5)->endOfMonth()->toDateString();
+
+    // June
+    // $startOfMonth = now()->startOfYear()->month(6)->startOfMonth()->toDateString();
+    // $endOfMonth = now()->startOfYear()->month(6)->endOfMonth()->toDateString();
+
+    // July
+    // $startOfMonth = now()->startOfYear()->month(7)->startOfMonth()->toDateString();
+    // $endOfMonth = now()->startOfYear()->month(7)->endOfMonth()->toDateString();
+
+    // August
+    // $startOfMonth = now()->startOfYear()->month(8)->startOfMonth()->toDateString();
+    // $endOfMonth = now()->startOfYear()->month(8)->endOfMonth()->toDateString();
+
+    // September
+    // $startOfMonth = now()->startOfYear()->month(9)->startOfMonth()->toDateString();
+    // $endOfMonth = now()->startOfYear()->month(9)->endOfMonth()->toDateString();
+
+    // October
+    // $startOfMonth = now()->startOfYear()->month(10)->startOfMonth()->toDateString();
+    // $endOfMonth = now()->startOfYear()->month(10)->endOfMonth()->toDateString();
+
+
+
     // $startOfMonth = now()->subMonth()->startOfMonth()->toDateString();
     // $endOfMonth = now()->subMonth()->endOfMonth()->toDateString();
 
