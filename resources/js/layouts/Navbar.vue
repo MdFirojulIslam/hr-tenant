@@ -92,35 +92,24 @@ onMounted(() => {
 </script>
 
 <template>
-    <nav class="sb-topnav navbar navbar-expand navbar-color">
+    <nav class="sb-topnav navbar navbar-expand navbar-minimal">
         <div class="d-flex align-items-center w-100 navbar-content">
-            <div class="d-flex align-items-center navbar-logo">
-                <div>
-                    <img
-                        src="/public/storage/uploads/1718087744_artisan.png"
-                        height="35px"
-                        width="35px"
-                        class="mx-3"
-                    />
-                </div>
-                <h3 class="text-white mb-0">ARTISAN HRM</h3>
-            </div>
-
-            <div class="ms-5">
-                <button
-                    class="btn btn-link btn-sm text-white"
-                    id="sidebarToggle"
-                    @click="toggleSidebar"
-                >
-                    <i class="fas fa-bars fa-2x"></i>
-                </button>
-            </div>
+            <button
+                class="nav-toggle d-lg-none"
+                type="button"
+                @click="toggleSidebar"
+                aria-label="Toggle navigation"
+            >
+                <i class="fas fa-bars"></i>
+            </button>
 
             <div class="ms-auto nav-profile">
                 <div
                     class="ms-auto d-flex align-items-center ms-md-0 me-3 me-lg-4"
                 >
-                    <div class="nav-item dropdown position-relative p-2">
+                    <div
+                        class="nav-item dropdown position-relative p-2 notification-item"
+                    >
                         <a
                             class="nav-link position-relative"
                             id="navbarDropdown"
@@ -129,10 +118,7 @@ onMounted(() => {
                             data-bs-toggle="dropdown"
                             aria-expanded="false"
                         >
-                            <i
-                                class="fa-solid fa-bell"
-                                style="font-size: large; color: white"
-                            ></i>
+                            <i class="fa-solid fa-bell notification-bell"></i>
 
                             <span
                                 v-if="totalNotifications > 0"
@@ -177,10 +163,6 @@ onMounted(() => {
                             data-bs-toggle="dropdown"
                             aria-expanded="false"
                         >
-                            <span
-                                class="text-white fs-4 m-3 nav-profile-name"
-                                >{{ user.Full_Name }}</span
-                            >
                             <img
                                 :src="user.img_url"
                                 alt="User Image"
@@ -210,23 +192,43 @@ onMounted(() => {
 </template>
 
 <style scoped>
-.navbar-color {
-    /* background-color: rgb(39, 106, 70); */
-    /* background-color: #198754; */
-    background-color: #212529;
-    /* border-bottom: 0.1px solid #fbfffd; */
+.navbar-minimal {
+    background-color: transparent;
+    flex-shrink: 0;
 }
+
+.nav-toggle {
+    background: transparent;
+    border: none;
+    color: #242424;
+    font-size: 20px;
+    line-height: 1;
+    padding: 6px 10px;
+    margin-left: 4px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.15s ease-in-out;
+}
+
+.nav-toggle:hover {
+    background-color: #f0f0f0;
+}
+
+.notification-item {
+    margin-right: 8px;
+}
+
+.notification-bell {
+    font-size: 20px;
+    color: #0078d4;
+    transition: color 0.15s ease-in-out;
+}
+
+.notification-bell:hover {
+    color: #005a9e;
+}
+
 @media (max-width: 768px) {
-    .navbar-logo {
-        display: none !important;
-    }
-    /* .navbar-content{
-
-
-   } */
-    .nav-profile-name {
-        display: none;
-    }
     .nav-profile {
         margin-left: 10px;
     }

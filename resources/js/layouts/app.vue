@@ -1,47 +1,96 @@
 <script setup>
+import { computed, onMounted, onUnmounted, ref, watch } from "vue";
+import { useRoute } from "vue-router";
 import { useStore } from "vuex";
 import SideBar from "./Sidebar.vue";
 import NavBar from "./Navbar.vue";
-import Footer from "./Footer.vue";
-import { onMounted, ref } from "vue";
 
 const store = useStore();
+const route = useRoute();
 
-const visibility = ref(false);
-const layoutStyle = ref("");
+// Single source of truth for the breakpoint that separates the in-flow
+// desktop sidebar from the off-canvas mobile/tablet sidebar. Must stay in
+// sync with the media queries in Sidebar.vue.
+const DESKTOP_QUERY = "(min-width: 992px)";
 
-const getData = async () => {
-    if (store.getters.getToken !== 0) {
-        visibility.value = true;
-    }
-    if (!store.getters.getToken) {
-        layoutStyle.value = { margin: "0" };
+const mediaQueryList = window.matchMedia(DESKTOP_QUERY);
+const isDesktop = ref(mediaQueryList.matches);
+
+const sidebarOpen = computed(() => store.getters.getSidebarOpen);
+
+// The off-canvas panel is only relevant below the desktop breakpoint.
+const mobileOpen = computed(() => !isDesktop.value && sidebarOpen.value);
+
+const closeSidebar = () => {
+    if (sidebarOpen.value) {
+        store.commit("TOGGLE_SIDEBAR");
     }
 };
 
-onMounted(() => getData());
+const onMediaChange = (event) => {
+    isDesktop.value = event.matches;
+    // Entering the mobile range must never leave the off-canvas panel open.
+    if (!event.matches && sidebarOpen.value) {
+        store.commit("TOGGLE_SIDEBAR");
+    }
+};
+
+const onKeydown = (event) => {
+    if (event.key === "Escape" && !isDesktop.value) {
+        closeSidebar();
+    }
+};
+
+// Close the off-canvas panel once navigation has occurred.
+watch(
+    () => route.fullPath,
+    () => {
+        if (!isDesktop.value) {
+            closeSidebar();
+        }
+    },
+);
+
+// Initialise on a small screen with the off-canvas panel closed.
+if (!isDesktop.value && sidebarOpen.value) {
+    store.commit("TOGGLE_SIDEBAR");
+}
+
+onMounted(() => {
+    mediaQueryList.addEventListener("change", onMediaChange);
+    document.addEventListener("keydown", onKeydown);
+});
+
+onUnmounted(() => {
+    mediaQueryList.removeEventListener("change", onMediaChange);
+    document.removeEventListener("keydown", onKeydown);
+});
 </script>
 
 <template>
     <div class="layout-wrapper">
-        <!-- Top Fixed Navbar -->
-        <NavBar v-if="$store.getters.getToken !== 0"></NavBar>
-
         <div id="layoutSidenav">
-            <!-- Fixed Sidebar -->
+            <!-- Shared Sidebar (desktop rail / mobile off-canvas) -->
             <SideBar v-if="$store.getters.getToken !== 0"></SideBar>
 
-            <!-- Content Area (Body + Footer) -->
+            <!-- Backdrop for the mobile off-canvas sidebar -->
+            <div
+                v-if="$store.getters.getToken !== 0 && mobileOpen"
+                class="sidebar-backdrop"
+                @click="closeSidebar"
+            ></div>
+
+            <!-- Content Area (Minimal Header + Body) -->
             <div id="layoutSidenav_content">
+                <!-- Minimal Top Header -->
+                <NavBar v-if="$store.getters.getToken !== 0"></NavBar>
+
                 <!-- Main Body (Scrollable Area) -->
                 <main class="main">
-                    <div class="container-fluid px-2 py-3 body-background">
+                    <div class="container-fluid body-background">
                         <router-view></router-view>
                     </div>
                 </main>
-
-                <!-- Fixed Bottom Footer -->
-                <Footer v-if="$store.getters.getToken !== 0" />
             </div>
         </div>
     </div>
@@ -53,15 +102,14 @@ onMounted(() => getData());
 }
 
 .layout-wrapper {
-    display: flex;
-    flex-direction: column;
     height: 100vh;
     overflow: hidden;
+    background-color: #f8f8f8;
 }
 
 #layoutSidenav {
     display: flex;
-    flex: 1;
+    height: 100%;
     overflow: hidden;
 }
 
@@ -69,50 +117,30 @@ onMounted(() => getData());
     display: flex;
     flex-direction: column;
     flex: 1;
+    min-width: 0;
+    height: 100%;
     overflow: hidden;
 }
 
-:deep(#layoutSidenav #layoutSidenav_nav) {
-    transform: translateX(0) !important;
+/* Neutralise the legacy SB Admin negative margin that shifts the content
+   under the sidebar below the desktop breakpoint. */
+#layoutSidenav #layoutSidenav_content {
+    margin-left: 0;
 }
 
 .main {
     flex: 1;
+    min-height: 0;
     overflow-y: auto;
 }
 
-.tech-assist-btn:hover {
-    background-color: #019d19f7;
-    color: #fff !important;
-}
-
-@media (max-width: 768px) {
-    /* #layoutSidenav_content {
-       margin-left: 0 !important;
-   } */
-
-    /* .sidebar-hidden #layoutSidenav_content {
-       margin-left: 0 !important;
-   } */
-    /* :deep(#layoutSidenav #layoutSidenav_content) {
-       margin-left: 0 !important;
-   } */
-    /* #layoutSidenav {
-       display: block;
-   } */
-
-    :deep(#layoutSidenav #layoutSidenav_nav) {
+/* Mobile / tablet: off-canvas sidebar with a dismissible backdrop. */
+@media (max-width: 991.98px) {
+    .sidebar-backdrop {
         position: fixed;
-        left: 0;
-        top: 56px; /* Navbar height */
-        width: 230px;
-        height: calc(100vh - 56px);
-        z-index: 1050;
-    }
-
-    #layoutSidenav_content {
-        width: 100%;
-        margin-left: 0 !important;
+        inset: 0;
+        background-color: rgba(0, 0, 0, 0.45);
+        z-index: 1040;
     }
 }
 </style>
